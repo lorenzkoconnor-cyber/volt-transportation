@@ -56,7 +56,7 @@ function BookingFlow() {
       </div>
 
       {/* Main content */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+      <div className="max-w-2xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
         {/* Purple ambient glow */}
         <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[#7C3AED]/5 blur-[120px] pointer-events-none" />
 
@@ -66,7 +66,7 @@ function BookingFlow() {
           </div>
         )}
 
-        <div className="relative glass rounded-2xl p-6 sm:p-8">
+        <div className="relative glass rounded-2xl p-4 sm:p-6 lg:p-8">
           {step === 1 && (
             <Step1Search
               initial={search}

@@ -48,7 +48,7 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
   }) => (
     <div>
       <h3 className="text-white font-semibold mb-3">{label}</h3>
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
         {slots.map((slot) => {
           const isSelected = selected?.id === slot.id;
           return (
