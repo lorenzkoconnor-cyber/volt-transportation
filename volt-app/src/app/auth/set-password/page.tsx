@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Zap, Eye, EyeOff, CheckCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,7 @@ export default function SetPasswordPage() {
   const [isEmployee, setIsEmployee]   = useState(false);
   const [name, setName]               = useState("");
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   // Check if this user is an employee so we can personalise the message
   useEffect(() => {
