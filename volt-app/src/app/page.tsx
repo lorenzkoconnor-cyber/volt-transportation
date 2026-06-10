@@ -7,7 +7,6 @@ import PricingSection from "@/components/home/PricingSection";
 import ReviewsSection from "@/components/home/ReviewsSection";
 import FAQSection from "@/components/home/FAQSection";
 import CTASection from "@/components/home/CTASection";
-import ScrollProgress from "@/components/ui/ScrollProgress";
 import MobileBookCTA from "@/components/ui/MobileBookCTA";
 
 export const metadata: Metadata = {
@@ -108,7 +107,6 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ScrollProgress />
       <MobileBookCTA />
       <Navbar />
       <main>

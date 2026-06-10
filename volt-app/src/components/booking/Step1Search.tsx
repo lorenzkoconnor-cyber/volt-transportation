@@ -26,8 +26,16 @@ export default function Step1Search({ initial, onNext }: Props) {
   const swapLocations = () =>
     setSearch((prev) => ({ ...prev, from: prev.to, to: prev.from }));
 
-  const handleFrom = (v: string | null) => { if (v) set("from", v as "columbus" | "atl"); };
-  const handleTo = (v: string | null) => { if (v) set("to", v as "columbus" | "atl"); };
+  const handleFrom = (v: string | null) => {
+    if (!v) return;
+    if (v === search.to) setSearch((prev) => ({ ...prev, from: v as "columbus" | "atl", to: prev.from as "columbus" | "atl" }));
+    else set("from", v as "columbus" | "atl");
+  };
+  const handleTo = (v: string | null) => {
+    if (!v) return;
+    if (v === search.from) setSearch((prev) => ({ ...prev, to: v as "columbus" | "atl", from: prev.to as "columbus" | "atl" }));
+    else set("to", v as "columbus" | "atl");
+  };
   const handleAdults = (v: string | null) => { if (v) set("adults", Number(v)); };
   const handleChildren = (v: string | null) => { if (v !== null) set("children", Number(v)); };
   const handlePets = (v: string | null) => { if (v !== null) set("pets", Number(v)); };
@@ -46,8 +54,8 @@ export default function Step1Search({ initial, onNext }: Props) {
       </div>
 
       {/* Route */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
-        <div>
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
           <Label className="text-[#A1A1AA] text-xs mb-2 block">From</Label>
           <Select value={search.from} onValueChange={handleFrom}>
             <SelectTrigger className="w-full bg-white/5 border-white/10 text-white h-12 rounded-xl">
@@ -56,7 +64,7 @@ export default function Step1Search({ initial, onNext }: Props) {
             </SelectTrigger>
             <SelectContent className="bg-[#171717] border-white/10">
               {Object.entries(LOCATIONS).map(([key, loc]) => (
-                <SelectItem key={key} value={key} disabled={key === search.to} className="text-white focus:bg-white/10">
+                <SelectItem key={key} value={key} className="text-white focus:bg-white/10">
                   {loc.label}
                 </SelectItem>
               ))}
@@ -64,16 +72,17 @@ export default function Step1Search({ initial, onNext }: Props) {
           </Select>
         </div>
 
-        {/* Swap button */}
+        {/* Swap button — visible on all screen sizes */}
         <button
           type="button"
           onClick={swapLocations}
-          className="absolute left-1/2 -translate-x-1/2 top-7 z-10 hidden sm:flex w-8 h-8 rounded-full bg-[#171717] border border-white/10 items-center justify-center text-[#A1A1AA] hover:text-[#7C3AED] hover:border-[#7C3AED]/50 transition-colors"
+          aria-label="Switch directions"
+          className="mb-[1px] flex-shrink-0 w-10 h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#7C3AED] hover:border-[#7C3AED]/50 transition-colors"
         >
-          <ArrowLeftRight className="w-3.5 h-3.5" />
+          <ArrowLeftRight className="w-4 h-4" />
         </button>
 
-        <div>
+        <div className="flex-1">
           <Label className="text-[#A1A1AA] text-xs mb-2 block">To</Label>
           <Select value={search.to} onValueChange={handleTo}>
             <SelectTrigger className="w-full bg-white/5 border-white/10 text-white h-12 rounded-xl">
@@ -82,7 +91,7 @@ export default function Step1Search({ initial, onNext }: Props) {
             </SelectTrigger>
             <SelectContent className="bg-[#171717] border-white/10">
               {Object.entries(LOCATIONS).map(([key, loc]) => (
-                <SelectItem key={key} value={key} disabled={key === search.from} className="text-white focus:bg-white/10">
+                <SelectItem key={key} value={key} className="text-white focus:bg-white/10">
                   {loc.label}
                 </SelectItem>
               ))}
