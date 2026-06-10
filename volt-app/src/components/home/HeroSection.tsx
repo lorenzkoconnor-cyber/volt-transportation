@@ -34,8 +34,16 @@ export default function HeroSection() {
   const [extraBags, setExtraBags] = useState(0);
   const [roundTrip, setRoundTrip] = useState(false);
 
-  const handleFrom     = (v: string | null) => { if (v) setFrom(v as LocationKey); };
-  const handleTo       = (v: string | null) => { if (v) setTo(v as LocationKey); };
+  const handleFrom = (v: string | null) => {
+    if (!v) return;
+    if (v === to) setTo(from);
+    setFrom(v as LocationKey);
+  };
+  const handleTo = (v: string | null) => {
+    if (!v) return;
+    if (v === from) setFrom(to);
+    setTo(v as LocationKey);
+  };
   const handleAdults   = (v: string | null) => { if (v) setAdults(Number(v)); };
   const handleChildren = (v: string | null) => { if (v !== null) setChildren(Number(v)); };
   const handlePets     = (v: string | null) => { if (v !== null) setPets(Number(v)); };
@@ -145,7 +153,7 @@ export default function HeroSection() {
                     </SelectTrigger>
                     <SelectContent className="bg-[#171717] border-white/10 z-50">
                       {Object.entries(LOCATIONS).map(([key, loc]) => (
-                        <SelectItem key={key} value={key} disabled={key === to} className="text-white focus:bg-white/10">
+                        <SelectItem key={key} value={key} className="text-white focus:bg-white/10">
                           {loc.label}
                         </SelectItem>
                       ))}
@@ -153,9 +161,10 @@ export default function HeroSection() {
                   </Select>
                 </div>
 
-                {/* Swap button */}
+                {/* Swap button — visible on all sizes */}
                 <button type="button" onClick={swapLocations}
-                  className="absolute left-1/2 -translate-x-1/2 top-7 z-10 hidden sm:flex w-8 h-8 rounded-full bg-[#171717] border border-white/10 items-center justify-center text-[#A1A1AA] hover:text-[#7C3AED] hover:border-[#7C3AED]/50 transition-colors">
+                  className="absolute left-1/2 -translate-x-1/2 top-7 z-10 flex w-8 h-8 rounded-full bg-[#171717] border border-white/10 items-center justify-center text-[#A1A1AA] hover:text-[#7C3AED] hover:border-[#7C3AED]/50 transition-colors"
+                  aria-label="Switch directions">
                   <ArrowLeftRight className="w-3.5 h-3.5" />
                 </button>
 
@@ -168,7 +177,7 @@ export default function HeroSection() {
                     </SelectTrigger>
                     <SelectContent className="bg-[#171717] border-white/10 z-50">
                       {Object.entries(LOCATIONS).map(([key, loc]) => (
-                        <SelectItem key={key} value={key} disabled={key === from} className="text-white focus:bg-white/10">
+                        <SelectItem key={key} value={key} className="text-white focus:bg-white/10">
                           {loc.label}
                         </SelectItem>
                       ))}

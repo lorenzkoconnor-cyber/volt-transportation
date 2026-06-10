@@ -157,3 +157,26 @@
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 64px 64px;
 }
+
+/* ── Scroll reveal ─────────────────────────────────────────────────── */
+.sr-init {
+  opacity: 0;
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sr-up    { transform: translateY(44px); }
+.sr-left  { transform: translateX(-44px); }
+.sr-right { transform: translateX(44px); }
+.sr-none  { transform: none; }
+
+.sr-visible {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .sr-init { opacity: 1; transform: none; transition: none; }
+}
