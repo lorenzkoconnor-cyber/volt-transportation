@@ -26,11 +26,11 @@ function ResetPasswordForm() {
 
     const supabase = createClient();
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      redirectTo: `${window.location.origin}/auth/callback`,
     });
 
     if (err) {
-      setError("Could not send reset email. Please try again.");
+      setError(err.message || "Could not send reset email. Please try again.");
     } else {
       setSent(true);
     }
