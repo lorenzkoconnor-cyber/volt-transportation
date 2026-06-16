@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           email,
-          redirect_to: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+          redirect_to: `${(process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")}/auth/callback`,
         }),
       }
     );
