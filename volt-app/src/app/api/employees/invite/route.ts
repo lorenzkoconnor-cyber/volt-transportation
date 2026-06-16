@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          redirect_to: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        }),
       }
     );
 
