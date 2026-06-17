@@ -18,6 +18,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { user, customer, signOut } = useAuth();
   const router = useRouter();
 
@@ -28,6 +29,7 @@ export default function Navbar() {
   };
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -70,7 +72,7 @@ export default function Navbar() {
 
           {/* Desktop right CTAs */}
           <div className="hidden lg:flex items-center gap-4">
-            {user ? (
+            {mounted && user ? (
               <>
                 <Link
                   href="/portal"
@@ -131,7 +133,7 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="pt-3 pb-1 border-t border-white/8 mt-2 space-y-2">
-              {user ? (
+              {mounted && user ? (
                 <>
                   <Link href="/portal" onClick={() => setOpen(false)}>
                     <button className="w-full text-left px-3 py-3 text-[#C0C0C0] hover:text-white text-sm font-medium flex items-center gap-2">
