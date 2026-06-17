@@ -177,7 +177,7 @@
 }
 
 /* On small screens the horizontal reveals would push full-width cards past
-   the viewport edge (≈28px), causing a horizontal scroll/jitter. Reveal from
+   the viewport edge (~28px), causing a horizontal scroll/jitter. Reveal from
    the bottom only on mobile and keep the offset small. */
 @media (max-width: 640px) {
   .sr-up,
