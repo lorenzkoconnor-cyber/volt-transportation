@@ -47,14 +47,20 @@ function LoginForm() {
         setLoading(false);
         return;
       }
-      const { error: err } = await signUp(email, password, firstName, lastName, phone);
+      const { error: err, needsConfirmation } = await signUp(email, password, firstName, lastName, phone);
       if (err) {
         setError(err);
         setLoading(false);
         return;
       }
-      setSuccess("Account created! Check your email to confirm, then sign in.");
-      setMode("login");
+      if (needsConfirmation) {
+        setSuccess("Account created! Check your email to confirm, then sign in.");
+        setMode("login");
+      } else {
+        // Email confirmation is disabled — the user is already signed in.
+        router.push(redirect);
+        return;
+      }
     }
     setLoading(false);
   };
