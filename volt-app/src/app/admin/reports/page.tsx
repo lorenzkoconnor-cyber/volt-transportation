@@ -31,7 +31,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-white">Reports</h1>
           <p className="text-[#A1A1AA] text-sm mt-0.5">Revenue, passengers, and route performance</p>
@@ -80,7 +80,7 @@ export default function ReportsPage() {
         </div>
         <div className="divide-y divide-white/6">
           {ROUTE_STATS.map((r) => (
-            <div key={r.route} className="grid grid-cols-6 gap-4 px-6 py-5 items-center">
+            <div key={r.route} className="grid grid-cols-2 sm:grid-cols-6 gap-4 px-4 sm:px-6 py-5 items-center">
               <div className="col-span-2">
                 <div className="text-white font-semibold text-sm">{r.route}</div>
                 <div className="text-[#A1A1AA] text-xs mt-0.5">{r.trips} trips in period</div>
@@ -113,12 +113,12 @@ export default function ReportsPage() {
         <div className="px-6 py-4 border-b border-white/8">
           <h2 className="text-white font-bold text-lg">Daily Breakdown</h2>
         </div>
-        <div className="grid grid-cols-4 gap-4 px-6 py-3 border-b border-white/6 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
+        <div className="grid grid-cols-4 gap-4 px-4 sm:px-6 py-3 border-b border-white/6 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
           <div>Date</div><div className="text-center">Trips</div><div className="text-center">Passengers</div><div className="text-right">Revenue</div>
         </div>
         <div className="divide-y divide-white/5">
           {DAILY_STATS.map((day) => (
-            <div key={day.date} className="grid grid-cols-4 gap-4 px-6 py-3 hover:bg-white/3 transition-colors">
+            <div key={day.date} className="grid grid-cols-4 gap-4 px-4 sm:px-6 py-3 hover:bg-white/3 transition-colors">
               <div className="text-white text-sm">{day.date}</div>
               <div className="text-center text-[#A1A1AA] text-sm">{day.trips}</div>
               <div className="text-center text-[#A1A1AA] text-sm">{day.passengers}</div>
