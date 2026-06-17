@@ -43,7 +43,7 @@ interface AuthContextValue {
   isDriver: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, phone: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -174,9 +174,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
 
-    if (error) return { error: error.message };
+    if (error) return { error: error.message, needsConfirmation: false };
 
-    // Create customer record linked to the new user
+    // Create customer record linked to the new user. A failure here is logged
+    // but not fatal: the auth account exists, and the profile row can be created
+    // on first sign-in via refreshProfile, so we never block account creation.
     if (data.user) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: customerError } = await (supabase as any).from("customers").insert({
@@ -187,10 +189,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone,
         is_military: false,
       });
-      if (customerError) return { error: "Account created but profile setup failed. Please contact support." };
+      if (customerError) {
+        console.error("[signUp] customer profile insert failed:", customerError.message);
+      }
     }
 
-    return { error: null };
+    // If Supabase returned a session, email confirmation is disabled and the
+    // user is already signed in. Otherwise they must confirm their email first.
+    return { error: null, needsConfirmation: !data.session };
   };
 
   const signOut = async () => {
