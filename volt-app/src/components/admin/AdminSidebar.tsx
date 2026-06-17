@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Shield,
   Bus,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -39,7 +40,15 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/employees",   label: "Employees",     icon: UserCog,         roles: ["owner"] },
 ];
 
-export default function AdminSidebar({ previewMode = false }: { previewMode?: boolean }) {
+export default function AdminSidebar({
+  previewMode = false,
+  mobileOpen = false,
+  onClose,
+}: {
+  previewMode?: boolean;
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { employee, signOut } = useAuth();
@@ -60,7 +69,21 @@ export default function AdminSidebar({ previewMode = false }: { previewMode?: bo
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0F0F0F] border-r border-white/6 flex flex-col z-40">
+    <>
+      {/* Mobile backdrop */}
+      <div
+        onClick={onClose}
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-300 ${
+          mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={`fixed left-0 top-0 h-screen w-64 bg-[#0F0F0F] border-r border-white/6 flex flex-col z-50 transition-transform duration-300 lg:translate-x-0 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-6 h-16 border-b border-white/6">
         <div className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
@@ -70,6 +93,14 @@ export default function AdminSidebar({ previewMode = false }: { previewMode?: bo
           <div className="text-white font-semibold text-sm leading-tight">Volt</div>
           <div className="text-[#A1A1AA] text-xs">Operations</div>
         </div>
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="ml-auto lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-[#A1A1AA] hover:text-white hover:bg-white/5 transition-colors"
+          aria-label="Close menu"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Role badge */}
@@ -100,6 +131,7 @@ export default function AdminSidebar({ previewMode = false }: { previewMode?: bo
               <li key={item.href}>
                 <Link
                   href={linkHref}
+                  onClick={onClose}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
                     isActive
                       ? "bg-[#7C3AED] text-white"
@@ -125,6 +157,7 @@ export default function AdminSidebar({ previewMode = false }: { previewMode?: bo
       <div className="px-3 pb-4 space-y-1 border-t border-white/6 pt-3">
         <Link
           href="/"
+          onClick={onClose}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#A1A1AA] hover:text-white hover:bg-white/5 transition-all"
         >
           <Users className="w-4 h-4" />
@@ -138,6 +171,7 @@ export default function AdminSidebar({ previewMode = false }: { previewMode?: bo
           Sign Out
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

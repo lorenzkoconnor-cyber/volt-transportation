@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Menu, Zap } from "lucide-react";
 
 // Dev preview mode — lets you see the dashboard without Supabase connected.
 // Access via: /admin?preview=true
@@ -17,12 +17,21 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const params = useSearchParams();
   const isPreview = DEV_PREVIEW_ENABLED && params.get("preview") === "true";
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!isPreview && !loading && !isEmployee) {
       router.replace("/emp-login");
     }
   }, [isEmployee, loading, router, isPreview]);
+
+  // Prevent background scroll while the mobile sidebar is open.
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
 
   if (!isPreview && loading) {
     return (
@@ -39,8 +48,29 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[#0A0A0A]">
-      <AdminSidebar previewMode={isPreview} />
-      <main className="flex-1 ml-64 min-h-screen">
+      <AdminSidebar
+        previewMode={isPreview}
+        mobileOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+      <main className="flex-1 min-h-screen lg:ml-64">
+        {/* Mobile top bar with hamburger toggle */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 bg-[#0F0F0F]/95 backdrop-blur-xl border-b border-white/6">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="w-9 h-9 -ml-1 flex items-center justify-center rounded-lg text-white hover:bg-white/5 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#7C3AED] flex items-center justify-center">
+              <Zap className="w-3.5 h-3.5 text-white" fill="white" />
+            </div>
+            <span className="text-white font-semibold text-sm">Volt Operations</span>
+          </div>
+        </div>
+
         {/* Dev preview banner */}
         {isPreview && (
           <div className="flex items-center gap-2 bg-yellow-500/10 border-b border-yellow-500/20 px-6 py-2.5">
@@ -51,7 +81,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </p>
           </div>
         )}
-        <div className="p-6 lg:p-8 max-w-7xl">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
           {children}
         </div>
       </main>
