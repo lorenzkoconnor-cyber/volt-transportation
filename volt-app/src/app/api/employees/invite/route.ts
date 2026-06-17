@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseUrl } from "@/lib/supabase/url";
 
 function adminClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );

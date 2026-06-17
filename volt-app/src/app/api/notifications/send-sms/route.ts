@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseUrl } from "@/lib/supabase/url";
 
 // POST /api/notifications/send-sms
 // Body: { type, reservationId, ...templateParams }
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Log to notifications table if reservationId provided
     if (reservationId && result.success) {
       const supabase = createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        getSupabaseUrl(),
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );

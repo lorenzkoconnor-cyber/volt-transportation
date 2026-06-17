@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseUrl } from "@/lib/supabase/url";
 
 // Use raw supabase client to avoid TS inference issues during Supabase setup phase
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createAdminClient(): any {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );

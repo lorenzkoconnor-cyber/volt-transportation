@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseUrl, SUPABASE_ANON_KEY } from "@/lib/supabase/url";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createClient(): Promise<any> {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    getSupabaseUrl(),
+    SUPABASE_ANON_KEY
   );
 }
 

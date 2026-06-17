@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripeServer } from "@/lib/stripe/server";
 import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
 import { createClient } from "@supabase/supabase-js";
+import { getSupabaseUrl } from "@/lib/supabase/url";
 
 // POST /api/payments/webhook
 // Stripe sends events here after payment success, failure, refund, etc.
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
