@@ -60,6 +60,14 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-[#0A0A0A] text-white antialiased">
+        {/* Failsafe: reveal any scroll-reveal sections that haven't been shown
+            (e.g. if hydration is delayed or an observer never fires) so the
+            page can never be left permanently blank. Runs outside React. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `setTimeout(function(){document.querySelectorAll('.sr-init:not(.sr-visible)').forEach(function(el){el.classList.add('sr-visible')})},2500);`,
+          }}
+        />
         <CursorEffect />
         <AuthProvider>{children}</AuthProvider>
       </body>
