@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Zap, Eye, EyeOff, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,12 @@ export default function EmpLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // If already logged in as employee, redirect to dashboard
-  if (!authLoading && isEmployee && employee) {
-    router.replace("/admin");
-    return null;
-  }
+  // Redirect once employee profile is confirmed loaded
+  useEffect(() => {
+    if (!authLoading && isEmployee && employee) {
+      router.replace("/admin");
+    }
+  }, [authLoading, isEmployee, employee, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,12 +38,8 @@ export default function EmpLoginPage() {
       return;
     }
 
-    // Re-check role after sign in
-    // The AuthContext will update employee state — redirect on next render
-    // We'll add a small delay to let the context update
-    setTimeout(() => {
-      router.replace("/admin");
-    }, 500);
+    // AuthContext onAuthStateChange will update employee state — redirect handled by the
+    // useEffect below once isEmployee becomes true
     setLoading(false);
   };
 

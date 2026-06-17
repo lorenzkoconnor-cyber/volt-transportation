@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone,
         is_military: false,
       });
-      if (customerError) console.error("Customer insert error:", customerError);
+      if (customerError) return { error: "Account created but profile setup failed. Please contact support." };
     }
 
     return { error: null };
