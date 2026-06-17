@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Shield, Plus, Mail, Phone, CheckCircle2, XCircle,
-  Crown, X, Loader2, Send,
+  Crown, X, Loader2, UserPlus, Eye, EyeOff, KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,15 +40,25 @@ function EmployeesContent() {
   const [loading, setLoading]     = useState(true);
   const [showModal, setShowModal] = useState(false);
 
-  // Invite form state
+  // Add employee form state
   const [inviteEmail, setInviteEmail]         = useState("");
   const [inviteFirst, setInviteFirst]         = useState("");
   const [inviteLast, setInviteLast]           = useState("");
   const [invitePhone, setInvitePhone]         = useState("");
   const [inviteRole, setInviteRole]           = useState("driver");
+  const [invitePassword, setInvitePassword]   = useState("");
+  const [showPassword, setShowPassword]       = useState(false);
   const [inviteLoading, setInviteLoading]     = useState(false);
   const [inviteError, setInviteError]         = useState("");
   const [inviteSuccess, setInviteSuccess]     = useState("");
+
+  // Reset password modal state
+  const [resetTarget, setResetTarget]         = useState<Employee | null>(null);
+  const [resetPassword, setResetPassword]     = useState("");
+  const [showResetPw, setShowResetPw]         = useState(false);
+  const [resetLoading, setResetLoading]       = useState(false);
+  const [resetError, setResetError]           = useState("");
+  const [resetSuccess, setResetSuccess]       = useState("");
 
   const supabase = createClient();
 
@@ -86,19 +96,43 @@ function EmployeesContent() {
         lastName: inviteLast,
         phone: invitePhone,
         role: inviteRole,
+        password: invitePassword,
       }),
     });
 
     const data = await res.json();
     if (!res.ok) {
-      setInviteError(data.error ?? "Failed to send invite");
+      setInviteError(data.error ?? "Failed to create account");
     } else {
-      setInviteSuccess(`Invite sent to ${inviteEmail}. They'll receive an email to set their password.`);
+      setInviteSuccess(`Account created for ${inviteFirst} ${inviteLast}. They can sign in at /emp-login right away.`);
       setInviteEmail(""); setInviteFirst(""); setInviteLast("");
-      setInvitePhone(""); setInviteRole("driver");
+      setInvitePhone(""); setInviteRole("driver"); setInvitePassword("");
       fetchEmployees();
     }
     setInviteLoading(false);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    setResetLoading(true);
+    setResetError("");
+    setResetSuccess("");
+
+    const res = await fetch("/api/employees/invite", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: resetTarget.user_id, newPassword: resetPassword }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setResetError(data.error ?? "Failed to reset password");
+    } else {
+      setResetSuccess(`Password updated for ${resetTarget.first_name}.`);
+      setResetPassword("");
+    }
+    setResetLoading(false);
   };
 
   const toggleActive = async (emp: Employee) => {
@@ -238,7 +272,14 @@ function EmployeesContent() {
                       }
                     </span>
                   </div>
-                  <div className="col-span-2 flex justify-end">
+                  <div className="col-span-2 flex justify-end gap-3">
+                    <button
+                      onClick={() => { setResetTarget(emp); setResetPassword(""); setResetError(""); setResetSuccess(""); }}
+                      className="text-xs text-[#A1A1AA] hover:text-[#7C3AED] transition-colors"
+                      title="Reset password"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                    </button>
                     {emp.role !== "owner" && (
                       <button
                         onClick={() => toggleActive(emp)}
@@ -261,13 +302,13 @@ function EmployeesContent() {
 
       {/* How it works note */}
       <div className="glass rounded-xl p-4 flex items-start gap-3">
-        <Send className="w-4 h-4 text-[#7C3AED] flex-shrink-0 mt-0.5" />
+        <UserPlus className="w-4 h-4 text-[#7C3AED] flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-white text-sm font-medium">How employee accounts work</p>
           <p className="text-[#A1A1AA] text-xs mt-0.5">
-            When you add an employee, they receive an email invite with a link to set their own password.
-            They then sign in at <span className="text-[#7C3AED]">/emp-login</span> and see only what their role allows.
-            You can change their role or deactivate them at any time from this page.
+            You create each employee&apos;s account directly with a starting password — no email required.
+            They sign in immediately at <span className="text-[#7C3AED]">/emp-login</span> and see only what their role allows.
+            Use the key icon (<KeyRound className="w-3 h-3 inline" />) next to any employee to reset their password at any time.
           </p>
         </div>
       </div>
@@ -280,7 +321,7 @@ function EmployeesContent() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-white font-bold text-lg">Add Employee</h2>
-                <p className="text-[#A1A1AA] text-xs mt-0.5">They&apos;ll receive an email invite to set their password.</p>
+                <p className="text-[#A1A1AA] text-xs mt-0.5">Create their account — they can sign in immediately.</p>
               </div>
               <button onClick={() => setShowModal(false)} className="text-[#A1A1AA] hover:text-white transition-colors">
                 <X className="w-5 h-5" />
@@ -290,22 +331,15 @@ function EmployeesContent() {
             {inviteSuccess ? (
               <div className="text-center py-6">
                 <div className="w-14 h-14 rounded-full bg-[#7C3AED]/15 flex items-center justify-center mx-auto mb-4">
-                  <Send className="w-7 h-7 text-[#7C3AED]" />
+                  <UserPlus className="w-7 h-7 text-[#7C3AED]" />
                 </div>
-                <p className="text-white font-semibold mb-2">Invite Sent!</p>
+                <p className="text-white font-semibold mb-2">Account Created!</p>
                 <p className="text-[#A1A1AA] text-sm">{inviteSuccess}</p>
                 <div className="flex gap-3 mt-5">
-                  <Button
-                    onClick={() => { setInviteSuccess(""); }}
-                    variant="outline"
-                    className="flex-1 border-white/15 text-white hover:bg-white/5"
-                  >
+                  <Button onClick={() => setInviteSuccess("")} variant="outline" className="flex-1 border-white/15 text-white hover:bg-white/5">
                     Add Another
                   </Button>
-                  <Button
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 bg-[#7C3AED] hover:bg-[#9D5FF5] text-white"
-                  >
+                  <Button onClick={() => setShowModal(false)} className="flex-1 bg-[#7C3AED] hover:bg-[#9D5FF5] text-white">
                     Done
                   </Button>
                 </div>
@@ -336,15 +370,26 @@ function EmployeesContent() {
                 </div>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Role *</Label>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value)}
-                    className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]"
-                  >
+                  <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}
+                    className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]">
                     <option value="manager">Manager — full access except owner settings</option>
                     <option value="office_staff">Office Staff — bookings, check-in, payments</option>
                     <option value="driver">Driver — assigned trips and manifest only</option>
                   </select>
+                </div>
+                <div>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Starting Password *</Label>
+                  <div className="relative">
+                    <Input required type={showPassword ? "text" : "password"} value={invitePassword}
+                      onChange={(e) => setInvitePassword(e.target.value)}
+                      placeholder="Min. 8 characters"
+                      minLength={8}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED] pr-10" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A1AA] hover:text-white transition-colors">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 {inviteError && (
@@ -354,8 +399,60 @@ function EmployeesContent() {
                 <Button type="submit" disabled={inviteLoading}
                   className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
                   {inviteLoading
-                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending invite…</>
-                    : <><Send className="w-4 h-4 mr-2" />Send Invite Email</>
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating account…</>
+                    : <><UserPlus className="w-4 h-4 mr-2" />Create Account</>
+                  }
+                </Button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { setResetTarget(null); setResetSuccess(""); setResetError(""); }} />
+          <div className="relative w-full max-w-sm glass rounded-2xl p-7 border border-white/10 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-white font-bold text-lg">Reset Password</h2>
+                <p className="text-[#A1A1AA] text-xs mt-0.5">{resetTarget.first_name} {resetTarget.last_name}</p>
+              </div>
+              <button onClick={() => { setResetTarget(null); setResetSuccess(""); setResetError(""); }} className="text-[#A1A1AA] hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {resetSuccess ? (
+              <div className="text-center py-4">
+                <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-3" />
+                <p className="text-white font-semibold mb-1">Password Updated</p>
+                <p className="text-[#A1A1AA] text-sm mb-5">{resetSuccess}</p>
+                <Button onClick={() => { setResetTarget(null); setResetSuccess(""); }} className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white w-full">Done</Button>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">New Password *</Label>
+                  <div className="relative">
+                    <Input required type={showResetPw ? "text" : "password"} value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      placeholder="Min. 8 characters"
+                      minLength={8}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED] pr-10" />
+                    <button type="button" onClick={() => setShowResetPw(!showResetPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A1AA] hover:text-white transition-colors">
+                      {showResetPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                {resetError && <p className="text-red-400 text-xs bg-red-500/10 rounded-lg px-3 py-2">{resetError}</p>}
+                <Button type="submit" disabled={resetLoading}
+                  className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
+                  {resetLoading
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Updating…</>
+                    : <><KeyRound className="w-4 h-4 mr-2" />Set New Password</>
                   }
                 </Button>
               </form>

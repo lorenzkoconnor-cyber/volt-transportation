@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 
 const navLinks = [
   { href: "/",           label: "Home" },
@@ -16,6 +18,14 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const { user, customer, signOut } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setOpen(false);
+    router.push("/");
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -60,13 +70,32 @@ export default function Navbar() {
 
           {/* Desktop right CTAs */}
           <div className="hidden lg:flex items-center gap-4">
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 text-[#C0C0C0] hover:text-white text-sm font-medium transition-colors"
-            >
-              <User className="w-4 h-4" />
-              Log In / Sign Up
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/portal"
+                  className="flex items-center gap-1.5 text-[#C0C0C0] hover:text-white text-sm font-medium transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  {customer?.firstName ?? "My Account"}
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-1.5 text-[#C0C0C0] hover:text-white text-sm font-medium transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 text-[#C0C0C0] hover:text-white text-sm font-medium transition-colors"
+              >
+                <User className="w-4 h-4" />
+                Log In / Sign Up
+              </Link>
+            )}
             <Link href="/book">
               <Button
                 size="sm"
@@ -102,11 +131,29 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="pt-3 pb-1 border-t border-white/8 mt-2 space-y-2">
-              <Link href="/login" onClick={() => setOpen(false)}>
-                <button className="w-full text-left px-3 py-3 text-[#C0C0C0] hover:text-white text-sm font-medium">
-                  Log In / Sign Up
-                </button>
-              </Link>
+              {user ? (
+                <>
+                  <Link href="/portal" onClick={() => setOpen(false)}>
+                    <button className="w-full text-left px-3 py-3 text-[#C0C0C0] hover:text-white text-sm font-medium flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      {customer?.firstName ?? "My Account"}
+                    </button>
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-3 py-3 text-[#C0C0C0] hover:text-white text-sm font-medium flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <Link href="/login" onClick={() => setOpen(false)}>
+                  <button className="w-full text-left px-3 py-3 text-[#C0C0C0] hover:text-white text-sm font-medium">
+                    Log In / Sign Up
+                  </button>
+                </Link>
+              )}
               <Link href="/book" onClick={() => setOpen(false)}>
                 <Button className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-bold">
                   Book Now
