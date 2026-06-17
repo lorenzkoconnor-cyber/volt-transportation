@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setLoading(false);
       }
-    });
+    }).catch(() => setLoading(false));
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -170,7 +170,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
         data: { first_name: firstName, last_name: lastName },
       },
     });
