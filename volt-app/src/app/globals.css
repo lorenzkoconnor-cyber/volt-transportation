@@ -176,6 +176,15 @@
   transform: none !important;
 }
 
+/* On small screens the horizontal reveals would push full-width cards past
+   the viewport edge (≈28px), causing a horizontal scroll/jitter. Reveal from
+   the bottom only on mobile and keep the offset small. */
+@media (max-width: 640px) {
+  .sr-up,
+  .sr-left,
+  .sr-right { transform: translateY(24px); }
+}
+
 /* Respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
   .sr-init { opacity: 1; transform: none; transition: none; }
