@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -47,13 +48,16 @@ export default function AboutPage() {
         {/* Mission */}
         <section className="py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Placeholder vehicle image */}
-            <div className="relative rounded-2xl overflow-hidden bg-[#171717] aspect-video flex items-center justify-center glass">
-              <div className="text-center">
-                <Zap className="w-16 h-16 text-[#7C3AED]/30 mx-auto mb-3" />
-                <p className="text-[#A1A1AA] text-sm">Vehicle photo coming soon</p>
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/60 to-transparent" />
+            {/* Volt headquarters */}
+            <div className="relative rounded-2xl overflow-hidden bg-[#171717] aspect-video glass">
+              <Image
+                src="/images/volt-business-exterior-building.png"
+                alt="Volt Transportation headquarters building in Columbus, Georgia"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/60 to-transparent pointer-events-none" />
             </div>
             <div>
               <h2 className="text-3xl font-bold text-white mb-5">Our Mission</h2>
@@ -121,18 +125,25 @@ export default function AboutPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A]">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-white mb-4">Our Fleet</h2>
+              <h2 className="text-3xl font-bold text-white mb-4">The Volt Way</h2>
               <p className="text-[#A1A1AA]">Black Mercedes Sprinter vans — the gold standard in group transportation.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {["Exterior", "Interior", "Airport Pickup"].map((label) => (
-                <div key={label} className="glass rounded-2xl aspect-video flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-12 h-12 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mx-auto mb-3">
-                      <Zap className="w-6 h-6 text-[#7C3AED]" />
-                    </div>
-                    <p className="text-[#A1A1AA] text-sm">{label} photo coming soon</p>
-                  </div>
+              {[
+                { label: "Luxury Interior", src: "/images/van-luxury-interior.png", alt: "Plush leather interior of a Volt black Mercedes Sprinter van" },
+                { label: "Luggage Capacity", src: "/images/van-luggage-capacity.png", alt: "Spacious luggage area of a Volt Mercedes Sprinter van" },
+                { label: "Airport Pickup", src: "/images/chauffeur-passenger-boarding.png", alt: "A Volt chauffeur assisting a passenger boarding the shuttle" },
+              ].map((item) => (
+                <div key={item.label} className="glass rounded-2xl overflow-hidden relative aspect-video group">
+                  <Image
+                    src={item.src}
+                    alt={item.alt}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/80 via-transparent to-transparent pointer-events-none" />
+                  <span className="absolute bottom-4 left-4 text-white text-sm font-semibold">{item.label}</span>
                 </div>
               ))}
             </div>

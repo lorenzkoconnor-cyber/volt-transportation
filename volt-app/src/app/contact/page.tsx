@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,18 @@ export default function ContactPage() {
           <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Contact info */}
             <div className="space-y-5">
+              <div className="glass rounded-2xl overflow-hidden relative aspect-[4/3]">
+                <Image
+                  src="/images/volt-business-interior-building.png"
+                  alt="Inside the Volt Transportation office in Columbus, Georgia"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 33vw"
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/80 via-transparent to-transparent pointer-events-none" />
+                <span className="absolute bottom-4 left-5 text-white text-sm font-semibold">Our Columbus Office</span>
+              </div>
+
               <div className="glass rounded-2xl p-6">
                 <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mb-4">
                   <Phone className="w-5 h-5 text-[#7C3AED]" />
