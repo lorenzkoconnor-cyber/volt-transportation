@@ -5,10 +5,15 @@ import { ArrowRight } from "lucide-react";
 
 export default function MobileBookCTA() {
   const [visible, setVisible] = useState(false);
+  const [atBottom, setAtBottom] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
       setVisible(window.scrollY > window.innerHeight * 0.65);
+      setAtBottom(
+        window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 24
+      );
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -16,7 +21,9 @@ export default function MobileBookCTA() {
 
   return (
     <div
-      className={`fixed bottom-5 left-4 right-4 z-50 md:hidden transition-all duration-500 ease-out ${
+      className={`fixed left-4 right-4 z-40 md:hidden transition-all duration-500 ease-out ${
+        atBottom ? "top-20" : "bottom-5"
+      } ${
         visible
           ? "translate-y-0 opacity-100"
           : "translate-y-20 opacity-0 pointer-events-none"
