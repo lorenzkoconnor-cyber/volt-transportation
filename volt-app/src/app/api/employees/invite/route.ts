@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    // 1. Create auth user with password set immediately — no email flow needed
+    // 1. Create the auth user with a password set immediately (no email flow).
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email,
       password,
@@ -65,13 +65,65 @@ export async function POST(request: NextRequest) {
       user_metadata: { first_name: firstName, last_name: lastName },
     });
 
+    let userId: string;
+    let linkedExisting = false;
+
     if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 400 });
+      // The email may already belong to a Volt account (e.g. the person signed
+      // up as a customer first). Rather than fail, link that existing account.
+      const alreadyRegistered = /already been registered|already exists|already registered/i.test(authError.message);
+      if (!alreadyRegistered) {
+        return NextResponse.json({ error: authError.message }, { status: 400 });
+      }
+
+      // Find the existing auth user id — check the customers table first
+      // (indexed), then fall back to scanning the auth user list.
+      let existingUserId: string | null = null;
+      const { data: custRow } = await admin
+        .from("customers")
+        .select("user_id")
+        .eq("email", email)
+        .not("user_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+      if (custRow?.user_id) {
+        existingUserId = custRow.user_id;
+      } else {
+        const { data: list } = await admin.auth.admin.listUsers({ perPage: 1000 });
+        const match = list?.users?.find((u: { id: string; email?: string }) => u.email?.toLowerCase() === email.toLowerCase());
+        existingUserId = match?.id ?? null;
+      }
+
+      if (!existingUserId) {
+        return NextResponse.json(
+          { error: "That email is already registered but the account couldn't be located. Contact support." },
+          { status: 409 }
+        );
+      }
+
+      // Already a staff member?
+      const { data: existingEmp } = await admin
+        .from("employees")
+        .select("id, role")
+        .eq("user_id", existingUserId)
+        .maybeSingle();
+      if (existingEmp) {
+        return NextResponse.json(
+          { error: `That email is already a staff member (${existingEmp.role}). Change their role from the list instead.` },
+          { status: 400 }
+        );
+      }
+
+      // Set the password the owner just entered so the new staff member can
+      // sign in with it, and adopt them as an employee.
+      await admin.auth.admin.updateUserById(existingUserId, { password });
+      userId = existingUserId;
+      linkedExisting = true;
+    } else {
+      userId = authData!.user.id;
     }
 
-    const userId = authData.user.id;
-
-    // 2. Create employee record
+    // 2. Create the employee record.
     const { data: employee, error: empError } = await admin
       .from("employees")
       .insert({
@@ -87,8 +139,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (empError) {
-      // Clean up the auth user if employee record fails
-      await admin.auth.admin.deleteUser(userId);
+      // Clean up the auth user only if WE created it in this request.
+      if (!linkedExisting) await admin.auth.admin.deleteUser(userId);
       return NextResponse.json({ error: empError.message }, { status: 500 });
     }
 
@@ -96,13 +148,13 @@ export async function POST(request: NextRequest) {
     await admin.from("audit_logs").insert({
       actor_id: auth.owner.id,
       actor_role: "owner",
-      action: "employee.created",
+      action: linkedExisting ? "employee.linked_existing" : "employee.created",
       table_name: "employees",
       record_id: employee.id,
-      new_data: { email, role, first_name: firstName, last_name: lastName },
+      new_data: { email, role, first_name: firstName, last_name: lastName, linked_existing: linkedExisting },
     });
 
-    return NextResponse.json({ success: true, employee });
+    return NextResponse.json({ success: true, employee, linkedExisting });
   } catch (err) {
     console.error("[employees/create]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

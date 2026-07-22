@@ -104,7 +104,9 @@ function EmployeesContent() {
     if (!res.ok) {
       setInviteError(data.error ?? "Failed to create account");
     } else {
-      setInviteSuccess(`Account created for ${inviteFirst} ${inviteLast}. They can sign in at /emp-login right away.`);
+      setInviteSuccess(data.linkedExisting
+        ? `${inviteFirst} ${inviteLast} already had a Volt account (from booking a ride), so we gave that account ${inviteRole} access and set the password you entered. They sign in at /emp-login.`
+        : `Account created for ${inviteFirst} ${inviteLast}. They can sign in at /emp-login right away.`);
       setInviteEmail(""); setInviteFirst(""); setInviteLast("");
       setInvitePhone(""); setInviteRole("driver"); setInvitePassword("");
       fetchEmployees();
