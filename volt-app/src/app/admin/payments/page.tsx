@@ -238,6 +238,19 @@ export default function PaymentsPage() {
                   This was a {refundTarget.method} payment — hand the refund to the customer directly. This records it in the books.
                 </p>
               )}
+              {(() => {
+                const cents = Math.round(parseFloat(refundAmount || "0") * 100);
+                const isFull = cents >= (refundTarget.amount_cents - refundTarget.refund_amount_cents);
+                return isFull ? (
+                  <p className="text-yellow-400/90 text-xs bg-yellow-500/10 rounded-lg px-3 py-2">
+                    This is a full refund — it will <span className="font-semibold">cancel the reservation</span> and release the seat(s) back to the trip.
+                  </p>
+                ) : (
+                  <p className="text-[#A1A1AA] text-xs">
+                    Partial refund — the reservation stays active and seats are kept.
+                  </p>
+                );
+              })()}
               {refundError && (
                 <p className="text-red-400 text-xs bg-red-500/10 rounded-lg px-3 py-2">{refundError}</p>
               )}

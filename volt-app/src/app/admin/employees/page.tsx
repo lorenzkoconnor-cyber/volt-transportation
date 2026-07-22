@@ -372,10 +372,16 @@ function EmployeesContent() {
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Role *</Label>
                   <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}
                     className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]">
+                    <option value="owner">Owner — full access, including employee management</option>
                     <option value="manager">Manager — full access except owner settings</option>
                     <option value="office_staff">Office Staff — bookings, check-in, payments</option>
                     <option value="driver">Driver — assigned trips and manifest only</option>
                   </select>
+                  {inviteRole === "owner" && (
+                    <p className="text-yellow-400/90 text-xs mt-1.5">
+                      Owners have full control, including creating and removing other employees. Only add someone you fully trust.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Starting Password *</Label>

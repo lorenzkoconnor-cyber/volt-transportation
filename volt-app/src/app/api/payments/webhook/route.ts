@@ -91,9 +91,14 @@ export async function POST(request: NextRequest) {
       }
 
       // ── Refund issued ──────────────────────────────────────────────────────
+      // Fires for refunds initiated either from our dashboard (/api/payments/
+      // refund) or directly in the Stripe dashboard. A FULL refund cancels the
+      // reservation and frees its seats; the guarded update below frees seats
+      // exactly once even when the refund route already handled it.
       case "charge.refunded": {
         const charge = event.data.object;
         const refundAmount = charge.amount_refunded;
+        const isFullRefund = charge.amount_refunded >= charge.amount;
 
         const { data: payment } = await supabase
           .from("payments")
@@ -105,26 +110,37 @@ export async function POST(request: NextRequest) {
           await supabase
             .from("payments")
             .update({
-              status: "refunded",
+              status: isFullRefund ? "refunded" : "paid",
               refund_amount_cents: refundAmount,
               refunded_at: new Date().toISOString(),
             })
             .eq("id", payment.id);
 
-          // Update reservation status to cancelled
-          await supabase
-            .from("reservations")
-            .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-            .eq("id", payment.reservation_id);
+          if (isFullRefund && payment.reservation_id) {
+            const { data: cancelled } = await supabase
+              .from("reservations")
+              .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+              .eq("id", payment.reservation_id)
+              .neq("status", "cancelled")
+              .select("trip_id, return_trip_id, adults, children");
 
-          // Audit log
+            if (cancelled && cancelled.length > 0) {
+              const r = cancelled[0];
+              const seats = (r.adults ?? 0) + (r.children ?? 0);
+              await supabase.rpc("decrement_seats_booked", { p_trip_id: r.trip_id, p_count: seats });
+              if (r.return_trip_id) {
+                await supabase.rpc("decrement_seats_booked", { p_trip_id: r.return_trip_id, p_count: seats });
+              }
+            }
+          }
+
           await supabase.from("audit_logs").insert({
             actor_id: "stripe_webhook",
             actor_role: "system",
             action: "payment.refunded",
             table_name: "payments",
             record_id: payment.id,
-            new_data: { refund_amount_cents: refundAmount },
+            new_data: { refund_amount_cents: refundAmount, full_refund: isFullRefund },
           });
         }
         break;

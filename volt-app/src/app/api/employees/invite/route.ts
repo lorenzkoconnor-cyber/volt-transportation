@@ -50,7 +50,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
-    const validRoles = ["manager", "office_staff", "driver"];
+    // "owner" is allowed here because this route is already owner-guarded
+    // (requireOwner above) — only an existing owner can create another owner.
+    const validRoles = ["owner", "manager", "office_staff", "driver"];
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }

@@ -78,10 +78,11 @@ export async function POST(request: NextRequest) {
     }
 
     const totalRefunded = payment.refund_amount_cents + refundCents;
+    const isFullRefund = totalRefunded >= payment.amount_cents;
     const { error: updErr } = await admin
       .from("payments")
       .update({
-        status: totalRefunded >= payment.amount_cents ? "refunded" : payment.status,
+        status: isFullRefund ? "refunded" : payment.status,
         refund_amount_cents: totalRefunded,
         refunded_at: new Date().toISOString(),
         refunded_by_employee_id: employee.id,
@@ -91,16 +92,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: updErr.message }, { status: 500 });
     }
 
+    // A FULL refund cancels the reservation and frees its seats. Partial refunds
+    // leave the booking active (price adjustment / add-on refund).
+    let reservationCancelled = false;
+    if (isFullRefund && payment.reservation_id) {
+      // Flip to cancelled only if it isn't already — the returned rows tell us
+      // whether WE performed the cancellation, so seats are freed exactly once
+      // even if Stripe's charge.refunded webhook runs the same logic.
+      const { data: cancelled } = await admin
+        .from("reservations")
+        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+        .eq("id", payment.reservation_id)
+        .neq("status", "cancelled")
+        .select("trip_id, return_trip_id, adults, children");
+
+      if (cancelled && cancelled.length > 0) {
+        reservationCancelled = true;
+        const r = cancelled[0];
+        const seats = (r.adults ?? 0) + (r.children ?? 0);
+        await admin.rpc("decrement_seats_booked", { p_trip_id: r.trip_id, p_count: seats });
+        if (r.return_trip_id) {
+          await admin.rpc("decrement_seats_booked", { p_trip_id: r.return_trip_id, p_count: seats });
+        }
+      }
+    }
+
     await admin.from("audit_logs").insert({
       actor_id: user.id,
       actor_role: employee.role,
       action: "payment.refunded",
       table_name: "payments",
       record_id: paymentId,
-      new_data: { refund_cents: refundCents, stripe: !!isRealStripeCharge },
+      new_data: {
+        refund_cents: refundCents,
+        stripe: !!isRealStripeCharge,
+        full_refund: isFullRefund,
+        reservation_cancelled: reservationCancelled,
+      },
     });
 
-    return NextResponse.json({ success: true, refundedCents: refundCents });
+    return NextResponse.json({
+      success: true,
+      refundedCents: refundCents,
+      fullRefund: isFullRefund,
+      reservationCancelled,
+    });
   } catch (err) {
     console.error("[payments/refund]", err);
     const message = err instanceof Error ? err.message : "Refund failed";
