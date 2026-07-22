@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { formatTime12h, localDateString } from "@/lib/format";
 import {
   Users, Truck, Clock, ChevronRight, CheckCircle2, AlertTriangle,
@@ -25,8 +26,11 @@ const STATUS_MAP: Record<string, { label: string; class: string }> = {
 export default function DispatchPage() {
   const supabase = createClient();
   const sb = supabase as any;
+  const { isOwner } = useAuth();
 
   const [date, setDate] = useState(localDateString());
+  const [deleteTrip, setDeleteTrip] = useState<any>(null);
+  const [deleteError, setDeleteError] = useState("");
   const [trips, setTrips] = useState<any[]>([]);
   const [routes, setRoutes] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -133,6 +137,28 @@ export default function DispatchPage() {
     if (err) setEditError(err.message);
     else { setEditTrip(null); await load(); }
     setBusy(false);
+  };
+
+  const confirmDeleteTrip = async () => {
+    if (!deleteTrip) return;
+    setBusy(true);
+    setDeleteError("");
+    // reservations.trip_id -> trips is ON DELETE RESTRICT, so a departure with
+    // bookings can't be deleted. trip_vehicles cascade away automatically.
+    const { error: err } = await sb.from("trips").delete().eq("id", deleteTrip.id);
+    if (err) {
+      const hasBookings = err.message.includes("foreign key") || err.code === "23503";
+      setDeleteError(hasBookings
+        ? "This departure has bookings. Cancel or move those reservations first, then delete it."
+        : err.message.includes("row-level security")
+        ? "Only the owner can delete departures."
+        : err.message);
+      setBusy(false);
+      return;
+    }
+    setDeleteTrip(null);
+    setBusy(false);
+    await load();
   };
 
   const assignVehicle = async (e: React.FormEvent) => {
@@ -265,6 +291,17 @@ export default function DispatchPage() {
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
+                    {/* Delete trip (owner only) */}
+                    {isOwner && (
+                      <button
+                        onClick={() => { setDeleteTrip(dep); setDeleteError(""); }}
+                        disabled={busy}
+                        title="Delete departure"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-[#A1A1AA] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {/* Status selector */}
                     <select
                       value={dep.status}
@@ -442,6 +479,46 @@ export default function DispatchPage() {
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
               </Button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Trip confirmation modal */}
+      {deleteTrip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDeleteTrip(null)} />
+          <div className="relative w-full max-w-sm glass rounded-2xl p-7 border border-white/10 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white font-bold text-lg">Delete Departure</h2>
+              <button onClick={() => setDeleteTrip(null)} className="text-[#A1A1AA] hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-[#A1A1AA] text-sm mb-2">
+              Delete the <span className="text-white font-medium">{formatTime12h(deleteTrip.departure_time)}</span>{" "}
+              {deleteTrip.route?.name} departure on {date}?
+            </p>
+            {deleteTrip.seats_booked > 0 ? (
+              <p className="text-yellow-400/90 text-xs bg-yellow-500/10 rounded-lg px-3 py-2 mb-4">
+                This departure has {deleteTrip.seats_booked} booked seat{deleteTrip.seats_booked !== 1 ? "s" : ""}.
+                You&apos;ll need to cancel those reservations first — deletion will be blocked otherwise.
+              </p>
+            ) : (
+              <p className="text-[#A1A1AA] text-xs mb-4">This can&apos;t be undone.</p>
+            )}
+            {deleteError && (
+              <p className="text-red-400 text-xs bg-red-500/10 rounded-lg px-3 py-2 mb-4">{deleteError}</p>
+            )}
+            <div className="flex gap-2">
+              <Button disabled={busy} onClick={confirmDeleteTrip}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold h-10 rounded-lg text-sm">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1.5" />Delete Departure</>}
+              </Button>
+              <Button variant="outline" onClick={() => setDeleteTrip(null)}
+                className="flex-1 border-white/15 text-white hover:bg-white/5 h-10 rounded-lg text-sm">
+                Cancel
+              </Button>
+            </div>
           </div>
         </div>
       )}

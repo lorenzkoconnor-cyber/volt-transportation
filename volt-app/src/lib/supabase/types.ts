@@ -96,7 +96,7 @@ export interface Database {
           last_name: string;
           phone: string;
           email: string | null;
-          license_number: string;
+          license_number: string | null;   // optional — drivers rotate vehicles per-trip
           is_active: boolean;
           notes: string | null;
           created_at: string;

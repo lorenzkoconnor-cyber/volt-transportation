@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { localDateString } from "@/lib/format";
-import { Plus, Phone, Mail, CheckCircle2, XCircle, X, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Phone, Mail, CheckCircle2, XCircle, X, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,17 +17,17 @@ interface DriverForm {
   last_name: string;
   phone: string;
   email: string;
-  license_number: string;
   is_active: boolean;
 }
 
 const EMPTY_FORM: DriverForm = {
-  first_name: "", last_name: "", phone: "", email: "", license_number: "", is_active: true,
+  first_name: "", last_name: "", phone: "", email: "", is_active: true,
 };
 
 export default function DriversPage() {
   const supabase = createClient();
   const sb = supabase as any;
+  const { isOwner } = useAuth();
 
   const [drivers, setDrivers] = useState<any[]>([]);
   const [tripCounts, setTripCounts] = useState<Record<string, number>>({});
@@ -35,6 +36,8 @@ export default function DriversPage() {
   const [form, setForm] = useState<DriverForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error: err } = await sb
@@ -64,6 +67,21 @@ export default function DriversPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const openForm = (driver?: any) => {
+    setConfirmDelete(false);
+    setFormError("");
+    setForm(driver
+      ? {
+          id: driver.id,
+          first_name: driver.first_name,
+          last_name: driver.last_name,
+          phone: driver.phone,
+          email: driver.email ?? "",
+          is_active: driver.is_active,
+        }
+      : { ...EMPTY_FORM });
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form) return;
@@ -75,7 +93,6 @@ export default function DriversPage() {
       last_name: form.last_name.trim(),
       phone: form.phone.trim(),
       email: form.email.trim() || null,
-      license_number: form.license_number.trim(),
       is_active: form.is_active,
     };
 
@@ -103,6 +120,26 @@ export default function DriversPage() {
     else await load();
   };
 
+  const deleteDriver = async () => {
+    if (!form?.id) return;
+    setDeleting(true);
+    setFormError("");
+    // Driver assignments (trip_vehicles.driver_id) are ON DELETE SET NULL, so
+    // deleting a driver simply un-assigns them from any trips — no records lost.
+    const { error: err } = await sb.from("drivers").delete().eq("id", form.id);
+    if (err) {
+      setFormError(err.message.includes("row-level security")
+        ? "Only the owner or a manager can delete drivers."
+        : err.message);
+      setDeleting(false);
+      return;
+    }
+    setForm(null);
+    setConfirmDelete(false);
+    setDeleting(false);
+    await load();
+  };
+
   const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]";
 
   return (
@@ -114,7 +151,7 @@ export default function DriversPage() {
             {loading ? "Loading…" : `${drivers.filter(d => d.is_active).length} active driver${drivers.filter(d => d.is_active).length !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <Button onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(""); }}
+        <Button onClick={() => openForm()}
           className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
           <Plus className="w-4 h-4 mr-1.5" /> Add Driver
         </Button>
@@ -142,7 +179,7 @@ export default function DriversPage() {
                   </div>
                   <div>
                     <div className="text-white font-bold">{d.first_name} {d.last_name}</div>
-                    <div className="text-[#A1A1AA] text-xs font-mono">{d.license_number}</div>
+                    <div className="text-[#A1A1AA] text-xs">Driver</div>
                   </div>
                 </div>
                 <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${d.is_active ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
@@ -174,16 +211,7 @@ export default function DriversPage() {
                   )}
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <Button variant="outline" size="sm"
-                    onClick={() => setForm({
-                      id: d.id,
-                      first_name: d.first_name,
-                      last_name: d.last_name,
-                      phone: d.phone,
-                      email: d.email ?? "",
-                      license_number: d.license_number,
-                      is_active: d.is_active,
-                    })}
+                  <Button variant="outline" size="sm" onClick={() => openForm(d)}
                     className="flex-1 border-white/15 text-white hover:bg-white/5 text-xs">
                     Edit
                   </Button>
@@ -197,7 +225,7 @@ export default function DriversPage() {
           ))}
 
           <button
-            onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(""); }}
+            onClick={() => openForm()}
             className="glass rounded-2xl p-8 flex flex-col items-center justify-center gap-3 border-dashed border-white/15 hover:border-[#7C3AED]/40 transition-all group min-h-[200px]"
           >
             <div className="w-12 h-12 rounded-full bg-white/5 group-hover:bg-[#7C3AED]/15 flex items-center justify-center transition-colors">
@@ -212,7 +240,7 @@ export default function DriversPage() {
       {form && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setForm(null)} />
-          <div className="relative w-full max-w-md glass rounded-2xl p-7 border border-white/10 shadow-2xl">
+          <div className="relative w-full max-w-md glass rounded-2xl p-7 border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-white font-bold text-lg">{form.id ? "Edit Driver" : "Add Driver"}</h2>
               <button onClick={() => setForm(null)} className="text-[#A1A1AA] hover:text-white transition-colors">
@@ -242,13 +270,9 @@ export default function DriversPage() {
                 <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="driver@email.com" className={inputCls} />
               </div>
-              <div>
-                <Label className="text-[#A1A1AA] text-xs mb-1.5 block">License Number *</Label>
-                <Input required value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })}
-                  placeholder="GA-DL-0000" className={inputCls} />
-              </div>
               <p className="text-[#A1A1AA] text-xs">
-                To give this driver access to the dashboard (manifests, trips), also create an
+                Drivers are assigned to a vehicle per trip in Dispatch, so no fixed vehicle or license
+                is stored here. To give this driver dashboard access (manifests, trips), also create an
                 employee account for them on the Employees page with the &quot;Driver&quot; role.
               </p>
 
@@ -263,6 +287,35 @@ export default function DriversPage() {
                   : form.id ? "Save Changes" : "Add Driver"}
               </Button>
             </form>
+
+            {/* Owner-only delete */}
+            {form.id && isOwner && (
+              <div className="mt-5 pt-5 border-t border-white/10">
+                {confirmDelete ? (
+                  <div className="space-y-3">
+                    <p className="text-[#A1A1AA] text-xs">
+                      Permanently delete this driver? They&apos;ll be removed from any trips they&apos;re
+                      assigned to (those trips keep their vehicle, just no driver). This can&apos;t be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button type="button" disabled={deleting} onClick={deleteDriver}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold h-9 rounded-lg">
+                        {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Yes, Delete Driver"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}
+                        className="flex-1 border-white/15 text-white hover:bg-white/5 text-xs h-9 rounded-lg">
+                        Keep
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setConfirmDelete(true)}
+                    className="flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-medium transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" /> Delete driver
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

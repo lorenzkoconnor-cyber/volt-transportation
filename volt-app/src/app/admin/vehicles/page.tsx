@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Car, Plus, CheckCircle2, Wrench, XCircle, X, Loader2, AlertCircle } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { Car, Plus, CheckCircle2, Wrench, XCircle, X, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ const EMPTY_FORM: VehicleForm = {
 export default function VehiclesPage() {
   const supabase = createClient();
   const sb = supabase as any;
+  const { isOwner } = useAuth();
 
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,8 @@ export default function VehiclesPage() {
   const [form, setForm] = useState<VehicleForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error: err } = await sb
@@ -94,6 +98,29 @@ export default function VehiclesPage() {
     setSaving(false);
   };
 
+  const deleteVehicle = async () => {
+    if (!form?.id) return;
+    setDeleting(true);
+    setFormError("");
+    const { error: err } = await sb.from("vehicles").delete().eq("id", form.id);
+    if (err) {
+      // trip_vehicles.vehicle_id is ON DELETE RESTRICT, so a vehicle that's
+      // assigned to any trip can't be deleted until those assignments are removed.
+      const inUse = err.message.includes("foreign key") || err.code === "23503";
+      setFormError(inUse
+        ? "This vehicle is assigned to one or more trips. Remove it from those departures in Dispatch (or set it to Retired) before deleting."
+        : err.message.includes("row-level security")
+        ? "Only the owner or a manager can delete vehicles."
+        : err.message);
+      setDeleting(false);
+      return;
+    }
+    setForm(null);
+    setConfirmDelete(false);
+    setDeleting(false);
+    await load();
+  };
+
   const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]";
 
   return (
@@ -105,7 +132,7 @@ export default function VehiclesPage() {
             {loading ? "Loading…" : `${vehicles.filter(v => v.status === "active").length} active · ${vehicles.length} total`}
           </p>
         </div>
-        <Button onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(""); }}
+        <Button onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(""); setConfirmDelete(false); }}
           className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
           <Plus className="w-4 h-4 mr-1.5" /> Add Vehicle
         </Button>
@@ -158,7 +185,7 @@ export default function VehiclesPage() {
                   </div>
                   <div className="flex items-center gap-2 pt-1">
                     <Button variant="outline" size="sm"
-                      onClick={() => { setForm({ ...v, notes: v.notes ?? "" }); setFormError(""); }}
+                      onClick={() => { setForm({ ...v, notes: v.notes ?? "" }); setFormError(""); setConfirmDelete(false); }}
                       className="flex-1 border-white/15 text-white hover:bg-white/5 text-xs">
                       Edit
                     </Button>
@@ -170,7 +197,7 @@ export default function VehiclesPage() {
 
           {/* Add vehicle placeholder */}
           <button
-            onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(""); }}
+            onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(""); setConfirmDelete(false); }}
             className="glass rounded-2xl p-8 flex flex-col items-center justify-center gap-3 border-dashed border-white/15 hover:border-[#7C3AED]/40 transition-all group min-h-[200px]"
           >
             <div className="w-12 h-12 rounded-xl bg-white/5 group-hover:bg-[#7C3AED]/15 flex items-center justify-center transition-colors">
@@ -254,6 +281,35 @@ export default function VehiclesPage() {
                   : form.id ? "Save Changes" : "Add Vehicle"}
               </Button>
             </form>
+
+            {/* Owner-only delete */}
+            {form.id && isOwner && (
+              <div className="mt-5 pt-5 border-t border-white/10">
+                {confirmDelete ? (
+                  <div className="space-y-3">
+                    <p className="text-[#A1A1AA] text-xs">
+                      Permanently delete this vehicle? This can&apos;t be undone. If it&apos;s assigned to any
+                      trips you&apos;ll need to remove it from those first (or set it to Retired instead).
+                    </p>
+                    <div className="flex gap-2">
+                      <Button type="button" disabled={deleting} onClick={deleteVehicle}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold h-9 rounded-lg">
+                        {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Yes, Delete Vehicle"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}
+                        className="flex-1 border-white/15 text-white hover:bg-white/5 text-xs h-9 rounded-lg">
+                        Keep
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setConfirmDelete(true)}
+                    className="flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-medium transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" /> Delete vehicle
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
