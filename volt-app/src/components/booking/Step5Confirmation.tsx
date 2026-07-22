@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Calendar, Clock, MapPin, Users, MessageSquare, Download } from "lucide-react";
@@ -25,7 +27,54 @@ export default function Step5Confirmation({
   returnSlot,
   primary,
 }: Props) {
-  const { total } = calcPrice(search);
+  const { lines, total } = calcPrice(search);
+
+  const downloadReceipt = () => {
+    const rows = lines
+      .map((l) => `<tr><td>${l.label}</td><td style="text-align:right">$${l.amount}</td></tr>`)
+      .join("");
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Volt Receipt ${confirmationNumber}</title>
+      <style>
+        body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:40px auto;padding:0 24px;color:#111}
+        h1{color:#7C3AED;margin-bottom:4px}
+        .muted{color:#666;font-size:13px}
+        .box{border:1px solid #eee;border-radius:12px;padding:20px;margin-top:20px}
+        table{width:100%;border-collapse:collapse;margin-top:8px}
+        td{padding:6px 0;font-size:14px}
+        .total td{border-top:2px solid #111;font-weight:700;font-size:16px;padding-top:10px}
+        .conf{font-size:24px;font-weight:700;letter-spacing:2px}
+      </style></head><body>
+      <h1>Volt Transportation</h1>
+      <div class="muted">Booking Receipt</div>
+      <div class="box">
+        <div class="muted">Confirmation Number</div>
+        <div class="conf">${confirmationNumber}</div>
+      </div>
+      <div class="box">
+        <table>
+          <tr><td class="muted">Passenger</td><td style="text-align:right">${primary.name}</td></tr>
+          <tr><td class="muted">Route</td><td style="text-align:right">${LOCATIONS[search.from].label} → ${LOCATIONS[search.to].label}</td></tr>
+          <tr><td class="muted">Date</td><td style="text-align:right">${formatDate(search.date)}</td></tr>
+          <tr><td class="muted">Departure</td><td style="text-align:right">${outbound.displayTime}</td></tr>
+          ${returnSlot ? `<tr><td class="muted">Return</td><td style="text-align:right">${returnSlot.displayTime}</td></tr>` : ""}
+          <tr><td class="muted">Contact</td><td style="text-align:right">${primary.phone}</td></tr>
+        </table>
+      </div>
+      <div class="box">
+        <table>
+          ${rows}
+          <tr class="total"><td>Total Paid</td><td style="text-align:right">$${total}</td></tr>
+        </table>
+      </div>
+      <p class="muted" style="margin-top:24px">Thank you for riding with Volt Transportation. Questions? Visit volttransportation.com</p>
+      <script>window.onload=function(){window.print()}</script>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
+  };
 
   return (
     <div className="space-y-6 text-center">
@@ -119,7 +168,7 @@ export default function Step5Confirmation({
             Manage Reservation
           </Button>
         </Link>
-        <Button variant="outline" className="w-full border-white/15 text-white hover:bg-white/5">
+        <Button variant="outline" onClick={downloadReceipt} className="w-full border-white/15 text-white hover:bg-white/5">
           <Download className="w-4 h-4 mr-2" />
           Download Receipt
         </Button>

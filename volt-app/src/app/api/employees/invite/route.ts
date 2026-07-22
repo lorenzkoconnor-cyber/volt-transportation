@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 
 function adminClient() {
@@ -10,10 +11,35 @@ function adminClient() {
   );
 }
 
+// Verify the caller is a signed-in, active OWNER. Returns the owner's employee
+// row on success, or a NextResponse error to return immediately.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function requireOwner(admin: any): Promise<{ ok: true; owner: any } | { ok: false; res: NextResponse }> {
+  const authed = await createServerClient();
+  const { data: { user } } = await authed.auth.getUser();
+  if (!user) {
+    return { ok: false, res: NextResponse.json({ error: "Not signed in" }, { status: 401 }) };
+  }
+  const { data: owner } = await admin
+    .from("employees")
+    .select("id, role")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+  if (!owner || owner.role !== "owner") {
+    return { ok: false, res: NextResponse.json({ error: "Only the owner can manage employee accounts" }, { status: 403 }) };
+  }
+  return { ok: true, owner };
+}
+
 // POST /api/employees/invite
 // Owner-only: creates a Supabase auth user with a set password + employee record
 export async function POST(request: NextRequest) {
   try {
+    const admin = adminClient();
+    const auth = await requireOwner(admin);
+    if (!auth.ok) return auth.res;
+
     const { email, firstName, lastName, role, phone, password } = await request.json();
 
     if (!email || !firstName || !lastName || !role || !password) {
@@ -28,8 +54,6 @@ export async function POST(request: NextRequest) {
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
-
-    const admin = adminClient();
 
     // 1. Create auth user with password set immediately — no email flow needed
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
@@ -68,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Audit log
     await admin.from("audit_logs").insert({
-      actor_id: "owner",
+      actor_id: auth.owner.id,
       actor_role: "owner",
       action: "employee.created",
       table_name: "employees",
@@ -86,9 +110,11 @@ export async function POST(request: NextRequest) {
 // PATCH /api/employees/invite — update role, deactivate, or reset password
 export async function PATCH(request: NextRequest) {
   try {
-    const { employeeId, role, isActive, newPassword, userId } = await request.json();
-
     const admin = adminClient();
+    const auth = await requireOwner(admin);
+    if (!auth.ok) return auth.res;
+
+    const { employeeId, role, isActive, newPassword, userId } = await request.json();
 
     // Handle password reset
     if (newPassword && userId) {

@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, Users, ArrowLeft } from "lucide-react";
+import { ArrowRight, Clock, Users, ArrowLeft, Loader2 } from "lucide-react";
 import {
   type BookingSearch,
   type DepartureSlot,
-  generateDepartureSlots,
   formatDate,
   LOCATIONS,
 } from "@/lib/booking";
@@ -18,19 +17,44 @@ interface Props {
   onBack: () => void;
 }
 
+async function fetchSlots(from: string, to: string, date: string): Promise<DepartureSlot[]> {
+  const res = await fetch(`/api/trips/availability?route_key=${from}-${to}&date=${date}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.slots ?? [];
+}
+
 export default function Step2Departures({ search, onNext, onBack }: Props) {
   const [selectedOutbound, setSelectedOutbound] = useState<DepartureSlot | null>(null);
   const [selectedReturn, setSelectedReturn] = useState<DepartureSlot | null>(null);
 
-  const outboundSlots = useMemo(
-    () => generateDepartureSlots(search.date, search.from),
-    [search.date, search.from]
-  );
+  const [outboundSlots, setOutboundSlots] = useState<DepartureSlot[]>([]);
+  const [returnSlots, setReturnSlots] = useState<DepartureSlot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  const returnSlots = useMemo(
-    () => (search.roundTrip ? generateDepartureSlots(search.date, search.to) : []),
-    [search.date, search.to, search.roundTrip]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
+    setSelectedOutbound(null);
+    setSelectedReturn(null);
+
+    Promise.all([
+      fetchSlots(search.from, search.to, search.date),
+      search.roundTrip ? fetchSlots(search.to, search.from, search.date) : Promise.resolve([]),
+    ])
+      .then(([out, ret]) => {
+        if (cancelled) return;
+        setOutboundSlots(out);
+        setReturnSlots(ret);
+        if (out.length === 0) setLoadError(true);
+      })
+      .catch(() => { if (!cancelled) setLoadError(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [search.date, search.from, search.to, search.roundTrip]);
 
   const canProceed =
     selectedOutbound !== null && (!search.roundTrip || selectedReturn !== null);
@@ -100,20 +124,34 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
         </button>
       </div>
 
-      <DepartureGrid
-        slots={outboundSlots}
-        selected={selectedOutbound}
-        onSelect={setSelectedOutbound}
-        label={`Outbound — ${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short}`}
-      />
+      {loading ? (
+        <div className="glass rounded-2xl p-12 flex flex-col items-center gap-3">
+          <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+          <p className="text-[#A1A1AA] text-sm">Checking live availability…</p>
+        </div>
+      ) : loadError ? (
+        <div className="glass rounded-2xl p-10 text-center">
+          <p className="text-white font-medium mb-1">No departures available for this date</p>
+          <p className="text-[#A1A1AA] text-sm">Try a different date, or call us and we&apos;ll get you on the road.</p>
+        </div>
+      ) : (
+        <>
+          <DepartureGrid
+            slots={outboundSlots}
+            selected={selectedOutbound}
+            onSelect={setSelectedOutbound}
+            label={`Outbound — ${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short}`}
+          />
 
-      {search.roundTrip && (
-        <DepartureGrid
-          slots={returnSlots}
-          selected={selectedReturn}
-          onSelect={setSelectedReturn}
-          label={`Return — ${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short}`}
-        />
+          {search.roundTrip && (
+            <DepartureGrid
+              slots={returnSlots}
+              selected={selectedReturn}
+              onSelect={setSelectedReturn}
+              label={`Return — ${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short}`}
+            />
+          )}
+        </>
       )}
 
       <PriceSummary search={search} />

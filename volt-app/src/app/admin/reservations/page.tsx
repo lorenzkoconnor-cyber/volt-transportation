@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { formatTime12h, formatCents, formatDateShort } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Search, Plus, CheckCircle2, XCircle, Clock,
-  ChevronRight, Calendar, Users, DollarSign, Filter,
+  ChevronRight, Calendar, Users, DollarSign, Filter, Loader2,
 } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -17,30 +19,72 @@ const STATUS_STYLES: Record<string, string> = {
   no_show:   "bg-orange-500/15 text-orange-400",
 };
 
-const MOCK_RESERVATIONS = [
-  { id: "1", confirmation: "VOLT-AB1234", name: "Sarah Mitchell",    phone: "(706) 555-0101", route: "Columbus → ATL", date: "Jul 18", time: "8:00 AM",  pax: 2, total: 118, status: "confirmed" },
-  { id: "2", confirmation: "VOLT-CD5678", name: "James Lawson",      phone: "(706) 555-0202", route: "Columbus → ATL", date: "Jul 18", time: "10:00 AM", pax: 3, total: 177, status: "confirmed" },
-  { id: "3", confirmation: "VOLT-EF9012", name: "Tanya Williams",    phone: "(706) 555-0303", route: "ATL → Columbus", date: "Jul 19", time: "2:00 PM",  pax: 1, total: 59,  status: "confirmed" },
-  { id: "4", confirmation: "VOLT-GH3456", name: "Robert King",       phone: "(706) 555-0404", route: "Columbus → ATL", date: "Jul 20", time: "6:00 AM",  pax: 4, total: 236, status: "confirmed" },
-  { id: "5", confirmation: "VOLT-IJ7890", name: "Diana Foster",      phone: "(706) 555-0505", route: "Columbus → ATL", date: "Jul 15", time: "9:00 AM",  pax: 1, total: 59,  status: "completed" },
-  { id: "6", confirmation: "VOLT-KL2345", name: "Marcus Thompson",   phone: "(706) 555-0606", route: "ATL → Columbus", date: "Jul 17", time: "4:00 PM",  pax: 2, total: 118, status: "cancelled" },
-];
+interface ReservationRow {
+  id: string;
+  confirmation: string;
+  name: string;
+  phone: string;
+  route: string;
+  date: string;
+  time: string;
+  pax: number;
+  totalCents: number;
+  status: string;
+}
 
 type FilterStatus = "all" | "confirmed" | "completed" | "cancelled";
 
 export default function ReservationsPage() {
+  const supabase = createClient();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
+  const [rows, setRows] = useState<ReservationRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = MOCK_RESERVATIONS.filter((r) => {
+  useEffect(() => {
+    const load = async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from("reservations")
+        .select(
+          "id, confirmation_number, status, adults, children, total_cents, created_at, " +
+          "customer:customers(first_name, last_name, phone), " +
+          "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, route:routes(name))"
+        )
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setRows((data ?? []).map((r: any) => ({
+        id: r.id,
+        confirmation: r.confirmation_number,
+        name: r.customer ? `${r.customer.first_name} ${r.customer.last_name}` : "—",
+        phone: r.customer?.phone ?? "",
+        route: r.trip?.route?.name ?? "—",
+        date: r.trip ? formatDateShort(r.trip.departure_date) : "—",
+        time: r.trip ? formatTime12h(r.trip.departure_time) : "—",
+        pax: (r.adults ?? 0) + (r.children ?? 0),
+        totalCents: r.total_cents,
+        status: r.status,
+      })));
+      setLoading(false);
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filtered = rows.filter((r) => {
+    const q = query.toLowerCase();
     const matchesQuery =
       !query ||
-      r.name.toLowerCase().includes(query.toLowerCase()) ||
-      r.confirmation.toLowerCase().includes(query.toLowerCase()) ||
+      r.name.toLowerCase().includes(q) ||
+      r.confirmation.toLowerCase().includes(q) ||
       r.phone.includes(query);
     const matchesFilter = filter === "all" || r.status === filter;
     return matchesQuery && matchesFilter;
   });
+
+  const revenueCents = rows.filter(r => r.status !== "cancelled").reduce((s, r) => s + r.totalCents, 0);
 
   return (
     <div className="space-y-6">
@@ -48,7 +92,9 @@ export default function ReservationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Reservations</h1>
-          <p className="text-[#A1A1AA] text-sm mt-0.5">{MOCK_RESERVATIONS.length} total reservations</p>
+          <p className="text-[#A1A1AA] text-sm mt-0.5">
+            {loading ? "Loading…" : `${rows.length} total reservations`}
+          </p>
         </div>
         <Link href="/admin/reservations/new">
           <Button className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
@@ -99,16 +145,24 @@ export default function ReservationsPage() {
           <div className="col-span-1" />
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center">
             <Search className="w-8 h-8 text-[#A1A1AA] mb-3" />
             <p className="text-white font-medium mb-1">No reservations found</p>
-            <p className="text-[#A1A1AA] text-sm">Try a different search or filter</p>
+            <p className="text-[#A1A1AA] text-sm">
+              {rows.length === 0
+                ? "New bookings will appear here — or create one manually."
+                : "Try a different search or filter"}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-white/5">
             {filtered.map((r) => (
-              <div key={r.id} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center group">
+              <Link key={r.id} href={`/admin/reservations/${r.id}`} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center group">
                 <div className="col-span-3">
                   <div className="text-white font-medium text-sm">{r.name}</div>
                   <div className="text-[#A1A1AA] text-xs">{r.phone}</div>
@@ -129,21 +183,19 @@ export default function ReservationsPage() {
                   </span>
                 </div>
                 <div className="col-span-1 text-right">
-                  <span className="text-white font-semibold text-sm">${r.total}</span>
+                  <span className="text-white font-semibold text-sm">{formatCents(r.totalCents)}</span>
                 </div>
                 <div className="col-span-1 flex justify-center">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[r.status]}`}>
-                    {r.status}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? ""}`}>
+                    {r.status.replace("_", " ")}
                   </span>
                 </div>
                 <div className="col-span-1 flex justify-end">
-                  <Link href={`/admin/reservations/${r.id}`}>
-                    <button className="w-7 h-7 rounded-lg flex items-center justify-center text-[#A1A1AA] hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </Link>
+                  <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[#A1A1AA] group-hover:text-white group-hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
+                    <ChevronRight className="w-4 h-4" />
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -151,12 +203,12 @@ export default function ReservationsPage() {
 
       {/* Summary strip */}
       <div className="flex items-center justify-between glass rounded-xl px-5 py-3">
-        <span className="text-[#A1A1AA] text-sm">Showing {filtered.length} of {MOCK_RESERVATIONS.length}</span>
+        <span className="text-[#A1A1AA] text-sm">Showing {filtered.length} of {rows.length}</span>
         <div className="flex items-center gap-4">
           {[
-            { icon: CheckCircle2, label: "Confirmed", count: MOCK_RESERVATIONS.filter(r=>r.status==="confirmed").length, color: "text-green-400" },
-            { icon: XCircle,      label: "Cancelled", count: MOCK_RESERVATIONS.filter(r=>r.status==="cancelled").length, color: "text-red-400" },
-            { icon: DollarSign,   label: "Revenue",   count: `$${MOCK_RESERVATIONS.filter(r=>r.status!=="cancelled").reduce((s,r)=>s+r.total,0)}`, color: "text-[#7C3AED]" },
+            { icon: CheckCircle2, label: "Confirmed", count: rows.filter(r=>r.status==="confirmed").length, color: "text-green-400" },
+            { icon: XCircle,      label: "Cancelled", count: rows.filter(r=>r.status==="cancelled").length, color: "text-red-400" },
+            { icon: DollarSign,   label: "Revenue",   count: formatCents(revenueCents), color: "text-[#7C3AED]" },
           ].map((item) => {
             const Icon = item.icon;
             return (

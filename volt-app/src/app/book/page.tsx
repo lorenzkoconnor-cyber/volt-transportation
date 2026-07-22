@@ -14,7 +14,6 @@ import {
   type BookingSearch,
   type DepartureSlot,
   type Passenger,
-  generateConfirmationNumber,
 } from "@/lib/booking";
 
 function BookingFlow() {
@@ -36,7 +35,7 @@ function BookingFlow() {
   const [primary, setPrimary] = useState<Passenger>({ name: "", phone: "", email: "" });
   const [additionalPassengers, setAdditionalPassengers] = useState<string[]>([]);
   const [specialNotes, setSpecialNotes] = useState("");
-  const [confirmationNumber] = useState(() => generateConfirmationNumber());
+  const [confirmationNumber, setConfirmationNumber] = useState("");
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] grid-bg">
@@ -109,7 +108,12 @@ function BookingFlow() {
               outbound={outbound}
               returnSlot={returnSlot}
               primary={primary}
-              onNext={() => setStep(5)}
+              additionalPassengers={additionalPassengers}
+              specialNotes={specialNotes}
+              onNext={(conf) => {
+                setConfirmationNumber(conf);
+                setStep(5);
+              }}
               onBack={() => setStep(3)}
             />
           )}

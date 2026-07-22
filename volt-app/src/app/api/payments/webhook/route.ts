@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeServer } from "@/lib/stripe/server";
-import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 
@@ -51,11 +50,14 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       // ── Payment succeeded ──────────────────────────────────────────────────
+      // The reservation, seat reservation, payment record, and confirmation SMS
+      // are all written authoritatively by /api/booking/create the moment the
+      // browser confirms payment. This webhook is a reconciliation backup: it
+      // idempotently marks the payment row paid (and attaches the charge id for
+      // later refunds) in case that row was written a beat after this event.
       case "payment_intent.succeeded": {
         const pi = event.data.object;
-        const meta = pi.metadata as Record<string, string>;
 
-        // 1. Mark payment as paid in our DB
         await supabase
           .from("payments")
           .update({
@@ -64,51 +66,13 @@ export async function POST(request: NextRequest) {
           })
           .eq("stripe_payment_intent_id", pi.id);
 
-        // 2. Confirm reservation status
-        if (meta.reservationId) {
-          await supabase
-            .from("reservations")
-            .update({ status: "confirmed" })
-            .eq("id", meta.reservationId);
-
-          // 3. Send booking confirmation SMS
-          if (meta.customerPhone && meta.confirmationNumber) {
-            const date = new Date(meta.tripDate || Date.now());
-            const dateStr = date.toLocaleDateString("en-US", {
-              weekday: "long", month: "long", day: "numeric", year: "numeric",
-            });
-            await sendSMS(
-              meta.customerPhone,
-              SMS_TEMPLATES.bookingConfirmation({
-                confirmationNumber: meta.confirmationNumber,
-                date: dateStr,
-                time: meta.tripTime ?? "",
-                from: meta.tripFrom ?? "",
-                to: meta.tripTo ?? "",
-                passengerName: meta.passengerName ?? "Passenger",
-              })
-            );
-          }
-        }
-
-        // 4. Update trip seat count
-        if (meta.tripId && meta.passengerCount) {
-          const count = parseInt(meta.passengerCount, 10);
-          // Use a raw query to increment safely
-          await supabase.rpc("increment_seats_booked", {
-            p_trip_id: meta.tripId,
-            p_count: count,
-          });
-        }
-
-        // 5. Audit log
         await supabase.from("audit_logs").insert({
           actor_id: "stripe_webhook",
           actor_role: "system",
           action: "payment.succeeded",
           table_name: "payments",
           record_id: pi.id,
-          new_data: { amount: pi.amount, currency: pi.currency, reservation_id: meta.reservationId },
+          new_data: { amount: pi.amount, currency: pi.currency },
         });
 
         break;

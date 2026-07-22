@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@/lib/supabase/client";
+import { formatTime12h, formatDateLong, localDateString } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
   Calendar,
@@ -18,44 +20,85 @@ import {
   Loader2,
 } from "lucide-react";
 
-// Mock upcoming trips — will be replaced with Supabase query
-const MOCK_TRIPS = [
-  {
-    id: "1",
-    confirmationNumber: "VOLT-AB1234",
-    from: "Columbus, GA",
-    to: "ATL Airport",
-    date: "Friday, July 18, 2026",
-    time: "8:00 AM",
-    passengers: 2,
-    status: "confirmed",
-    total: 118,
-  },
-];
-
-const MOCK_HISTORY = [
-  {
-    id: "2",
-    confirmationNumber: "VOLT-XY9876",
-    from: "ATL Airport",
-    to: "Columbus, GA",
-    date: "Monday, June 2, 2026",
-    time: "2:00 PM",
-    passengers: 1,
-    status: "completed",
-    total: 59,
-  },
-];
+interface PortalTrip {
+  id: string;
+  confirmationNumber: string;
+  from: string;
+  to: string;
+  date: string;
+  time: string;
+  passengers: number;
+  status: string;
+  total: number;
+}
 
 export default function PortalPage() {
   const router = useRouter();
   const { user, customer, loading, signOut } = useAuth();
+  const supabase = createClient();
+
+  const [upcoming, setUpcoming] = useState<PortalTrip[]>([]);
+  const [history, setHistory] = useState<PortalTrip[]>([]);
+  const [tripsLoading, setTripsLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/login?redirect=/portal");
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!customer) {
+      if (!loading) setTripsLoading(false);
+      return;
+    }
+
+    const load = async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from("reservations")
+        .select(
+          "id, confirmation_number, status, adults, children, total_cents, " +
+          "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, " +
+          "route:routes(origin_label, destination_label))"
+        )
+        .eq("customer_id", customer.id)
+        .order("created_at", { ascending: false });
+
+      const today = localDateString();
+      const up: PortalTrip[] = [];
+      const past: PortalTrip[] = [];
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (data ?? []).forEach((r: any) => {
+        if (!r.trip) return;
+        const trip: PortalTrip = {
+          id: r.id,
+          confirmationNumber: r.confirmation_number,
+          from: r.trip.route?.origin_label ?? "—",
+          to: r.trip.route?.destination_label ?? "—",
+          date: formatDateLong(r.trip.departure_date),
+          time: formatTime12h(r.trip.departure_time),
+          passengers: (r.adults ?? 0) + (r.children ?? 0),
+          status: r.status,
+          total: Math.round(r.total_cents / 100),
+        };
+        const isUpcoming =
+          r.trip.departure_date >= today &&
+          (r.status === "confirmed" || r.status === "pending");
+        (isUpcoming ? up : past).push(trip);
+      });
+
+      // Upcoming soonest-first
+      up.reverse();
+      setUpcoming(up);
+      setHistory(past);
+      setTripsLoading(false);
+    };
+
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer?.id, loading]);
 
   if (loading) {
     return (
@@ -104,7 +147,11 @@ export default function PortalPage() {
           {/* Upcoming Trips */}
           <section className="mb-10">
             <h2 className="text-white font-bold text-xl mb-4">Upcoming Trips</h2>
-            {MOCK_TRIPS.length === 0 ? (
+            {tripsLoading ? (
+              <div className="glass rounded-2xl p-10 flex justify-center">
+                <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+              </div>
+            ) : upcoming.length === 0 ? (
               <div className="glass rounded-2xl p-10 text-center">
                 <Calendar className="w-10 h-10 text-[#A1A1AA] mx-auto mb-3" />
                 <p className="text-white font-medium mb-1">No upcoming trips</p>
@@ -119,7 +166,7 @@ export default function PortalPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {MOCK_TRIPS.map((trip) => (
+                {upcoming.map((trip) => (
                   <TripCard key={trip.id} trip={trip} upcoming />
                 ))}
               </div>
@@ -129,13 +176,17 @@ export default function PortalPage() {
           {/* Trip History */}
           <section className="mb-10">
             <h2 className="text-white font-bold text-xl mb-4">Trip History</h2>
-            {MOCK_HISTORY.length === 0 ? (
+            {tripsLoading ? (
+              <div className="glass rounded-2xl p-8 flex justify-center">
+                <Loader2 className="w-5 h-5 text-[#7C3AED] animate-spin" />
+              </div>
+            ) : history.length === 0 ? (
               <div className="glass rounded-2xl p-8 text-center">
                 <p className="text-[#A1A1AA] text-sm">No past trips yet.</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {MOCK_HISTORY.map((trip) => (
+                {history.map((trip) => (
                   <TripCard key={trip.id} trip={trip} upcoming={false} />
                 ))}
               </div>

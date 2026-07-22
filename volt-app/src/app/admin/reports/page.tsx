@@ -1,33 +1,118 @@
 "use client";
 
-import { useState } from "react";
-import { TrendingUp, Users, Truck, DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { formatCents, formatDateShort, localDateString } from "@/lib/format";
+import { TrendingUp, Users, Truck, DollarSign, Loader2, Download } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
+import { Button } from "@/components/ui/button";
 
-const DAILY_STATS = [
-  { date: "Jun 28", revenue: 1240, passengers: 21, trips: 18 },
-  { date: "Jun 29", revenue: 890,  passengers: 15, trips: 14 },
-  { date: "Jun 30", revenue: 1650, passengers: 28, trips: 22 },
-  { date: "Jul 1",  revenue: 2100, passengers: 36, trips: 26 },
-  { date: "Jul 2",  revenue: 1380, passengers: 23, trips: 20 },
-  { date: "Jul 3",  revenue: 980,  passengers: 17, trips: 16 },
-  { date: "Jul 4",  revenue: 1820, passengers: 31, trips: 24 },
-];
+type Period = "7d" | "30d" | "90d";
+const PERIOD_DAYS: Record<Period, number> = { "7d": 7, "30d": 30, "90d": 90 };
 
-const ROUTE_STATS = [
-  { route: "Columbus → ATL", trips: 63, passengers: 98,  revenue: 5782, avgLoad: "74%", trend: 8 },
-  { route: "ATL → Columbus", trips: 57, passengers: 73,  revenue: 4307, avgLoad: "64%", trend: -3 },
-];
-
-const MAX_REVENUE = Math.max(...DAILY_STATS.map((d) => d.revenue));
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function ReportsPage() {
-  const [period, setPeriod] = useState<"7d" | "30d" | "90d">("7d");
+  const supabase = createClient();
+  const sb = supabase as any;
 
-  const totalRevenue   = DAILY_STATS.reduce((s, d) => s + d.revenue, 0);
-  const totalPassengers = DAILY_STATS.reduce((s, d) => s + d.passengers, 0);
-  const totalTrips     = DAILY_STATS.reduce((s, d) => s + d.trips, 0);
-  const avgRevPerDay   = Math.round(totalRevenue / DAILY_STATS.length);
+  const [period, setPeriod] = useState<Period>("7d");
+  const [loading, setLoading] = useState(true);
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [trips, setTrips] = useState<any[]>([]);
+
+  useEffect(() => {
+    setLoading(true);
+    const end = localDateString();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (PERIOD_DAYS[period] - 1));
+    const start = localDateString(startDate);
+
+    const load = async () => {
+      const [resvRes, tripsRes] = await Promise.all([
+        sb.from("reservations")
+          .select(
+            "adults, children, total_cents, status, " +
+            "trip:trips!reservations_trip_id_fkey!inner(id, departure_date, route_id)"
+          )
+          .gte("trip.departure_date", start)
+          .lte("trip.departure_date", end)
+          .neq("status", "cancelled"),
+        sb.from("trips")
+          .select("id, departure_date, route_id, seats_booked, total_capacity, route:routes(name)")
+          .gte("departure_date", start)
+          .lte("departure_date", end)
+          .gt("seats_booked", 0),
+      ]);
+      setReservations(resvRes.data ?? []);
+      setTrips(tripsRes.data ?? []);
+      setLoading(false);
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
+
+  const { daily, routeStats, totals } = useMemo(() => {
+    // Group by day
+    const dayMap = new Map<string, { revenue: number; passengers: number; tripIds: Set<string> }>();
+    reservations.forEach((r) => {
+      const d = r.trip.departure_date;
+      const entry = dayMap.get(d) ?? { revenue: 0, passengers: 0, tripIds: new Set() };
+      entry.revenue += r.total_cents;
+      entry.passengers += (r.adults ?? 0) + (r.children ?? 0);
+      entry.tripIds.add(r.trip.id);
+      dayMap.set(d, entry);
+    });
+    const daily = [...dayMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ date, revenue: v.revenue, passengers: v.passengers, trips: v.tripIds.size }));
+
+    // Group trips by route
+    const routeMap = new Map<string, { name: string; trips: number; passengers: number; capacity: number; revenue: number }>();
+    trips.forEach((t) => {
+      const entry = routeMap.get(t.route_id) ?? { name: t.route?.name ?? "—", trips: 0, passengers: 0, capacity: 0, revenue: 0 };
+      entry.trips += 1;
+      entry.passengers += t.seats_booked;
+      entry.capacity += t.total_capacity;
+      routeMap.set(t.route_id, entry);
+    });
+    reservations.forEach((r) => {
+      const entry = routeMap.get(r.trip.route_id);
+      if (entry) entry.revenue += r.total_cents;
+    });
+    const routeStats = [...routeMap.values()];
+
+    const totals = {
+      revenue: daily.reduce((s, d) => s + d.revenue, 0),
+      passengers: daily.reduce((s, d) => s + d.passengers, 0),
+      trips: daily.reduce((s, d) => s + d.trips, 0),
+      occupancy: routeStats.reduce((s, r) => s + r.capacity, 0) > 0
+        ? Math.round((routeStats.reduce((s, r) => s + r.passengers, 0) / routeStats.reduce((s, r) => s + r.capacity, 0)) * 100)
+        : 0,
+    };
+
+    return { daily, routeStats, totals };
+  }, [reservations, trips]);
+
+  const exportCsv = () => {
+    const header = "Date,Trips,Passengers,Revenue (USD)";
+    const body = daily
+      .map((d) => `${d.date},${d.trips},${d.passengers},${(d.revenue / 100).toFixed(2)}`)
+      .join("\n");
+    const totalsRow = `Totals,${totals.trips},${totals.passengers},${(totals.revenue / 100).toFixed(2)}`;
+    const csv = [header, body, totalsRow].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `volt-report-${period}-${localDateString()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const maxRevenue = Math.max(1, ...daily.map((d) => d.revenue));
+  const activeDays = Math.max(1, daily.length);
+  const chartDays = daily.slice(-30); // keep the chart readable on 90d
 
   return (
     <div className="space-y-6">
@@ -43,96 +128,118 @@ export default function ReportsPage() {
               {p === "7d" ? "7 Days" : p === "30d" ? "30 Days" : "90 Days"}
             </button>
           ))}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={loading || daily.length === 0}
+            onClick={exportCsv}
+            className="border-white/15 text-white hover:bg-white/5 disabled:opacity-40"
+          >
+            <Download className="w-3.5 h-3.5 mr-1.5" /> Export CSV
+          </Button>
         </div>
       </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Revenue"    value={`$${totalRevenue.toLocaleString()}`} sub={`$${avgRevPerDay}/day avg`} icon={DollarSign} accent trend={{ value: "12%", positive: true }} />
-        <StatCard label="Total Passengers" value={totalPassengers} sub="Both directions" icon={Users} trend={{ value: "8%", positive: true }} />
-        <StatCard label="Total Trips"      value={totalTrips}      sub="Completed"       icon={Truck} />
-        <StatCard label="Avg Occupancy"    value="69%"             sub="Per vehicle"     icon={TrendingUp} trend={{ value: "5%", positive: true }} />
+        <StatCard label="Total Revenue"    value={loading ? "…" : formatCents(totals.revenue)} sub={`${formatCents(Math.round(totals.revenue / activeDays))}/day avg`} icon={DollarSign} accent />
+        <StatCard label="Total Passengers" value={loading ? "…" : totals.passengers} sub="Both directions" icon={Users} />
+        <StatCard label="Booked Trips"     value={loading ? "…" : totals.trips}      sub="With passengers" icon={Truck} />
+        <StatCard label="Avg Occupancy"    value={loading ? "…" : `${totals.occupancy}%`} sub="Of booked trips" icon={TrendingUp} />
       </div>
 
-      {/* Revenue chart */}
-      <div className="glass rounded-2xl p-6">
-        <h2 className="text-white font-bold text-lg mb-6">Daily Revenue</h2>
-        <div className="flex items-end gap-3 h-48">
-          {DAILY_STATS.map((day) => (
-            <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
-              <div className="text-white text-xs font-semibold">${(day.revenue/1000).toFixed(1)}k</div>
-              <div className="w-full flex items-end" style={{ height: "140px" }}>
-                <div
-                  className="w-full rounded-t-lg bg-[#7C3AED] hover:bg-[#9D5FF5] transition-colors cursor-default"
-                  style={{ height: `${(day.revenue / MAX_REVENUE) * 100}%` }}
-                />
-              </div>
-              <div className="text-[#A1A1AA] text-xs">{day.date}</div>
-            </div>
-          ))}
+      {loading ? (
+        <div className="glass rounded-2xl p-16 flex justify-center">
+          <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
         </div>
-      </div>
+      ) : daily.length === 0 ? (
+        <div className="glass rounded-2xl p-12 text-center">
+          <TrendingUp className="w-10 h-10 text-[#A1A1AA] mx-auto mb-3" />
+          <p className="text-white font-medium mb-1">No booking data in this period</p>
+          <p className="text-[#A1A1AA] text-sm">Reports fill in automatically as reservations come in.</p>
+        </div>
+      ) : (
+        <>
+          {/* Revenue chart */}
+          <div className="glass rounded-2xl p-6">
+            <h2 className="text-white font-bold text-lg mb-6">
+              Daily Revenue{period === "90d" && chartDays.length < daily.length ? " (last 30 days shown)" : ""}
+            </h2>
+            <div className="flex items-end gap-1.5 sm:gap-3 h-48 overflow-x-auto">
+              {chartDays.map((day) => (
+                <div key={day.date} className="flex-1 min-w-[28px] flex flex-col items-center gap-2">
+                  <div className="text-white text-[10px] sm:text-xs font-semibold">
+                    {day.revenue >= 100000 ? `$${(day.revenue / 100000).toFixed(1)}k` : formatCents(day.revenue)}
+                  </div>
+                  <div className="w-full flex items-end" style={{ height: "140px" }}>
+                    <div
+                      className="w-full rounded-t-lg bg-[#7C3AED] hover:bg-[#9D5FF5] transition-colors cursor-default"
+                      style={{ height: `${Math.max(2, (day.revenue / maxRevenue) * 100)}%` }}
+                      title={`${formatDateShort(day.date)}: ${formatCents(day.revenue)}`}
+                    />
+                  </div>
+                  <div className="text-[#A1A1AA] text-[10px] sm:text-xs whitespace-nowrap">{formatDateShort(day.date)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Route performance */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/8">
-          <h2 className="text-white font-bold text-lg">Route Performance</h2>
-        </div>
-        <div className="divide-y divide-white/6">
-          {ROUTE_STATS.map((r) => (
-            <div key={r.route} className="grid grid-cols-2 sm:grid-cols-6 gap-4 px-4 sm:px-6 py-5 items-center">
-              <div className="col-span-2">
-                <div className="text-white font-semibold text-sm">{r.route}</div>
-                <div className="text-[#A1A1AA] text-xs mt-0.5">{r.trips} trips in period</div>
-              </div>
-              <div className="text-center">
-                <div className="text-white font-bold">{r.passengers}</div>
-                <div className="text-[#A1A1AA] text-xs">Passengers</div>
-              </div>
-              <div className="text-center">
-                <div className="text-white font-bold">${r.revenue.toLocaleString()}</div>
-                <div className="text-[#A1A1AA] text-xs">Revenue</div>
-              </div>
-              <div className="text-center">
-                <div className="text-white font-bold">{r.avgLoad}</div>
-                <div className="text-[#A1A1AA] text-xs">Avg Load</div>
-              </div>
-              <div className="flex justify-end">
-                <span className={`flex items-center gap-1 text-sm font-semibold ${r.trend >= 0 ? "text-green-400" : "text-red-400"}`}>
-                  {r.trend >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                  {Math.abs(r.trend)}%
-                </span>
-              </div>
+          {/* Route performance */}
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/8">
+              <h2 className="text-white font-bold text-lg">Route Performance</h2>
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="divide-y divide-white/6">
+              {routeStats.map((r) => (
+                <div key={r.name} className="grid grid-cols-2 sm:grid-cols-5 gap-4 px-4 sm:px-6 py-5 items-center">
+                  <div className="col-span-2">
+                    <div className="text-white font-semibold text-sm">{r.name}</div>
+                    <div className="text-[#A1A1AA] text-xs mt-0.5">{r.trips} booked trip{r.trips !== 1 ? "s" : ""} in period</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white font-bold">{r.passengers}</div>
+                    <div className="text-[#A1A1AA] text-xs">Passengers</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white font-bold">{formatCents(r.revenue)}</div>
+                    <div className="text-[#A1A1AA] text-xs">Revenue</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-white font-bold">{r.capacity > 0 ? Math.round((r.passengers / r.capacity) * 100) : 0}%</div>
+                    <div className="text-[#A1A1AA] text-xs">Avg Load</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Daily breakdown table */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/8">
-          <h2 className="text-white font-bold text-lg">Daily Breakdown</h2>
-        </div>
-        <div className="grid grid-cols-4 gap-4 px-4 sm:px-6 py-3 border-b border-white/6 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
-          <div>Date</div><div className="text-center">Trips</div><div className="text-center">Passengers</div><div className="text-right">Revenue</div>
-        </div>
-        <div className="divide-y divide-white/5">
-          {DAILY_STATS.map((day) => (
-            <div key={day.date} className="grid grid-cols-4 gap-4 px-4 sm:px-6 py-3 hover:bg-white/3 transition-colors">
-              <div className="text-white text-sm">{day.date}</div>
-              <div className="text-center text-[#A1A1AA] text-sm">{day.trips}</div>
-              <div className="text-center text-[#A1A1AA] text-sm">{day.passengers}</div>
-              <div className="text-right text-white font-semibold text-sm">${day.revenue.toLocaleString()}</div>
+          {/* Daily breakdown table */}
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/8">
+              <h2 className="text-white font-bold text-lg">Daily Breakdown</h2>
             </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-4 gap-4 px-6 py-4 border-t border-white/10 bg-[#7C3AED]/5">
-          <div className="text-white font-bold text-sm">Totals</div>
-          <div className="text-center text-white font-bold text-sm">{totalTrips}</div>
-          <div className="text-center text-white font-bold text-sm">{totalPassengers}</div>
-          <div className="text-right text-[#7C3AED] font-bold text-sm">${totalRevenue.toLocaleString()}</div>
-        </div>
-      </div>
+            <div className="grid grid-cols-4 gap-4 px-4 sm:px-6 py-3 border-b border-white/6 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
+              <div>Date</div><div className="text-center">Trips</div><div className="text-center">Passengers</div><div className="text-right">Revenue</div>
+            </div>
+            <div className="divide-y divide-white/5 max-h-96 overflow-y-auto">
+              {daily.map((day) => (
+                <div key={day.date} className="grid grid-cols-4 gap-4 px-4 sm:px-6 py-3 hover:bg-white/3 transition-colors">
+                  <div className="text-white text-sm">{formatDateShort(day.date)}</div>
+                  <div className="text-center text-[#A1A1AA] text-sm">{day.trips}</div>
+                  <div className="text-center text-[#A1A1AA] text-sm">{day.passengers}</div>
+                  <div className="text-right text-white font-semibold text-sm">{formatCents(day.revenue)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-4 gap-4 px-6 py-4 border-t border-white/10 bg-[#7C3AED]/5">
+              <div className="text-white font-bold text-sm">Totals</div>
+              <div className="text-center text-white font-bold text-sm">{totals.trips}</div>
+              <div className="text-center text-white font-bold text-sm">{totals.passengers}</div>
+              <div className="text-right text-[#7C3AED] font-bold text-sm">{formatCents(totals.revenue)}</div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
