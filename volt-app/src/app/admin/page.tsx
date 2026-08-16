@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { canViewFinancials, canAccessAdminRoute } from "@/lib/permissions";
 import { formatTime12h, formatCents, formatDateShort, localDateString } from "@/lib/format";
 import StatCard from "@/components/admin/StatCard";
 import {
@@ -37,6 +38,9 @@ export default function AdminDashboardPage() {
   const { employee, loading: authLoading } = useAuth();
   const supabase = createClient();
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
+  // Revenue and payment figures are for managers and owners only.
+  const showFinancials = canViewFinancials(employee?.role);
 
   const [loading, setLoading] = useState(true);
   const [trips, setTrips] = useState<DashTrip[]>([]);
@@ -153,8 +157,10 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Today's Revenue" value={loading ? "…" : formatCents(stats.revenueToday)} sub={`${stats.passengersToday} passengers`} icon={DollarSign} accent />
+      <div className={`grid grid-cols-2 gap-4 ${showFinancials ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+        {showFinancials && (
+          <StatCard label="Today's Revenue" value={loading ? "…" : formatCents(stats.revenueToday)} sub={`${stats.passengersToday} passengers`} icon={DollarSign} accent />
+        )}
         <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} />
         <StatCard label="Passengers Today" value={loading ? "…" : stats.passengersToday} sub="Across all trips" icon={Users} />
         <StatCard label="Active Vehicles" value={loading ? "…" : stats.activeVehicles} sub="In the fleet" icon={CalendarDays} />
@@ -265,7 +271,7 @@ export default function AdminDashboardPage() {
                       <div className="text-[#A1A1AA] text-xs">{r.date}</div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-white font-semibold text-sm">{r.total}</div>
+                      {showFinancials && <div className="text-white font-semibold text-sm">{r.total}</div>}
                       {r.paymentStatus === "paid" ? (
                         <div className="flex items-center gap-1 text-green-400 text-xs justify-end">
                           <CheckCircle2 className="w-3 h-3" />
@@ -292,7 +298,9 @@ export default function AdminDashboardPage() {
             { label: "Search Reservations", href: "/admin/reservations", icon: CalendarDays },
             { label: "Payment Reports", href: "/admin/reports", icon: DollarSign },
             { label: "Manage Vehicles", href: "/admin/vehicles", icon: AlertCircle },
-          ].map((action) => {
+          ]
+            .filter((action) => !employee || canAccessAdminRoute(action.href, employee.role))
+            .map((action) => {
             const Icon = action.icon;
             return (
               <Link key={action.label} href={action.href}>

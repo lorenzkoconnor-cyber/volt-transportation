@@ -40,9 +40,13 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
     setSelectedOutbound(null);
     setSelectedReturn(null);
 
+    // Round trips return on their own date; fall back to the outbound date if
+    // one wasn't provided so availability still loads.
+    const returnDate = search.returnDate || search.date;
+
     Promise.all([
       fetchSlots(search.from, search.to, search.date),
-      search.roundTrip ? fetchSlots(search.to, search.from, search.date) : Promise.resolve([]),
+      search.roundTrip ? fetchSlots(search.to, search.from, returnDate) : Promise.resolve([]),
     ])
       .then(([out, ret]) => {
         if (cancelled) return;
@@ -54,7 +58,7 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [search.date, search.from, search.to, search.roundTrip]);
+  }, [search.date, search.returnDate, search.from, search.to, search.roundTrip]);
 
   const canProceed =
     selectedOutbound !== null && (!search.roundTrip || selectedReturn !== null);
@@ -140,7 +144,7 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
             slots={outboundSlots}
             selected={selectedOutbound}
             onSelect={setSelectedOutbound}
-            label={`Outbound — ${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short}`}
+            label={`Outbound — ${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short} · ${formatDate(search.date)}`}
           />
 
           {search.roundTrip && (
@@ -148,7 +152,7 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
               slots={returnSlots}
               selected={selectedReturn}
               onSelect={setSelectedReturn}
-              label={`Return — ${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short}`}
+              label={`Return — ${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short} · ${formatDate(search.returnDate || search.date)}`}
             />
           )}
         </>

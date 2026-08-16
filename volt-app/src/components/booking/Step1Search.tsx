@@ -43,7 +43,11 @@ export default function Step1Search({ initial, onNext }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onNext(search);
+    // Round trips must return on or after the outbound date.
+    const next = search.roundTrip
+      ? search
+      : { ...search, returnDate: "" };
+    onNext(next);
   };
 
   return (
@@ -100,19 +104,6 @@ export default function Step1Search({ initial, onNext }: Props) {
         </div>
       </div>
 
-      {/* Date */}
-      <div>
-        <Label className="text-[#A1A1AA] text-xs mb-2 block">Travel Date</Label>
-        <input
-          type="date"
-          required
-          value={search.date}
-          onChange={(e) => set("date", e.target.value)}
-          min={new Date().toISOString().split("T")[0]}
-          className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
-        />
-      </div>
-
       {/* Round trip */}
       <div className="flex items-center gap-3">
         <button
@@ -127,6 +118,45 @@ export default function Step1Search({ initial, onNext }: Props) {
         <Label className="text-[#A1A1AA] text-sm cursor-pointer" onClick={() => set("roundTrip", !search.roundTrip)}>
           Round Trip
         </Label>
+      </div>
+
+      {/* Dates */}
+      <div className={search.roundTrip ? "grid grid-cols-1 sm:grid-cols-2 gap-4" : ""}>
+        <div>
+          <Label className="text-[#A1A1AA] text-xs mb-2 block">
+            {search.roundTrip ? "Departure Date" : "Travel Date"}
+          </Label>
+          <input
+            type="date"
+            required
+            value={search.date}
+            onChange={(e) => {
+              const v = e.target.value;
+              // Keep the return date valid: never earlier than departure.
+              setSearch((prev) => ({
+                ...prev,
+                date: v,
+                returnDate: prev.returnDate && prev.returnDate < v ? v : prev.returnDate,
+              }));
+            }}
+            min={new Date().toISOString().split("T")[0]}
+            className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+          />
+        </div>
+
+        {search.roundTrip && (
+          <div>
+            <Label className="text-[#A1A1AA] text-xs mb-2 block">Return Date</Label>
+            <input
+              type="date"
+              required
+              value={search.returnDate}
+              onChange={(e) => set("returnDate", e.target.value)}
+              min={search.date || new Date().toISOString().split("T")[0]}
+              className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+            />
+          </div>
+        )}
       </div>
 
       {/* Passenger counts */}

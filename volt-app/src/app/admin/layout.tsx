@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import { Loader2, AlertTriangle, Menu, Zap } from "lucide-react";
+import { canAccessAdminRoute } from "@/lib/permissions";
+import { Loader2, AlertTriangle, Menu, Zap, ShieldAlert } from "lucide-react";
 
 // Dev preview mode — lets you see the dashboard without Supabase connected.
 // Access via: /admin?preview=true
@@ -13,9 +14,10 @@ import { Loader2, AlertTriangle, Menu, Zap } from "lucide-react";
 const DEV_PREVIEW_ENABLED = process.env.NODE_ENV === "development";
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
-  const { isEmployee, loading } = useAuth();
+  const { isEmployee, employee, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
+  const pathname = usePathname();
   const isPreview = DEV_PREVIEW_ENABLED && params.get("preview") === "true";
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -24,6 +26,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       router.replace("/emp-login");
     }
   }, [isEmployee, loading, router, isPreview]);
+
+  // Block regular employees from restricted areas (revenue, reports, payments,
+  // vehicles, drivers, employees) if they navigate there directly by URL.
+  const routeAllowed =
+    isPreview || !employee || canAccessAdminRoute(pathname, employee.role);
 
   // Prevent background scroll while the mobile sidebar is open.
   useEffect(() => {
@@ -82,7 +89,28 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
-          {children}
+          {routeAllowed ? (
+            children
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center py-24 gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <ShieldAlert className="w-7 h-7 text-red-400" />
+              </div>
+              <div>
+                <h1 className="text-white text-xl font-bold mb-1">Access restricted</h1>
+                <p className="text-[#A1A1AA] text-sm max-w-sm">
+                  This area is limited to managers and owners. If you need access,
+                  contact your manager.
+                </p>
+              </div>
+              <button
+                onClick={() => router.replace("/admin")}
+                className="mt-2 px-4 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#9D5FF5] text-white text-sm font-semibold transition-colors"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -23,6 +23,7 @@ export default function BookingWidget() {
   const [from,      setFrom]      = useState("columbus");
   const [to,        setTo]        = useState("atl");
   const [date,      setDate]      = useState("");
+  const [returnDate, setReturnDate] = useState("");
   const [adults,    setAdults]    = useState("1");
   const [children,  setChildren]  = useState("0");
   const [pets,      setPets]      = useState("0");
@@ -52,6 +53,7 @@ export default function BookingWidget() {
     const params = new URLSearchParams({
       from, to, date, adults, children, pets, extraBags,
       roundTrip: String(roundTrip),
+      returnDate: roundTrip ? returnDate : "",
     });
     router.push(`/book?${params.toString()}`);
   };
@@ -122,22 +124,43 @@ export default function BookingWidget() {
               </div>
             </div>
 
-            {/* ── Date / Passengers ────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            {/* ── Date(s) / Passengers ─────────────────────────────── */}
+            <div className={`grid grid-cols-1 gap-4 mb-4 ${roundTrip ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
               <div>
                 <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
                   <Calendar className="inline w-3 h-3 mr-1" />
-                  Date
+                  {roundTrip ? "Departure Date" : "Date"}
                 </Label>
                 <input
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDate(v);
+                    // Keep the return date on or after departure.
+                    if (returnDate && returnDate < v) setReturnDate(v);
+                  }}
                   min={new Date().toISOString().split("T")[0]}
                   required
                   className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
                 />
               </div>
+              {roundTrip && (
+                <div>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
+                    <Calendar className="inline w-3 h-3 mr-1" />
+                    Return Date
+                  </Label>
+                  <input
+                    type="date"
+                    value={returnDate}
+                    onChange={(e) => setReturnDate(e.target.value)}
+                    min={date || new Date().toISOString().split("T")[0]}
+                    required
+                    className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+                  />
+                </div>
+              )}
               <div>
                 <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
                   <Users className="inline w-3 h-3 mr-1" />

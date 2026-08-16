@@ -20,24 +20,27 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { rolesForRoute } from "@/lib/permissions";
+import type { EmployeeRole } from "@/lib/supabase/types";
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles: string[];        // which roles can see this item
   badge?: number;
 }
 
+// Access for each link is derived from the shared RBAC config so the sidebar
+// and the route guards can never drift apart.
 const NAV_ITEMS: NavItem[] = [
-  { href: "/admin",             label: "Dashboard",     icon: LayoutDashboard, roles: ["owner","manager","office_staff","driver"] },
-  { href: "/admin/reservations",label: "Reservations",  icon: CalendarDays,    roles: ["owner","manager","office_staff"] },
-  { href: "/admin/dispatch",    label: "Dispatch",      icon: Truck,           roles: ["owner","manager","office_staff","driver"] },
-  { href: "/admin/vehicles",    label: "Vehicles",      icon: Car,             roles: ["owner","manager"] },
-  { href: "/admin/drivers",     label: "Drivers",       icon: Bus,             roles: ["owner","manager"] },
-  { href: "/admin/payments",    label: "Payments",      icon: CreditCard,      roles: ["owner","manager"] },
-  { href: "/admin/reports",     label: "Reports",       icon: BarChart3,       roles: ["owner","manager"] },
-  { href: "/admin/employees",   label: "Employees",     icon: UserCog,         roles: ["owner"] },
+  { href: "/admin",             label: "Dashboard",     icon: LayoutDashboard },
+  { href: "/admin/reservations",label: "Reservations",  icon: CalendarDays },
+  { href: "/admin/dispatch",    label: "Dispatch",      icon: Truck },
+  { href: "/admin/vehicles",    label: "Vehicles",      icon: Car },
+  { href: "/admin/drivers",     label: "Drivers",       icon: Bus },
+  { href: "/admin/payments",    label: "Payments",      icon: CreditCard },
+  { href: "/admin/reports",     label: "Reports",       icon: BarChart3 },
+  { href: "/admin/employees",   label: "Employees",     icon: UserCog },
 ];
 
 export default function AdminSidebar({
@@ -52,9 +55,9 @@ export default function AdminSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { employee, signOut } = useAuth();
-  const role = previewMode ? "owner" : (employee?.role ?? "driver");
+  const role: EmployeeRole = previewMode ? "owner" : (employee?.role ?? "driver");
 
-  const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
+  const visibleItems = NAV_ITEMS.filter((item) => rolesForRoute(item.href).includes(role));
 
   const handleSignOut = async () => {
     await signOut();
