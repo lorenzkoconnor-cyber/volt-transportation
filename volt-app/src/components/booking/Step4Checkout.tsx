@@ -52,16 +52,21 @@ function TripSummary({
       <h3 className="text-white font-semibold text-sm">Trip Summary</h3>
       <div className="space-y-2">
         {[
-          { label: "Route", value: `${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short}` },
-          { label: "Outbound", value: `${formatDate(search.date)} · ${outbound.displayTime}` },
+          {
+            label: "Outbound",
+            value: `${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short} · ${formatDate(search.date)} · ${outbound.displayTime}`,
+          },
           ...(returnSlot
-            ? [{ label: "Return", value: `${formatDate(search.returnDate)} · ${returnSlot.displayTime}` }]
+            ? [{
+                label: "Return",
+                value: `${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short} · ${formatDate(search.returnDate)} · ${returnSlot.displayTime}`,
+              }]
             : []),
           { label: "Passenger", value: primary.name },
         ].map((row) => (
-          <div key={row.label} className="flex justify-between text-sm">
-            <span className="text-[#A1A1AA]">{row.label}</span>
-            <span className="text-white">{row.value}</span>
+          <div key={row.label} className="flex justify-between gap-4 text-sm">
+            <span className="text-[#A1A1AA] flex-shrink-0">{row.label}</span>
+            <span className="text-white text-right">{row.value}</span>
           </div>
         ))}
       </div>
