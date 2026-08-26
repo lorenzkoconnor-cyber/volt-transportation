@@ -18,6 +18,7 @@ export interface BookingSearch {
   from: LocationKey;
   to: LocationKey;
   date: string;
+  returnDate: string;   // only used when roundTrip is true
   adults: number;
   children: number;
   pets: number;

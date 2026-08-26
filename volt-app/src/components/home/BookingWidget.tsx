@@ -22,7 +22,8 @@ export default function BookingWidget() {
   const router = useRouter();
   const [from,      setFrom]      = useState("columbus");
   const [to,        setTo]        = useState("atl");
-  const [date,      setDate]      = useState("");
+  const [date,       setDate]       = useState("");
+  const [returnDate, setReturnDate] = useState("");
   const [adults,    setAdults]    = useState("1");
   const [children,  setChildren]  = useState("0");
   const [pets,      setPets]      = useState("0");
@@ -53,8 +54,12 @@ export default function BookingWidget() {
       from, to, date, adults, children, pets, extraBags,
       roundTrip: String(roundTrip),
     });
+    if (roundTrip && returnDate) params.set("returnDate", returnDate);
     router.push(`/book?${params.toString()}`);
   };
+
+  // Switching to one-way clears any chosen return date
+  const selectOneWay = () => { setRoundTrip(false); setReturnDate(""); };
 
   return (
     <section className="relative z-20 -mt-8 px-4 sm:px-6 lg:px-8 pb-16">
@@ -65,7 +70,7 @@ export default function BookingWidget() {
           <div className="flex items-center gap-4 mb-6">
             <span className="text-[#A1A1AA] text-sm font-medium">Trip Type</span>
             <div className="flex rounded-lg overflow-hidden border border-white/10">
-              <button type="button" onClick={() => setRoundTrip(false)}
+              <button type="button" onClick={selectOneWay}
                 className={`px-4 py-1.5 text-sm font-medium transition-colors ${!roundTrip ? "bg-[#7C3AED] text-white" : "text-[#A1A1AA] hover:text-white"}`}>
                 One Way
               </button>
@@ -122,22 +127,42 @@ export default function BookingWidget() {
               </div>
             </div>
 
-            {/* ── Date / Passengers ────────────────────────────────── */}
+            {/* ── Date(s) / Passengers ─────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
                   <Calendar className="inline w-3 h-3 mr-1" />
-                  Date
+                  {roundTrip ? "Departure Date" : "Date"}
                 </Label>
                 <input
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => {
+                    const d = e.target.value;
+                    setDate(d);
+                    if (returnDate && returnDate < d) setReturnDate("");
+                  }}
                   min={new Date().toISOString().split("T")[0]}
                   required
                   className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
                 />
               </div>
+              {roundTrip && (
+                <div>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
+                    <Calendar className="inline w-3 h-3 mr-1" />
+                    Return Date
+                  </Label>
+                  <input
+                    type="date"
+                    value={returnDate}
+                    onChange={(e) => setReturnDate(e.target.value)}
+                    min={date || new Date().toISOString().split("T")[0]}
+                    required
+                    className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+                  />
+                </div>
+              )}
               <div>
                 <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
                   <Users className="inline w-3 h-3 mr-1" />

@@ -24,6 +24,7 @@ function BookingFlow() {
     from: (params.get("from") as "columbus" | "atl") || "columbus",
     to: (params.get("to") as "columbus" | "atl") || "atl",
     date: params.get("date") || "",
+    returnDate: params.get("returnDate") || "",
     adults: Number(params.get("adults") || 1),
     children: Number(params.get("children") || 0),
     pets: Number(params.get("pets") || 0),

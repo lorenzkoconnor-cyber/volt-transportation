@@ -19,9 +19,18 @@ interface Props {
 
 export default function Step1Search({ initial, onNext }: Props) {
   const [search, setSearch] = useState<BookingSearch>(initial);
+  const [error, setError] = useState("");
 
   const set = (key: keyof BookingSearch, value: string | number | boolean) =>
     setSearch((prev) => ({ ...prev, [key]: value }));
+
+  const toggleRoundTrip = () =>
+    setSearch((prev) => ({
+      ...prev,
+      roundTrip: !prev.roundTrip,
+      // clear a stale return date when switching back to one-way
+      returnDate: !prev.roundTrip ? prev.returnDate : "",
+    }));
 
   const swapLocations = () =>
     setSearch((prev) => ({ ...prev, from: prev.to, to: prev.from }));
@@ -43,6 +52,17 @@ export default function Step1Search({ initial, onNext }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (search.roundTrip) {
+      if (!search.returnDate) {
+        setError("Please select a return date for your round trip.");
+        return;
+      }
+      if (search.returnDate < search.date) {
+        setError("Your return date can't be before your departure date.");
+        return;
+      }
+    }
+    setError("");
     onNext(search);
   };
 
@@ -100,33 +120,59 @@ export default function Step1Search({ initial, onNext }: Props) {
         </div>
       </div>
 
-      {/* Date */}
-      <div>
-        <Label className="text-[#A1A1AA] text-xs mb-2 block">Travel Date</Label>
-        <input
-          type="date"
-          required
-          value={search.date}
-          onChange={(e) => set("date", e.target.value)}
-          min={new Date().toISOString().split("T")[0]}
-          className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
-        />
-      </div>
-
       {/* Round trip */}
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => set("roundTrip", !search.roundTrip)}
+          onClick={toggleRoundTrip}
           className={`relative w-11 h-6 rounded-full transition-colors ${search.roundTrip ? "bg-[#7C3AED]" : "bg-white/10"}`}
         >
           <span
             className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${search.roundTrip ? "translate-x-5" : ""}`}
           />
         </button>
-        <Label className="text-[#A1A1AA] text-sm cursor-pointer" onClick={() => set("roundTrip", !search.roundTrip)}>
+        <Label className="text-[#A1A1AA] text-sm cursor-pointer" onClick={toggleRoundTrip}>
           Round Trip
         </Label>
+      </div>
+
+      {/* Dates */}
+      <div className={`grid gap-3 ${search.roundTrip ? "sm:grid-cols-2" : "grid-cols-1"}`}>
+        <div>
+          <Label className="text-[#A1A1AA] text-xs mb-2 block">
+            {search.roundTrip ? "Departure Date" : "Travel Date"}
+          </Label>
+          <input
+            type="date"
+            required
+            value={search.date}
+            onChange={(e) => {
+              const date = e.target.value;
+              setSearch((prev) => ({
+                ...prev,
+                date,
+                // keep the return date valid if departure moves past it
+                returnDate: prev.returnDate && prev.returnDate < date ? "" : prev.returnDate,
+              }));
+            }}
+            min={new Date().toISOString().split("T")[0]}
+            className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+          />
+        </div>
+
+        {search.roundTrip && (
+          <div>
+            <Label className="text-[#A1A1AA] text-xs mb-2 block">Return Date</Label>
+            <input
+              type="date"
+              required
+              value={search.returnDate}
+              onChange={(e) => set("returnDate", e.target.value)}
+              min={search.date || new Date().toISOString().split("T")[0]}
+              className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+            />
+          </div>
+        )}
       </div>
 
       {/* Passenger counts */}
@@ -169,6 +215,10 @@ export default function Step1Search({ initial, onNext }: Props) {
           Final price confirmed at checkout
         </p>
       </div>
+
+      {error && (
+        <p className="text-red-400 text-sm text-center -mt-2">{error}</p>
+      )}
 
       <Button
         type="submit"

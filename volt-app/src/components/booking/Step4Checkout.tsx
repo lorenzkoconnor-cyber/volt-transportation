@@ -54,7 +54,9 @@ function TripSummary({
         {[
           { label: "Route", value: `${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short}` },
           { label: "Outbound", value: `${formatDate(search.date)} · ${outbound.displayTime}` },
-          ...(returnSlot ? [{ label: "Return", value: returnSlot.displayTime }] : []),
+          ...(returnSlot
+            ? [{ label: "Return", value: `${formatDate(search.returnDate)} · ${returnSlot.displayTime}` }]
+            : []),
           { label: "Passenger", value: primary.name },
         ].map((row) => (
           <div key={row.label} className="flex justify-between text-sm">

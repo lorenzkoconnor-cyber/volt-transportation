@@ -56,7 +56,7 @@ export default function Step5Confirmation({
           <tr><td class="muted">Route</td><td style="text-align:right">${LOCATIONS[search.from].label} → ${LOCATIONS[search.to].label}</td></tr>
           <tr><td class="muted">Date</td><td style="text-align:right">${formatDate(search.date)}</td></tr>
           <tr><td class="muted">Departure</td><td style="text-align:right">${outbound.displayTime}</td></tr>
-          ${returnSlot ? `<tr><td class="muted">Return</td><td style="text-align:right">${returnSlot.displayTime}</td></tr>` : ""}
+          ${returnSlot ? `<tr><td class="muted">Return</td><td style="text-align:right">${formatDate(search.returnDate)} · ${returnSlot.displayTime}</td></tr>` : ""}
           <tr><td class="muted">Contact</td><td style="text-align:right">${primary.phone}</td></tr>
         </table>
       </div>
@@ -113,7 +113,7 @@ export default function Step5Confirmation({
             },
             { icon: Calendar, label: "Date", value: formatDate(search.date) },
             { icon: Clock, label: "Departure", value: outbound.displayTime },
-            ...(returnSlot ? [{ icon: Clock, label: "Return", value: returnSlot.displayTime }] : []),
+            ...(returnSlot ? [{ icon: Clock, label: "Return", value: `${formatDate(search.returnDate)} · ${returnSlot.displayTime}` }] : []),
             {
               icon: Users,
               label: "Passengers",

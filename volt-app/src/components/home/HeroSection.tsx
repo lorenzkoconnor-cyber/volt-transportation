@@ -28,6 +28,7 @@ export default function HeroSection() {
   const [from, setFrom]           = useState<LocationKey>("columbus");
   const [to, setTo]               = useState<LocationKey>("atl");
   const [date, setDate]           = useState("");
+  const [returnDate, setReturnDate] = useState("");
   const [adults, setAdults]       = useState(1);
   const [children, setChildren]   = useState(0);
   const [pets, setPets]           = useState(0);
@@ -62,7 +63,15 @@ export default function HeroSection() {
       pets: String(pets), extraBags: String(extraBags),
       roundTrip: String(roundTrip),
     });
+    if (roundTrip && returnDate) params.set("returnDate", returnDate);
     router.push(`/book?${params.toString()}`);
+  };
+
+  const toggleRoundTrip = () => {
+    setRoundTrip((prev) => {
+      if (prev) setReturnDate(""); // switching to one-way clears return date
+      return !prev;
+    });
   };
 
   // Scroll-driven video parallax
@@ -186,24 +195,41 @@ export default function HeroSection() {
                 </div>
               </div>
 
-              {/* Date */}
-              <div>
-                <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Travel Date</Label>
-                <input type="date" required value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
-              </div>
-
               {/* Round trip */}
               <div className="flex items-center gap-3">
-                <button type="button" onClick={() => setRoundTrip(!roundTrip)}
+                <button type="button" onClick={toggleRoundTrip}
                   className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${roundTrip ? "bg-[#7C3AED]" : "bg-white/10"}`}>
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${roundTrip ? "translate-x-5" : ""}`} />
                 </button>
-                <span className="text-[#A1A1AA] text-sm cursor-pointer select-none" onClick={() => setRoundTrip(!roundTrip)}>
+                <span className="text-[#A1A1AA] text-sm cursor-pointer select-none" onClick={toggleRoundTrip}>
                   Round Trip
                 </span>
+              </div>
+
+              {/* Date(s) */}
+              <div className={`grid gap-2 sm:gap-3 ${roundTrip ? "grid-cols-2" : "grid-cols-1"}`}>
+                <div>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
+                    {roundTrip ? "Departure Date" : "Travel Date"}
+                  </Label>
+                  <input type="date" required value={date}
+                    onChange={(e) => {
+                      const d = e.target.value;
+                      setDate(d);
+                      if (returnDate && returnDate < d) setReturnDate("");
+                    }}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
+                </div>
+                {roundTrip && (
+                  <div>
+                    <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Return Date</Label>
+                    <input type="date" required value={returnDate}
+                      onChange={(e) => setReturnDate(e.target.value)}
+                      min={date || new Date().toISOString().split("T")[0]}
+                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
+                  </div>
+                )}
               </div>
 
               {/* Passengers */}
