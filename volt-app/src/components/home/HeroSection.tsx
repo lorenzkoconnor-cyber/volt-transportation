@@ -207,7 +207,7 @@ export default function HeroSection() {
               </div>
 
               {/* Date(s) */}
-              <div className={`grid gap-2 sm:gap-3 ${roundTrip ? "grid-cols-2" : "grid-cols-1"}`}>
+              <div className={`grid gap-2 sm:gap-3 ${roundTrip ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
                     {roundTrip ? "Departure Date" : "Travel Date"}
