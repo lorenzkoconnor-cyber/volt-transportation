@@ -68,7 +68,7 @@ export default function SetPasswordPage() {
     setDone(true);
     // Redirect employees → dashboard, customers → portal
     setTimeout(() => {
-      router.replace(isEmployee ? "/admin" : "/portal");
+      router.replace(isEmployee ? "/dashboard" : "/portal");
     }, 2000);
   };
 

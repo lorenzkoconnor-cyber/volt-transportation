@@ -315,7 +315,7 @@ export default function DispatchPage() {
                       ))}
                     </select>
                     {dep.seats_booked > 0 && (
-                      <Link href={`/admin/manifest?tripId=${dep.id}`}>
+                      <Link href={`/dashboard/manifest?tripId=${dep.id}`}>
                         <span className="flex items-center gap-1 text-[#7C3AED] hover:text-[#9D5FF5] text-xs font-medium transition-colors cursor-pointer">
                           Manifest <ChevronRight className="w-3.5 h-3.5" />
                         </span>
@@ -542,7 +542,7 @@ export default function DispatchPage() {
             {vehicles.length === 0 ? (
               <p className="text-[#A1A1AA] text-sm">
                 No active vehicles. Add one on the{" "}
-                <Link href="/admin/vehicles" className="text-[#7C3AED] hover:underline">Vehicles</Link> page first.
+                <Link href="/dashboard/vehicles" className="text-[#7C3AED] hover:underline">Vehicles</Link> page first.
               </p>
             ) : (
               <form onSubmit={assignVehicle} className="space-y-4">
@@ -571,7 +571,7 @@ export default function DispatchPage() {
                   {drivers.length === 0 && (
                     <p className="text-[#A1A1AA] text-xs mt-1.5">
                       No drivers yet — add them on the{" "}
-                      <Link href="/admin/drivers" className="text-[#7C3AED] hover:underline">Drivers</Link> page.
+                      <Link href="/dashboard/drivers" className="text-[#7C3AED] hover:underline">Drivers</Link> page.
                     </p>
                   )}
                 </div>

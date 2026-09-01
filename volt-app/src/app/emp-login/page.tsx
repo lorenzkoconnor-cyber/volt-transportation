@@ -21,7 +21,7 @@ export default function EmpLoginPage() {
   // Redirect once employee profile is confirmed loaded
   useEffect(() => {
     if (!authLoading && isEmployee && employee) {
-      router.replace("/admin");
+      router.replace("/dashboard");
     }
   }, [authLoading, isEmployee, employee, router]);
 

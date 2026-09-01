@@ -135,7 +135,7 @@ function ManifestContent() {
         <AlertCircle className="w-10 h-10 text-[#A1A1AA]" />
         <p className="text-white font-semibold">Trip not found</p>
         <p className="text-[#A1A1AA] text-sm">Open a manifest from the Dispatch page.</p>
-        <Link href="/admin/dispatch" className="text-[#7C3AED] hover:underline text-sm">← Back to dispatch</Link>
+        <Link href="/dashboard/dispatch" className="text-[#7C3AED] hover:underline text-sm">← Back to dispatch</Link>
       </div>
     );
   }
@@ -144,7 +144,7 @@ function ManifestContent() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/admin/dispatch">
+        <Link href="/dashboard/dispatch">
           <button className="w-9 h-9 rounded-xl glass flex items-center justify-center text-[#A1A1AA] hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </button>

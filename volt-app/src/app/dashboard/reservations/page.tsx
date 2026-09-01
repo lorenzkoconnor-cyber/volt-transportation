@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { canViewFinancials } from "@/lib/permissions";
+import { useDashboardRole } from "@/lib/useDashboardRole";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatCents, formatDateShort } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,7 @@ type FilterStatus = "all" | "confirmed" | "completed" | "cancelled";
 
 export default function ReservationsPage() {
   const supabase = createClient();
+  const showMoney = canViewFinancials(useDashboardRole());
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [rows, setRows] = useState<ReservationRow[]>([]);
@@ -96,7 +99,7 @@ export default function ReservationsPage() {
             {loading ? "Loading…" : `${rows.length} total reservations`}
           </p>
         </div>
-        <Link href="/admin/reservations/new">
+        <Link href="/dashboard/reservations/new">
           <Button className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
             <Plus className="w-4 h-4 mr-1.5" /> New Reservation
           </Button>
@@ -138,9 +141,9 @@ export default function ReservationsPage() {
         <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
           <div className="col-span-3">Passenger</div>
           <div className="col-span-2">Confirmation</div>
-          <div className="col-span-3">Trip</div>
+          <div className={showMoney ? "col-span-3" : "col-span-4"}>Trip</div>
           <div className="col-span-1 text-center">Pax</div>
-          <div className="col-span-1 text-right">Total</div>
+          {showMoney && <div className="col-span-1 text-right">Total</div>}
           <div className="col-span-1 text-center">Status</div>
           <div className="col-span-1" />
         </div>
@@ -162,7 +165,7 @@ export default function ReservationsPage() {
         ) : (
           <div className="divide-y divide-white/5">
             {filtered.map((r) => (
-              <Link key={r.id} href={`/admin/reservations/${r.id}`} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center group">
+              <Link key={r.id} href={`/dashboard/reservations/${r.id}`} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center group">
                 <div className="col-span-3">
                   <div className="text-white font-medium text-sm">{r.name}</div>
                   <div className="text-[#A1A1AA] text-xs">{r.phone}</div>
@@ -170,7 +173,7 @@ export default function ReservationsPage() {
                 <div className="col-span-2">
                   <span className="text-[#7C3AED] text-xs font-mono">{r.confirmation}</span>
                 </div>
-                <div className="col-span-3">
+                <div className={showMoney ? "col-span-3" : "col-span-4"}>
                   <div className="text-white text-sm">{r.route}</div>
                   <div className="text-[#A1A1AA] text-xs flex items-center gap-2">
                     <Calendar className="w-3 h-3" />{r.date}
@@ -182,9 +185,11 @@ export default function ReservationsPage() {
                     <Users className="w-3.5 h-3.5" />{r.pax}
                   </span>
                 </div>
-                <div className="col-span-1 text-right">
-                  <span className="text-white font-semibold text-sm">{formatCents(r.totalCents)}</span>
-                </div>
+                {showMoney && (
+                  <div className="col-span-1 text-right">
+                    <span className="text-white font-semibold text-sm">{formatCents(r.totalCents)}</span>
+                  </div>
+                )}
                 <div className="col-span-1 flex justify-center">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? ""}`}>
                     {r.status.replace("_", " ")}
@@ -208,7 +213,8 @@ export default function ReservationsPage() {
           {[
             { icon: CheckCircle2, label: "Confirmed", count: rows.filter(r=>r.status==="confirmed").length, color: "text-green-400" },
             { icon: XCircle,      label: "Cancelled", count: rows.filter(r=>r.status==="cancelled").length, color: "text-red-400" },
-            { icon: DollarSign,   label: "Revenue",   count: formatCents(revenueCents), color: "text-[#7C3AED]" },
+            // Company revenue is owner/manager only.
+            ...(showMoney ? [{ icon: DollarSign, label: "Revenue", count: formatCents(revenueCents), color: "text-[#7C3AED]" }] : []),
           ].map((item) => {
             const Icon = item.icon;
             return (

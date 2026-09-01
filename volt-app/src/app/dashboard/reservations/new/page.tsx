@@ -185,7 +185,7 @@ export default function NewReservationPage() {
       });
       if (payErr) throw new Error(payErr.message);
 
-      router.push(`/admin/reservations/${reservation.id}`);
+      router.push(`/dashboard/reservations/${reservation.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create reservation.");
       setSaving(false);
@@ -198,7 +198,7 @@ export default function NewReservationPage() {
     <div className="space-y-6 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/admin/reservations">
+        <Link href="/dashboard/reservations">
           <button className="w-9 h-9 rounded-xl glass flex items-center justify-center text-[#A1A1AA] hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -249,7 +249,7 @@ export default function NewReservationPage() {
               </div>
             ) : slots.length === 0 ? (
               <p className="text-[#A1A1AA] text-sm py-3">
-                No scheduled departures for this date. Add one in <Link href="/admin/dispatch" className="text-[#7C3AED] hover:underline">Dispatch</Link>.
+                No scheduled departures for this date. Add one in <Link href="/dashboard/dispatch" className="text-[#7C3AED] hover:underline">Dispatch</Link>.
               </p>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-56 overflow-y-auto pr-1">

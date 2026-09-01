@@ -1,23 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import { Loader2, AlertTriangle, Menu, Zap } from "lucide-react";
+import { canAccessRoute } from "@/lib/permissions";
+import { Loader2, AlertTriangle, Menu, Zap, ShieldAlert } from "lucide-react";
 
 // Dev preview mode — lets you see the dashboard without Supabase connected.
-// Access via: /admin?preview=true
+// Access via: /dashboard?preview=true
 // Remove this entire block when Supabase is connected and you're using real auth.
 const DEV_PREVIEW_ENABLED = process.env.NODE_ENV === "development";
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
-  const { isEmployee, loading } = useAuth();
+  const { isEmployee, employee, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
+  const pathname = usePathname();
   const isPreview = DEV_PREVIEW_ENABLED && params.get("preview") === "true";
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Preview mode impersonates an owner (full access).
+  const effectiveRole = isPreview ? "owner" : employee?.role;
+  // An authenticated employee whose role isn't allowed on this route.
+  const roleBlocked =
+    !isPreview && !loading && isEmployee && !canAccessRoute(pathname ?? "", effectiveRole);
 
   useEffect(() => {
     if (!isPreview && !loading && !isEmployee) {
@@ -82,7 +90,28 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl">
-          {children}
+          {roleBlocked ? (
+            <div className="flex flex-col items-center justify-center text-center py-24 gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <ShieldAlert className="w-7 h-7 text-red-400" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">Access restricted</h1>
+                <p className="text-[#A1A1AA] text-sm mt-1 max-w-sm">
+                  Your role doesn&apos;t have permission to view this page. If you think this is a
+                  mistake, contact an owner or manager.
+                </p>
+              </div>
+              <button
+                onClick={() => router.replace("/dashboard")}
+                className="mt-1 px-4 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#9D5FF5] text-white text-sm font-semibold transition-colors"
+              >
+                Back to dashboard
+              </button>
+            </div>
+          ) : (
+            children
+          )}
         </div>
       </main>
     </div>

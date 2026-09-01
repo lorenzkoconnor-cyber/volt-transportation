@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { canViewFinancials, canAccessRoute } from "@/lib/permissions";
+import { useDashboardRole } from "@/lib/useDashboardRole";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatCents, formatDateShort, localDateString } from "@/lib/format";
 import StatCard from "@/components/admin/StatCard";
@@ -35,6 +37,8 @@ interface DashReservation {
 
 export default function AdminDashboardPage() {
   const { employee, loading: authLoading } = useAuth();
+  const role = useDashboardRole();
+  const showMoney = canViewFinancials(role);
   const supabase = createClient();
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
@@ -145,17 +149,25 @@ export default function AdminDashboardPage() {
           </h1>
           <p className="text-[#A1A1AA] text-sm mt-0.5">{today}</p>
         </div>
-        <Link href="/admin/reservations/new">
-          <Button className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
-            + New Reservation
-          </Button>
-        </Link>
+        {canAccessRoute("/dashboard/reservations/new", role) && (
+          <Link href="/dashboard/reservations/new">
+            <Button className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+              + New Reservation
+            </Button>
+          </Link>
+        )}
       </div>
 
-      {/* Stats */}
+      {/* Stats — revenue is owner/manager only; other roles lead with trips */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Today's Revenue" value={loading ? "…" : formatCents(stats.revenueToday)} sub={`${stats.passengersToday} passengers`} icon={DollarSign} accent />
-        <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} />
+        {showMoney ? (
+          <StatCard label="Today's Revenue" value={loading ? "…" : formatCents(stats.revenueToday)} sub={`${stats.passengersToday} passengers`} icon={DollarSign} accent />
+        ) : (
+          <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} accent />
+        )}
+        {showMoney && (
+          <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} />
+        )}
         <StatCard label="Passengers Today" value={loading ? "…" : stats.passengersToday} sub="Across all trips" icon={Users} />
         <StatCard label="Active Vehicles" value={loading ? "…" : stats.activeVehicles} sub="In the fleet" icon={CalendarDays} />
       </div>
@@ -165,7 +177,7 @@ export default function AdminDashboardPage() {
         <div className="xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white font-bold text-lg">Today&apos;s Schedule</h2>
-            <Link href="/admin/dispatch" className="text-[#7C3AED] text-sm hover:text-[#9D5FF5] flex items-center gap-1 transition-colors">
+            <Link href="/dashboard/dispatch" className="text-[#7C3AED] text-sm hover:text-[#9D5FF5] flex items-center gap-1 transition-colors">
               Full dispatch <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -242,7 +254,7 @@ export default function AdminDashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white font-bold text-lg">Recent Bookings</h2>
-            <Link href="/admin/reservations" className="text-[#7C3AED] text-sm hover:text-[#9D5FF5] flex items-center gap-1 transition-colors">
+            <Link href="/dashboard/reservations" className="text-[#7C3AED] text-sm hover:text-[#9D5FF5] flex items-center gap-1 transition-colors">
               All <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -257,7 +269,7 @@ export default function AdminDashboardPage() {
           ) : (
             <div className="space-y-2">
               {recent.map((r) => (
-                <Link key={r.id} href={`/admin/reservations/${r.id}`}>
+                <Link key={r.id} href={`/dashboard/reservations/${r.id}`}>
                   <div className="glass rounded-xl p-4 flex items-center justify-between gap-3 hover:border-[#7C3AED]/30 transition-all cursor-pointer mb-2">
                     <div className="min-w-0">
                       <div className="text-white text-sm font-medium truncate">{r.name}</div>
@@ -265,7 +277,7 @@ export default function AdminDashboardPage() {
                       <div className="text-[#A1A1AA] text-xs">{r.date}</div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-white font-semibold text-sm">{r.total}</div>
+                      {showMoney && <div className="text-white font-semibold text-sm">{r.total}</div>}
                       {r.paymentStatus === "paid" ? (
                         <div className="flex items-center gap-1 text-green-400 text-xs justify-end">
                           <CheckCircle2 className="w-3 h-3" />
@@ -288,11 +300,14 @@ export default function AdminDashboardPage() {
         <h2 className="text-white font-bold text-lg mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "View Dispatch", href: "/admin/dispatch", icon: Truck },
-            { label: "Search Reservations", href: "/admin/reservations", icon: CalendarDays },
-            { label: "Payment Reports", href: "/admin/reports", icon: DollarSign },
-            { label: "Manage Vehicles", href: "/admin/vehicles", icon: AlertCircle },
-          ].map((action) => {
+            { label: "View Dispatch", href: "/dashboard/dispatch", icon: Truck },
+            { label: "Search Reservations", href: "/dashboard/reservations", icon: CalendarDays },
+            { label: "Payment Reports", href: "/dashboard/reports", icon: DollarSign },
+            { label: "Manage Vehicles", href: "/dashboard/vehicles", icon: AlertCircle },
+          ]
+            // Only surface actions this role can actually open.
+            .filter((action) => canAccessRoute(action.href, role))
+            .map((action) => {
             const Icon = action.icon;
             return (
               <Link key={action.label} href={action.href}>

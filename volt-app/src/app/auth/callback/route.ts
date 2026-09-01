@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (emp) {
-      return NextResponse.redirect(`${origin}/admin`);
+      return NextResponse.redirect(`${origin}/dashboard`);
     }
   }
 

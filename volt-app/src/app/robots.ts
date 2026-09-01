@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/", "/emp-login", "/dashboard/", "/api/"],
+        disallow: ["/dashboard/", "/emp-login", "/api/"],
       },
     ],
     sitemap: "https://volttransportation.com/sitemap.xml",

@@ -267,7 +267,7 @@ export default function PaymentsPage() {
 
       <p className="text-[#A1A1AA] text-xs">
         Looking for a specific booking? Open it from the{" "}
-        <Link href="/admin/reservations" className="text-[#7C3AED] hover:underline">Reservations</Link> page for full details.
+        <Link href="/dashboard/reservations" className="text-[#7C3AED] hover:underline">Reservations</Link> page for full details.
       </p>
     </div>
   );

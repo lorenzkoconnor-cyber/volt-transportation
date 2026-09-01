@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { canViewFinancials } from "@/lib/permissions";
+import { useDashboardRole } from "@/lib/useDashboardRole";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatCents, formatDateLong } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ const PAY_ICONS = { stripe: CreditCard, cash: Banknote, comp: Gift } as const;
 
 export default function ReservationDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const showMoney = canViewFinancials(useDashboardRole());
   const supabase = createClient();
   const sb = supabase as any;
 
@@ -131,7 +134,7 @@ export default function ReservationDetailPage() {
       <div className="flex flex-col items-center py-24 gap-3">
         <AlertCircle className="w-10 h-10 text-[#A1A1AA]" />
         <p className="text-white font-semibold">Reservation not found</p>
-        <Link href="/admin/reservations" className="text-[#7C3AED] hover:underline text-sm">
+        <Link href="/dashboard/reservations" className="text-[#7C3AED] hover:underline text-sm">
           ← Back to reservations
         </Link>
       </div>
@@ -147,7 +150,7 @@ export default function ReservationDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
-          <Link href="/admin/reservations">
+          <Link href="/dashboard/reservations">
             <button className="w-9 h-9 rounded-xl glass flex items-center justify-center text-[#A1A1AA] hover:text-white transition-colors">
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -237,7 +240,7 @@ export default function ReservationDetailPage() {
         )}
         {resv.trip_id && (
           <div className="mt-4">
-            <Link href={`/admin/manifest?tripId=${resv.trip_id}`} className="text-[#7C3AED] hover:text-[#9D5FF5] text-sm font-medium transition-colors">
+            <Link href={`/dashboard/manifest?tripId=${resv.trip_id}`} className="text-[#7C3AED] hover:text-[#9D5FF5] text-sm font-medium transition-colors">
               View trip manifest →
             </Link>
           </div>
@@ -283,25 +286,28 @@ export default function ReservationDetailPage() {
         )}
       </div>
 
-      {/* Payment */}
+      {/* Payment — amounts are owner/manager only. Other roles see payment
+          status (paid / unpaid) and can still record a payment as taken. */}
       <div className="glass rounded-2xl p-6">
         <h2 className="text-white font-semibold mb-4">Payment</h2>
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-[#A1A1AA]">Subtotal</span>
-            <span className="text-white">{formatCents(resv.subtotal_cents)}</span>
-          </div>
-          {resv.discount_cents > 0 && (
+        {showMoney && (
+          <div className="space-y-2 mb-4">
             <div className="flex justify-between text-sm">
-              <span className="text-[#A1A1AA]">Discount</span>
-              <span className="text-green-400">−{formatCents(resv.discount_cents)}</span>
+              <span className="text-[#A1A1AA]">Subtotal</span>
+              <span className="text-white">{formatCents(resv.subtotal_cents)}</span>
             </div>
-          )}
-          <div className="flex justify-between font-bold border-t border-white/10 pt-2">
-            <span className="text-white">Total</span>
-            <span className="text-[#7C3AED]">{formatCents(resv.total_cents)}</span>
+            {resv.discount_cents > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-[#A1A1AA]">Discount</span>
+                <span className="text-green-400">−{formatCents(resv.discount_cents)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold border-t border-white/10 pt-2">
+              <span className="text-white">Total</span>
+              <span className="text-[#7C3AED]">{formatCents(resv.total_cents)}</span>
+            </div>
           </div>
-        </div>
+        )}
 
         {payments.length === 0 ? (
           <p className="text-[#A1A1AA] text-sm">No payment record.</p>
@@ -315,10 +321,11 @@ export default function ReservationDetailPage() {
                     <Icon className="w-4 h-4 text-[#7C3AED]" />
                     <div>
                       <div className="text-white text-sm font-medium capitalize">
-                        {p.method === "stripe" ? "Card" : p.method} · {formatCents(p.amount_cents)}
+                        {p.method === "stripe" ? "Card" : p.method}
+                        {showMoney && ` · ${formatCents(p.amount_cents)}`}
                       </div>
                       {p.notes && <div className="text-[#A1A1AA] text-xs">{p.notes}</div>}
-                      {p.refund_amount_cents > 0 && (
+                      {showMoney && p.refund_amount_cents > 0 && (
                         <div className="text-orange-400 text-xs">Refunded {formatCents(p.refund_amount_cents)}</div>
                       )}
                     </div>
@@ -343,9 +350,11 @@ export default function ReservationDetailPage() {
             })}
           </div>
         )}
-        <p className="text-[#A1A1AA] text-xs mt-3">
-          Refunds are issued from the <Link href="/admin/payments" className="text-[#7C3AED] hover:underline">Payments</Link> page.
-        </p>
+        {showMoney && (
+          <p className="text-[#A1A1AA] text-xs mt-3">
+            Refunds are issued from the <Link href="/dashboard/payments" className="text-[#7C3AED] hover:underline">Payments</Link> page.
+          </p>
+        )}
       </div>
 
       {/* Notes */}

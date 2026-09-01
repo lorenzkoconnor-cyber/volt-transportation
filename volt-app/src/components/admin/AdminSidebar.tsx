@@ -30,14 +30,14 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/admin",             label: "Dashboard",     icon: LayoutDashboard, roles: ["owner","manager","office_staff","driver"] },
-  { href: "/admin/reservations",label: "Reservations",  icon: CalendarDays,    roles: ["owner","manager","office_staff"] },
-  { href: "/admin/dispatch",    label: "Dispatch",      icon: Truck,           roles: ["owner","manager","office_staff","driver"] },
-  { href: "/admin/vehicles",    label: "Vehicles",      icon: Car,             roles: ["owner","manager"] },
-  { href: "/admin/drivers",     label: "Drivers",       icon: Bus,             roles: ["owner","manager"] },
-  { href: "/admin/payments",    label: "Payments",      icon: CreditCard,      roles: ["owner","manager"] },
-  { href: "/admin/reports",     label: "Reports",       icon: BarChart3,       roles: ["owner","manager"] },
-  { href: "/admin/employees",   label: "Employees",     icon: UserCog,         roles: ["owner"] },
+  { href: "/dashboard",             label: "Dashboard",     icon: LayoutDashboard, roles: ["owner","manager","office_staff","driver"] },
+  { href: "/dashboard/reservations",label: "Reservations",  icon: CalendarDays,    roles: ["owner","manager","office_staff"] },
+  { href: "/dashboard/dispatch",    label: "Dispatch",      icon: Truck,           roles: ["owner","manager","office_staff","driver"] },
+  { href: "/dashboard/vehicles",    label: "Vehicles",      icon: Car,             roles: ["owner","manager"] },
+  { href: "/dashboard/drivers",     label: "Drivers",       icon: Bus,             roles: ["owner","manager"] },
+  { href: "/dashboard/payments",    label: "Payments",      icon: CreditCard,      roles: ["owner","manager"] },
+  { href: "/dashboard/reports",     label: "Reports",       icon: BarChart3,       roles: ["owner","manager"] },
+  { href: "/dashboard/employees",   label: "Employees",     icon: UserCog,         roles: ["owner"] },
 ];
 
 export default function AdminSidebar({
@@ -125,7 +125,7 @@ export default function AdminSidebar({
               ? `${item.href}?preview=true`
               : item.href;
             const isActive = pathname === item.href ||
-              (item.href !== "/admin" && pathname.startsWith(item.href));
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
             return (
               <li key={item.href}>
