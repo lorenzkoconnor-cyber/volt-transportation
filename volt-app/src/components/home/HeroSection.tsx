@@ -208,7 +208,7 @@ export default function HeroSection() {
 
               {/* Date(s) */}
               <div className={`grid gap-2 sm:gap-3 ${roundTrip ? "grid-cols-2" : "grid-cols-1"}`}>
-                <div>
+                <div className="min-w-0">
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
                     {roundTrip ? "Departure Date" : "Travel Date"}
                   </Label>
@@ -219,15 +219,15 @@ export default function HeroSection() {
                       if (returnDate && returnDate < d) setReturnDate("");
                     }}
                     min={new Date().toISOString().split("T")[0]}
-                    className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
+                    className="w-full min-w-0 h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
                 </div>
                 {roundTrip && (
-                  <div>
+                  <div className="min-w-0">
                     <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Return Date</Label>
                     <input type="date" required value={returnDate}
                       onChange={(e) => setReturnDate(e.target.value)}
                       min={date || new Date().toISOString().split("T")[0]}
-                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
+                      className="w-full min-w-0 h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
                   </div>
                 )}
               </div>
