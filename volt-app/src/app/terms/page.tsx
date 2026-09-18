@@ -49,6 +49,30 @@ const sections = [
     title: "10. Changes to These Terms",
     body: `Volt Transportation reserves the right to update these Terms & Conditions at any time. Changes will be posted on this page with an updated effective date. Continued use of our services after changes constitutes acceptance of the updated terms.`,
   },
+  {
+    title: "11. Luggage Allowance",
+    body: `Each passenger may bring two standard suitcases (each 50 lbs or less, with a total linear size — length + width + height — of 62 inches or less) and one personal item small enough to keep on your lap or between your feet without intruding on another passenger's space (such as a purse, laptop bag, or small backpack). Because our shuttles are shared, luggage space is shared as well. If you are traveling with more than the standard allowance, we recommend reserving an additional seat. If a bag exceeds 50 lbs, you may be asked to assist with loading it, space permitting, and Volt Transportation is not liable for injuries resulting from the loading, unloading, or handling of such luggage.`,
+  },
+  {
+    title: "12. Prohibited Items",
+    body: `For the safety of all passengers, the following may not be transported: oversized boxes or luggage exceeding the standard allowance and duffel bags over the allowance; corrosive substances (such as acids and alkalis); flammable or combustible liquids (such as gasoline or kerosene); compressed gases; biohazardous materials; explosives, including fireworks; other hazardous materials (poisons, radioactive materials, and the like); items with a noxious odor; and any illegal substances.`,
+  },
+  {
+    title: "13. Service Animals",
+    body: `Fully trained service dogs are welcome aboard our shuttles when they meet applicable requirements. A service animal is a dog individually trained to do work or perform tasks for a person with a disability. Service animals in training, emotional-support animals, and comfort animals are not service animals for this purpose and travel as pets, subject to our pet policy, fees, and availability.`,
+  },
+  {
+    title: "14. Traveling Minors & Unaccompanied Minors",
+    body: `For safety, children ages 5–14 must travel with a parent or guardian. Minors ages 15–17 may travel unaccompanied. Children under age 5 must always travel with an accompanying adult.`,
+  },
+  {
+    title: "15. Child Safety Seats",
+    body: `If you are traveling with a child under age 8 who is less than 57 inches tall, please bring your own car seat or booster seat. Volt Transportation does not provide child car seats or boosters and is unable to store child restraint seats at our offices.`,
+  },
+  {
+    title: "16. Firearms & Ammunition",
+    body: `Weapons and firearms may not be carried onto the shuttle or in carry-on items, except by federal or local law-enforcement officers where permitted by law. Unloaded firearms may be transported in checked luggage only, inside a locked, hard-sided case, and must be declared to a Volt Transportation representative at pickup. Ammunition may not be carried in any personal or carry-on bag.`,
+  },
 ];
 
 export default function TermsPage() {
@@ -60,7 +84,7 @@ export default function TermsPage() {
           <div className="max-w-3xl mx-auto">
             <div className="mb-10">
               <h1 className="text-4xl font-bold text-white mb-3">Terms & Conditions</h1>
-              <p className="text-[#A1A1AA] text-sm">Effective Date: January 1, 2025</p>
+              <p className="text-[#A1A1AA] text-sm">Effective Date: September 18, 2026</p>
             </div>
 
             <div className="glass rounded-2xl divide-y divide-white/8 overflow-hidden">

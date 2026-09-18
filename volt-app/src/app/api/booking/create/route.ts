@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
 import { formatTime12h, formatDateLong } from "@/lib/format";
+import { MILITARY_DISCOUNT_RATE } from "@/lib/booking";
 
 // Use raw supabase client to avoid TS inference issues during Supabase setup phase
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
       subtotalCents,
       totalCents,
       stripePaymentIntentId,
+      militaryDiscountRequested, // rider ticked the Military/First-Responder box
     } = body;
 
     // Validate required fields
@@ -79,6 +81,36 @@ export async function POST(request: NextRequest) {
           .single();
         if (custError || !created) throw custError;
         resolvedCustomerId = created.id;
+      }
+    }
+
+    // 0b. Military & First Responder discount — decided SERVER-SIDE from the
+    //     resolved customer's verification status, never trusted from the client.
+    //     • approved  → apply 5% now (the client already charged the discounted total)
+    //     • requested but not yet approved → full price now, flagged so the 5% is
+    //       refunded automatically once an owner/manager approves the account.
+    let isMilitaryBooking = false;
+    let militaryDiscountPending = false;
+    let discountCents = 0;
+    let finalTotalCents: number = totalCents;
+
+    if (militaryDiscountRequested && resolvedCustomerId) {
+      const { data: cust } = await supabase
+        .from("customers")
+        .select("military_status")
+        .eq("id", resolvedCustomerId)
+        .single();
+      const status = cust?.military_status ?? "none";
+      if (status === "approved") {
+        isMilitaryBooking = true;
+        discountCents = Math.round((subtotalCents ?? 0) * MILITARY_DISCOUNT_RATE);
+        finalTotalCents = (subtotalCents ?? 0) - discountCents;
+      } else {
+        // Charged full price now; the discount is owed as a refund on approval.
+        isMilitaryBooking = true;
+        militaryDiscountPending = true;
+        discountCents = 0;
+        finalTotalCents = subtotalCents ?? totalCents;
       }
     }
 
@@ -134,8 +166,10 @@ export async function POST(request: NextRequest) {
         is_round_trip: isRoundTrip,
         special_notes: specialNotes || null,
         subtotal_cents: subtotalCents,
-        discount_cents: 0,
-        total_cents: totalCents,
+        discount_cents: discountCents,
+        total_cents: finalTotalCents,
+        is_military: isMilitaryBooking,
+        military_discount_pending: militaryDiscountPending,
       })
       .select()
       .single();
@@ -164,7 +198,7 @@ export async function POST(request: NextRequest) {
       reservation_id: reservation.id,
       method: "stripe",
       status: "paid",
-      amount_cents: totalCents,
+      amount_cents: finalTotalCents,
       stripe_payment_intent_id: stripePaymentIntentId,
       refund_amount_cents: 0,
     });
@@ -209,7 +243,7 @@ export async function POST(request: NextRequest) {
       action: "reservation.created",
       table_name: "reservations",
       record_id: reservation.id,
-      new_data: { confirmation_number: confirmationNumber, total_cents: totalCents },
+      new_data: { confirmation_number: confirmationNumber, total_cents: finalTotalCents, is_military: isMilitaryBooking, military_discount_pending: militaryDiscountPending },
     });
 
     return NextResponse.json({
