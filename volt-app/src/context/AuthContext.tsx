@@ -29,6 +29,8 @@ interface CustomerProfile {
   email: string;
   phone: string;
   isMilitary: boolean;
+  militaryStatus: "none" | "pending" | "approved" | "rejected";
+  militaryCategory: string | null;
 }
 
 interface AuthContextValue {
@@ -86,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from("customers")
-      .select("id, first_name, last_name, email, phone, is_military")
+      .select("id, first_name, last_name, email, phone, is_military, military_status, military_category")
       .eq("user_id", userId)
       .single();
 
@@ -98,6 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: data.email,
         phone: data.phone,
         isMilitary: data.is_military,
+        militaryStatus: data.military_status ?? "none",
+        militaryCategory: data.military_category ?? null,
       });
     } else {
       setCustomer(null);

@@ -3,12 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCents, formatDateShort, localDateString } from "@/lib/format";
-import { TrendingUp, Users, Truck, DollarSign, Loader2, Download } from "lucide-react";
+import { TrendingUp, Users, Truck, DollarSign, Loader2, Download, HeartHandshake, Clock } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
 import { Button } from "@/components/ui/button";
 
 type Period = "7d" | "30d" | "90d";
 const PERIOD_DAYS: Record<Period, number> = { "7d": 7, "30d": 30, "90d": 90 };
+
+function monthLabel(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  if (!y || !m) return ym;
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -20,6 +26,47 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [reservations, setReservations] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
+  const [milRows, setMilRows] = useState<any[]>([]);
+  const [milLoading, setMilLoading] = useState(true);
+
+  // Military & First Responder savings run program-wide by calendar month
+  // (independent of the period selector above), so load them once.
+  useEffect(() => {
+    (async () => {
+      const { data } = await sb
+        .from("reservations")
+        .select("discount_cents, created_at, military_discount_pending")
+        .eq("is_military", true)
+        .neq("status", "cancelled");
+      setMilRows(data ?? []);
+      setMilLoading(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const donation = useMemo(() => {
+    const monthMap = new Map<string, number>();
+    let allTime = 0;
+    let pendingCount = 0;
+    milRows.forEach((r) => {
+      if (r.military_discount_pending) pendingCount += 1;
+      const cents = r.discount_cents ?? 0;
+      if (cents > 0) {
+        const month = String(r.created_at ?? "").slice(0, 7); // YYYY-MM
+        monthMap.set(month, (monthMap.get(month) ?? 0) + cents);
+        allTime += cents;
+      }
+    });
+    const months = [...monthMap.entries()].sort(([a], [b]) => b.localeCompare(a));
+    const currentMonth = localDateString().slice(0, 7);
+    return {
+      months,
+      allTime,
+      pendingCount,
+      currentMonth,
+      currentTotal: monthMap.get(currentMonth) ?? 0,
+    };
+  }, [milRows]);
 
   useEffect(() => {
     setLoading(true);
@@ -146,6 +193,49 @@ export default function ReportsPage() {
         <StatCard label="Total Passengers" value={loading ? "…" : totals.passengers} sub="Both directions" icon={Users} />
         <StatCard label="Booked Trips"     value={loading ? "…" : totals.trips}      sub="With passengers" icon={Truck} />
         <StatCard label="Avg Occupancy"    value={loading ? "…" : `${totals.occupancy}%`} sub="Of booked trips" icon={TrendingUp} />
+      </div>
+
+      {/* Military & First Responder donation tracking */}
+      <div className="glass rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-white/8 flex items-center gap-2.5">
+          <HeartHandshake className="w-5 h-5 text-[#7C3AED] flex-shrink-0" />
+          <div>
+            <h2 className="text-white font-bold text-lg">Military &amp; First Responder Program</h2>
+            <p className="text-[#A1A1AA] text-xs">
+              Volt donates 100% of each month&apos;s member savings to Warrior Outreach Ranch.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/6">
+          <div className="bg-[#0F0F0F] p-5">
+            <div className="text-[#A1A1AA] text-xs mb-1">{monthLabel(donation.currentMonth)} — to donate</div>
+            <div className="text-[#7C3AED] font-bold text-2xl">{milLoading ? "…" : formatCents(donation.currentTotal)}</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">Member savings this month</div>
+          </div>
+          <div className="bg-[#0F0F0F] p-5">
+            <div className="text-[#A1A1AA] text-xs mb-1">All-time donation equivalent</div>
+            <div className="text-white font-bold text-2xl">{milLoading ? "…" : formatCents(donation.allTime)}</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">Total member savings to date</div>
+          </div>
+          <div className="bg-[#0F0F0F] p-5">
+            <div className="text-[#A1A1AA] text-xs mb-1 flex items-center gap-1"><Clock className="w-3 h-3" />Awaiting verification</div>
+            <div className="text-white font-bold text-2xl">{milLoading ? "…" : donation.pendingCount}</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">Full-price now; 5% refunded on approval</div>
+          </div>
+        </div>
+        {donation.months.length > 0 && (
+          <div className="divide-y divide-white/6">
+            <div className="grid grid-cols-2 px-6 py-2.5 border-t border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
+              <div>Month</div><div className="text-right">Donation</div>
+            </div>
+            {donation.months.map(([ym, cents]) => (
+              <div key={ym} className="grid grid-cols-2 px-6 py-3 hover:bg-white/3 transition-colors">
+                <div className="text-white text-sm">{monthLabel(ym)}</div>
+                <div className="text-right text-white font-semibold text-sm">{formatCents(cents as number)}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading ? (

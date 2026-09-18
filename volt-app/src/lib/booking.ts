@@ -7,6 +7,16 @@ export const PRICING = {
   extraBag: 10,
 } as const;
 
+// Military & First Responder discount — 5% off the whole booking, applied only
+// for verified accounts (see src/lib/military.ts and /api/military/*).
+export const MILITARY_DISCOUNT_RATE = 0.05;
+
+// Format a dollar amount that may be fractional (e.g. after a % discount):
+// "59" stays "59", but "56.05" keeps its cents.
+export function money(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
 export const LOCATIONS = {
   columbus: { label: "Columbus, GA", short: "Columbus" },
   atl: { label: "ATL Airport", short: "ATL" },
@@ -56,7 +66,13 @@ export interface PriceBreakdown {
   petTotal: number;
   extraBagTotal: number;
   oneWaySubtotal: number;
-  total: number;
+  subtotal: number;          // pre-discount total (both legs), whole dollars
+  discount: number;          // dollars off (may be fractional)
+  total: number;             // amount due after discount (may be fractional)
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
+  militaryDiscount: boolean; // whether the 5% was applied to these numbers
   lines: { label: string; amount: number }[];
 }
 
@@ -90,14 +106,25 @@ export function generateDepartureSlots(date: string, from: LocationKey): Departu
   return slots;
 }
 
-// Calculate price breakdown
-export function calcPrice(search: BookingSearch): PriceBreakdown {
+// Calculate price breakdown. Pass { militaryDiscount: true } to apply the 5%
+// Military & First Responder discount to the whole booking — do this only when
+// the customer's account is verified (checked server-side in /api/booking/create).
+export function calcPrice(
+  search: BookingSearch,
+  opts: { militaryDiscount?: boolean } = {},
+): PriceBreakdown {
   const adultTotal = search.adults * PRICING.adult;
   const childTotal = search.children * PRICING.child;
   const petTotal = search.pets * PRICING.pet;
   const extraBagTotal = search.extraBags * PRICING.extraBag;
   const oneWaySubtotal = adultTotal + childTotal + petTotal + extraBagTotal;
-  const total = search.roundTrip ? oneWaySubtotal * 2 : oneWaySubtotal;
+  const subtotal = search.roundTrip ? oneWaySubtotal * 2 : oneWaySubtotal;
+
+  // Work in cents so the percentage discount is exact.
+  const subtotalCents = subtotal * 100;
+  const militaryDiscount = !!opts.militaryDiscount;
+  const discountCents = militaryDiscount ? Math.round(subtotalCents * MILITARY_DISCOUNT_RATE) : 0;
+  const totalCents = subtotalCents - discountCents;
 
   const lines: { label: string; amount: number }[] = [];
   if (search.adults > 0) lines.push({ label: `${search.adults} Adult${search.adults > 1 ? "s" : ""} × $${PRICING.adult}`, amount: adultTotal });
@@ -106,7 +133,17 @@ export function calcPrice(search: BookingSearch): PriceBreakdown {
   if (search.extraBags > 0) lines.push({ label: `${search.extraBags} Extra Bag${search.extraBags > 1 ? "s" : ""} × $${PRICING.extraBag}`, amount: extraBagTotal });
   if (search.roundTrip) lines.push({ label: "Round Trip (×2)", amount: oneWaySubtotal });
 
-  return { adultTotal, childTotal, petTotal, extraBagTotal, oneWaySubtotal, total, lines };
+  return {
+    adultTotal, childTotal, petTotal, extraBagTotal, oneWaySubtotal,
+    subtotal,
+    discount: discountCents / 100,
+    total: totalCents / 100,
+    subtotalCents,
+    discountCents,
+    totalCents,
+    militaryDiscount,
+    lines,
+  };
 }
 
 // Generate a confirmation number

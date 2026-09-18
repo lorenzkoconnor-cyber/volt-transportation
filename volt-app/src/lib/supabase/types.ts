@@ -133,12 +133,18 @@ export interface Database {
           last_name: string;
           email: string;
           phone: string;
-          is_military: boolean;
+          is_military: boolean;                 // convenience flag: true once approved
+          military_status: "none" | "pending" | "approved" | "rejected";
+          military_category: string | null;     // 'military' | 'first_responder'
+          military_id_path: string | null;      // object path in the private bucket
+          military_submitted_at: string | null;
+          military_reviewed_at: string | null;
+          military_reviewed_by: string | null;
           stripe_customer_id: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["customers"]["Row"], "id" | "created_at" | "updated_at">;
+        Insert: Omit<Database["public"]["Tables"]["customers"]["Row"], "id" | "created_at" | "updated_at" | "military_status" | "military_category" | "military_id_path" | "military_submitted_at" | "military_reviewed_at" | "military_reviewed_by"> & Partial<Pick<Database["public"]["Tables"]["customers"]["Row"], "military_status" | "military_category" | "military_id_path" | "military_submitted_at" | "military_reviewed_at" | "military_reviewed_by">>;
         Update: Partial<Database["public"]["Tables"]["customers"]["Insert"]>;
       };
 
@@ -158,6 +164,8 @@ export interface Database {
           is_round_trip: boolean;
           special_notes: string | null;
           discount_id: string | null;
+          is_military: boolean;                 // part of the Military/First-Responder program
+          military_discount_pending: boolean;   // full price charged; 5% owed on approval
           subtotal_cents: number;          // stored in cents to avoid float issues
           discount_cents: number;
           total_cents: number;
@@ -166,7 +174,7 @@ export interface Database {
           cancelled_at: string | null;
           created_by_employee_id: string | null; // null = self-booked online
         };
-        Insert: Omit<Database["public"]["Tables"]["reservations"]["Row"], "id" | "created_at" | "updated_at">;
+        Insert: Omit<Database["public"]["Tables"]["reservations"]["Row"], "id" | "created_at" | "updated_at" | "is_military" | "military_discount_pending"> & Partial<Pick<Database["public"]["Tables"]["reservations"]["Row"], "is_military" | "military_discount_pending">>;
         Update: Partial<Database["public"]["Tables"]["reservations"]["Insert"]>;
       };
 

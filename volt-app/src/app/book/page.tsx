@@ -8,7 +8,7 @@ import StepIndicator from "@/components/booking/StepIndicator";
 import Step1Search from "@/components/booking/Step1Search";
 import Step2Departures from "@/components/booking/Step2Departures";
 import Step3Passengers from "@/components/booking/Step3Passengers";
-import Step4Checkout from "@/components/booking/Step4Checkout";
+import Step4Checkout, { type MilitaryResult } from "@/components/booking/Step4Checkout";
 import Step5Confirmation from "@/components/booking/Step5Confirmation";
 import {
   type BookingSearch,
@@ -37,6 +37,7 @@ function BookingFlow() {
   const [additionalPassengers, setAdditionalPassengers] = useState<string[]>([]);
   const [specialNotes, setSpecialNotes] = useState("");
   const [confirmationNumber, setConfirmationNumber] = useState("");
+  const [military, setMilitary] = useState<MilitaryResult>({ applied: false, pending: false });
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] grid-bg">
@@ -111,8 +112,9 @@ function BookingFlow() {
               primary={primary}
               additionalPassengers={additionalPassengers}
               specialNotes={specialNotes}
-              onNext={(conf) => {
+              onNext={(conf, mil) => {
                 setConfirmationNumber(conf);
+                setMilitary(mil);
                 setStep(5);
               }}
               onBack={() => setStep(3)}
@@ -126,6 +128,7 @@ function BookingFlow() {
               outbound={outbound}
               returnSlot={returnSlot}
               primary={primary}
+              military={military}
             />
           )}
         </div>

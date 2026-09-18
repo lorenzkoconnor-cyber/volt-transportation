@@ -11,6 +11,7 @@ import {
   UserCog,
   CreditCard,
   BarChart3,
+  ShieldCheck,
   Zap,
   LogOut,
   ChevronRight,
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/vehicles",    label: "Vehicles",      icon: Car,             roles: ["owner","manager"] },
   { href: "/dashboard/drivers",     label: "Drivers",       icon: Bus,             roles: ["owner","manager"] },
   { href: "/dashboard/payments",    label: "Payments",      icon: CreditCard,      roles: ["owner","manager"] },
+  { href: "/dashboard/verifications", label: "Verifications", icon: ShieldCheck,   roles: ["owner","manager"] },
   { href: "/dashboard/reports",     label: "Reports",       icon: BarChart3,       roles: ["owner","manager"] },
   { href: "/dashboard/employees",   label: "Employees",     icon: UserCog,         roles: ["owner"] },
 ];

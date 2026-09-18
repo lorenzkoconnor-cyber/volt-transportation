@@ -8,9 +8,11 @@ import {
   type Passenger,
   type DepartureSlot,
   calcPrice,
+  money,
   formatDate,
   LOCATIONS,
 } from "@/lib/booking";
+import type { MilitaryResult } from "@/components/booking/Step4Checkout";
 
 interface Props {
   confirmationNumber: string;
@@ -18,6 +20,7 @@ interface Props {
   outbound: DepartureSlot;
   returnSlot: DepartureSlot | null;
   primary: Passenger;
+  military?: MilitaryResult;
 }
 
 export default function Step5Confirmation({
@@ -26,13 +29,17 @@ export default function Step5Confirmation({
   outbound,
   returnSlot,
   primary,
+  military = { applied: false, pending: false },
 }: Props) {
-  const { lines, total } = calcPrice(search);
+  const { lines, discountCents, total } = calcPrice(search, { militaryDiscount: military.applied });
 
   const downloadReceipt = () => {
     const rows = lines
       .map((l) => `<tr><td>${l.label}</td><td style="text-align:right">$${l.amount}</td></tr>`)
-      .join("");
+      .join("") +
+      (discountCents > 0
+        ? `<tr><td style="color:#059669">Military &amp; First Responder (−5%)</td><td style="text-align:right;color:#059669">−$${money(discountCents / 100)}</td></tr>`
+        : "");
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Volt Receipt ${confirmationNumber}</title>
       <style>
         body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:40px auto;padding:0 24px;color:#111}
@@ -63,7 +70,7 @@ export default function Step5Confirmation({
       <div class="box">
         <table>
           ${rows}
-          <tr class="total"><td>Total Paid</td><td style="text-align:right">$${total}</td></tr>
+          <tr class="total"><td>Total Paid</td><td style="text-align:right">$${money(total)}</td></tr>
         </table>
       </div>
       <p class="muted" style="margin-top:24px">Thank you for riding with Volt Transportation. Questions? Visit volttransportation.com</p>
@@ -139,11 +146,28 @@ export default function Step5Confirmation({
             );
           })}
         </div>
+        {discountCents > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-green-400">Military &amp; First Responder (−5%)</span>
+            <span className="text-green-400">−${money(discountCents / 100)}</span>
+          </div>
+        )}
         <div className="border-t border-white/10 pt-4 flex items-center justify-between">
           <span className="text-[#A1A1AA] text-sm">Total Paid</span>
-          <span className="text-white font-bold text-lg">${total}</span>
+          <span className="text-white font-bold text-lg">${money(total)}</span>
         </div>
       </div>
+
+      {military.pending && (
+        <div className="glass rounded-2xl p-5 text-left border border-yellow-500/25">
+          <h3 className="text-yellow-400 font-semibold mb-1 text-sm">Military &amp; First Responder discount — under review</h3>
+          <p className="text-[#A1A1AA] text-sm">
+            Thanks for submitting your ID. We charged the full fare today; once we verify your
+            eligibility, we&apos;ll refund the 5% to your card and apply the discount automatically to
+            future bookings.
+          </p>
+        </div>
+      )}
 
       {/* What happens next */}
       <div className="glass rounded-2xl p-5 text-left">
