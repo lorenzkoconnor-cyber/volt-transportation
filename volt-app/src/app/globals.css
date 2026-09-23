@@ -109,6 +109,19 @@
     @apply font-sans;
     scroll-behavior: smooth;
   }
+  /* iOS Safari gives native date inputs an intrinsic min-width that ignores
+     width/min-width, so side-by-side date fields overflow into each other. */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+    margin: 0;
+  }
 }
 
 /* Glassmorphism utility */
