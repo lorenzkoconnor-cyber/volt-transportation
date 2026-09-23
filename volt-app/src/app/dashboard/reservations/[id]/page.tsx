@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, XCircle,
-  Phone, Mail, Users, Calendar, Clock, MapPin, CreditCard, Banknote, Gift, FileText,
+  Phone, Mail, Users, Calendar, Clock, MapPin, CreditCard, Banknote, Gift, FileText, Plane,
 } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -50,7 +50,8 @@ export default function ReservationDetailPage() {
         "trip:trips!reservations_trip_id_fkey(id, departure_date, departure_time, status, route:routes(name, origin_label, destination_label)), " +
         "return_trip:trips!reservations_return_trip_id_fkey(id, departure_date, departure_time, route:routes(name)), " +
         "reservation_passengers(id, name, is_primary, is_boarded, is_no_show), " +
-        "payments(id, method, status, amount_cents, refund_amount_cents, notes)"
+        "payments(id, method, status, amount_cents, refund_amount_cents, notes), " +
+        "reservation_flights(id, leg, direction, airline, flight_number, terminal, flight_date, flight_time)"
       )
       .eq("id", id)
       .single();
@@ -238,11 +239,39 @@ export default function ReservationDetailPage() {
             Return: {resv.return_trip.route?.name} · {formatDateLong(resv.return_trip.departure_date)} · {formatTime12h(resv.return_trip.departure_time)}
           </div>
         )}
+        {(resv.reservation_flights ?? []).length > 0 && (
+          <div className="mt-4 space-y-2">
+            {[...resv.reservation_flights]
+              .sort((a: any, b: any) => (a.leg === "outbound" ? -1 : 1) - (b.leg === "outbound" ? -1 : 1))
+              .map((f: any) => (
+                <div key={f.id} className="flex items-start gap-2 bg-white/3 rounded-xl p-3 text-sm">
+                  <Plane className="w-4 h-4 text-[#7C3AED] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-white font-medium">
+                      {f.airline} {f.flight_number}
+                      <span className="text-[#A1A1AA] font-normal">
+                        {" "}· {resv.return_trip ? (f.leg === "outbound" ? "Outbound" : "Return") + " · " : ""}
+                        {f.direction === "departing" ? "Departs ATL" : "Lands at ATL"}
+                      </span>
+                    </div>
+                    <div className="text-[#A1A1AA] text-xs mt-0.5">
+                      {formatDateLong(f.flight_date)} · {formatTime12h(f.flight_time.slice(0, 5))} · {f.terminal}
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
         {resv.trip_id && (
           <div className="mt-4">
             <Link href={`/dashboard/manifest?tripId=${resv.trip_id}`} className="text-[#7C3AED] hover:text-[#9D5FF5] text-sm font-medium transition-colors">
               View trip manifest →
             </Link>
+            {resv.return_trip_id && (
+              <Link href={`/dashboard/manifest?tripId=${resv.return_trip_id}`} className="ml-4 text-[#7C3AED] hover:text-[#9D5FF5] text-sm font-medium transition-colors">
+                View return manifest →
+              </Link>
+            )}
           </div>
         )}
       </div>
