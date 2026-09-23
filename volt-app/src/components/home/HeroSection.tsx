@@ -34,6 +34,8 @@ export default function HeroSection() {
   const [pets, setPets]           = useState(0);
   const [extraBags, setExtraBags] = useState(0);
   const [roundTrip, setRoundTrip] = useState(false);
+  // Most riders are catching or meeting a flight, so flight mode is the default.
+  const [hasFlight, setHasFlight] = useState(true);
 
   const handleFrom = (v: string | null) => {
     if (!v) return;
@@ -62,6 +64,7 @@ export default function HeroSection() {
       adults: String(adults), children: String(children),
       pets: String(pets), extraBags: String(extraBags),
       roundTrip: String(roundTrip),
+      hasFlight: String(hasFlight),
     });
     if (roundTrip && returnDate) params.set("returnDate", returnDate);
     router.push(`/book?${params.toString()}`);
@@ -195,22 +198,19 @@ export default function HeroSection() {
                 </div>
               </div>
 
-              {/* Round trip */}
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={toggleRoundTrip}
-                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${roundTrip ? "bg-[#7C3AED]" : "bg-white/10"}`}>
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${roundTrip ? "translate-x-5" : ""}`} />
-                </button>
-                <span className="text-[#A1A1AA] text-sm cursor-pointer select-none" onClick={toggleRoundTrip}>
-                  Round Trip
-                </span>
+              {/* Round trip + flight */}
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                <Toggle on={roundTrip} onToggle={toggleRoundTrip} label="Round Trip" />
+                <Toggle on={hasFlight} onToggle={() => setHasFlight((v) => !v)} label="I have a flight" />
               </div>
 
               {/* Date(s) */}
               <div className={`grid gap-2 sm:gap-3 ${roundTrip ? "grid-cols-2" : "grid-cols-1"}`}>
                 <div className="min-w-0">
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
-                    {roundTrip ? "Departure Date" : "Travel Date"}
+                    {hasFlight
+                      ? (roundTrip ? "Outbound Flight Date" : "Flight Date")
+                      : (roundTrip ? "Departure Date" : "Travel Date")}
                   </Label>
                   <input type="date" required value={date}
                     onChange={(e) => {
@@ -223,7 +223,9 @@ export default function HeroSection() {
                 </div>
                 {roundTrip && (
                   <div className="min-w-0">
-                    <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Return Date</Label>
+                    <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
+                      {hasFlight ? "Return Flight Date" : "Return Date"}
+                    </Label>
                     <input type="date" required value={returnDate}
                       onChange={(e) => setReturnDate(e.target.value)}
                       min={date || new Date().toISOString().split("T")[0]}
@@ -303,5 +305,19 @@ export default function HeroSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onToggle}
+        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? "bg-[#7C3AED]" : "bg-white/10"}`}>
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : ""}`} />
+      </button>
+      <span className="text-[#A1A1AA] text-sm cursor-pointer select-none" onClick={onToggle}>
+        {label}
+      </span>
+    </div>
   );
 }
