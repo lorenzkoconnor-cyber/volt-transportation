@@ -28,12 +28,14 @@ export default function Step1Search({ initial, onNext }: Props) {
 
   const today = localDateString();
 
-  // Turning flight mode on carries over any travel dates already chosen
-  // (e.g. from the homepage widget) as the flight dates.
+  // Switching flight mode on/off carries the dates already chosen across
+  // (travel dates ⇄ flight dates) so the rider doesn't re-enter them.
   const toggleFlight = () =>
     setSearch((prev) => ({
       ...prev,
       hasFlight: !prev.hasFlight,
+      date: prev.date || prev.outboundFlight.date,
+      returnDate: prev.returnDate || (prev.roundTrip ? prev.returnFlight.date : ""),
       outboundFlight: { ...prev.outboundFlight, date: prev.outboundFlight.date || prev.date },
       returnFlight: { ...prev.returnFlight, date: prev.returnFlight.date || prev.returnDate },
     }));

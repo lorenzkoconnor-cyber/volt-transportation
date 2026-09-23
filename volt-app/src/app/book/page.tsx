@@ -31,9 +31,11 @@ function BookingFlow() {
     pets: Number(params.get("pets") || 0),
     extraBags: Number(params.get("extraBags") || 0),
     roundTrip: params.get("roundTrip") === "true",
-    hasFlight: false,
-    outboundFlight: EMPTY_FLIGHT,
-    returnFlight: EMPTY_FLIGHT,
+    // Flight mode is the default; the homepage passes hasFlight=false to opt out.
+    // Any dates chosen on the homepage seed the flight dates.
+    hasFlight: params.get("hasFlight") !== "false",
+    outboundFlight: { ...EMPTY_FLIGHT, date: params.get("date") || "" },
+    returnFlight: { ...EMPTY_FLIGHT, date: params.get("returnDate") || "" },
   });
   const [outbound, setOutbound] = useState<DepartureSlot | null>(null);
   const [returnSlot, setReturnSlot] = useState<DepartureSlot | null>(null);
