@@ -109,6 +109,10 @@ export interface DepartureSlot {
   date?: string;        // "2026-10-02" — the Volt departure date (may differ from the flight date)
   time: string;         // "08:00"
   displayTime: string;  // "8:00 AM"
+  // Estimated arrival at the destination, using the route time.
+  arrivalDate?: string;
+  arrivalTime?: string;
+  arrivalDisplayTime?: string;
   available: boolean;
   seatsLeft: number;
   totalSeats: number;
@@ -196,13 +200,27 @@ export function shiftDate(date: string, days: number): string {
   return fromMinutes(toMinutes(date, "12:00") + days * 1440).date;
 }
 
-// "1 hr 45 min", "45 min", "2 hrs"
-export function formatDuration(minutes: number): string {
+// "1 hr 45 min", "45 min", "2 hrs" — or with `long`: "1 hour and 45 minutes"
+export function formatDuration(minutes: number, long = false): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  const hPart = h > 0 ? `${h} hr${h > 1 ? "s" : ""}` : "";
-  const mPart = m > 0 ? `${m} min` : "";
-  return [hPart, mPart].filter(Boolean).join(" ") || "0 min";
+  const hPart = h > 0 ? (long ? `${h} hour${h > 1 ? "s" : ""}` : `${h} hr${h > 1 ? "s" : ""}`) : "";
+  const mPart = m > 0 ? (long ? `${m} minute${m > 1 ? "s" : ""}` : `${m} min`) : "";
+  return [hPart, mPart].filter(Boolean).join(long ? " and " : " ") || (long ? "0 minutes" : "0 min");
+}
+
+// Estimated arrival for a departure at `date` + `time`, given the route time
+// (may land on the next day).
+export function arrivalFor(date: string, time: string, routeMinutes: number) {
+  const arr = fromMinutes(toMinutes(date, time) + routeMinutes);
+  return { arrivalDate: arr.date, arrivalTime: arr.time, arrivalDisplayTime: displayTime12h(arr.time) };
+}
+
+// "8:00 AM" or, when the arrival estimate is known,
+// "Departs 8:00 AM · arrives ATL ~9:45 AM".
+export function slotTimes(slot: DepartureSlot, to: LocationKey): string {
+  if (!slot.arrivalDisplayTime) return slot.displayTime;
+  return `Departs ${slot.displayTime} · arrives ${LOCATIONS[to].short} ~${slot.arrivalDisplayTime}`;
 }
 
 // "13:05" → "1:05 PM"

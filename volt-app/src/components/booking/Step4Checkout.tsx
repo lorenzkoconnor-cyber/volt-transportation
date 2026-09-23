@@ -24,6 +24,7 @@ import {
   bookingFlights,
   flightDirection,
   flightSummary,
+  slotTimes,
 } from "@/lib/booking";
 import {
   MILITARY_CATEGORIES,
@@ -72,7 +73,7 @@ function TripSummary({
         {[
           {
             label: "Outbound",
-            value: `${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short} · ${formatDate(outbound.date || search.date)} · ${outbound.displayTime}`,
+            value: `${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short} · ${formatDate(outbound.date || search.date)} · ${slotTimes(outbound, search.to)}`,
           },
           ...(search.hasFlight
             ? [{ label: returnSlot ? "Outbound Flight" : "Flight", value: flightSummary(search.outboundFlight, flightDirection(search.from)) }]
@@ -80,7 +81,7 @@ function TripSummary({
           ...(returnSlot
             ? [{
                 label: "Return",
-                value: `${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short} · ${formatDate(returnSlot.date || search.returnDate)} · ${returnSlot.displayTime}`,
+                value: `${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short} · ${formatDate(returnSlot.date || search.returnDate)} · ${slotTimes(returnSlot, search.from)}`,
               }]
             : []),
           ...(returnSlot && search.hasFlight
