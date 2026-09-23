@@ -18,6 +18,7 @@ import {
   Shield,
   Bus,
   X,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/verifications", label: "Verifications", icon: ShieldCheck,   roles: ["owner","manager"] },
   { href: "/dashboard/reports",     label: "Reports",       icon: BarChart3,       roles: ["owner","manager"] },
   { href: "/dashboard/employees",   label: "Employees",     icon: UserCog,         roles: ["owner"] },
+  { href: "/dashboard/settings",    label: "Settings",      icon: Settings,        roles: ["owner","manager"] },
 ];
 
 export default function AdminSidebar({

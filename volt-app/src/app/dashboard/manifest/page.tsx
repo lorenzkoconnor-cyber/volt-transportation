@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatDateLong } from "@/lib/format";
 import {
   ArrowLeft, Phone, CheckCircle2, XCircle, UserX, MapPin,
-  MessageSquare, Loader2, AlertCircle,
+  MessageSquare, Loader2, AlertCircle, Plane,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -22,9 +22,18 @@ interface Passenger {
   isNoShow: boolean;
   notes: string;
   confirmation: string;
+  isReturnLeg: boolean;   // riding this trip as the return half of a round trip
+  flight: string;   // lead passenger only — "DL 1234 · lands 2:15 PM · Domestic – South"
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// Outbound riders use is_boarded/is_no_show; return-leg riders use the return_* pair.
+function legStatus(returnLeg: boolean, boarded: boolean, noShow: boolean) {
+  return returnLeg
+    ? { return_is_boarded: boarded, return_is_no_show: noShow }
+    : { is_boarded: boarded, is_no_show: noShow };
+}
 
 function ManifestContent() {
   const params = useSearchParams();
@@ -39,35 +48,52 @@ function ManifestContent() {
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    if (!tripId) { setLoading(false); return; }
+    // tripId is interpolated into a PostgREST filter below — only accept a UUID.
+    if (!tripId || !/^[0-9a-f-]{36}$/i.test(tripId)) { setLoading(false); return; }
 
-    const [tripRes, paxRes] = await Promise.all([
+    const [tripRes, paxRes, flightRes] = await Promise.all([
       sb.from("trips")
         .select("id, departure_date, departure_time, status, seats_booked, total_capacity, route:routes(name)")
         .eq("id", tripId)
         .single(),
       sb.from("reservation_passengers")
         .select(
-          "id, name, is_primary, is_boarded, is_no_show, " +
-          "reservation:reservations!inner(id, confirmation_number, special_notes, status, trip_id, " +
+          "id, name, is_primary, is_boarded, is_no_show, return_is_boarded, return_is_no_show, " +
+          "reservation:reservations!inner(id, confirmation_number, special_notes, status, trip_id, return_trip_id, " +
           "customer:customers(phone))"
         )
-        .eq("reservation.trip_id", tripId)
+        // Outbound riders AND round-trip riders coming back on this trip.
+        .or(`trip_id.eq.${tripId},return_trip_id.eq.${tripId}`, { referencedTable: "reservation" })
         .neq("reservation.status", "cancelled"),
+      sb.from("reservation_flights")
+        .select("reservation_id, direction, airline, flight_number, terminal, flight_time")
+        .eq("trip_id", tripId),
     ]);
+
+    const flightByReservation = new Map<string, string>(
+      (flightRes.data ?? []).map((f: any) => [
+        f.reservation_id,
+        `${f.airline} ${f.flight_number} · ${f.direction === "departing" ? "departs" : "lands"} ${formatTime12h(f.flight_time)} · ${f.terminal}`,
+      ])
+    );
 
     setTrip(tripRes.data ?? null);
     setPassengers(
-      (paxRes.data ?? []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        phone: p.reservation?.customer?.phone ?? "",
-        isPrimary: p.is_primary,
-        isBoarded: p.is_boarded,
-        isNoShow: p.is_no_show,
-        notes: p.is_primary ? (p.reservation?.special_notes ?? "") : "",
-        confirmation: p.reservation?.confirmation_number ?? "",
-      }))
+      (paxRes.data ?? []).map((p: any) => {
+        const isReturnLeg = p.reservation?.trip_id !== tripId;
+        return {
+          id: p.id,
+          name: p.name,
+          phone: p.reservation?.customer?.phone ?? "",
+          isPrimary: p.is_primary,
+          isBoarded: isReturnLeg ? p.return_is_boarded : p.is_boarded,
+          isNoShow: isReturnLeg ? p.return_is_no_show : p.is_no_show,
+          isReturnLeg,
+          notes: p.is_primary ? (p.reservation?.special_notes ?? "") : "",
+          confirmation: p.reservation?.confirmation_number ?? "",
+          flight: p.is_primary ? (flightByReservation.get(p.reservation?.id) ?? "") : "",
+        };
+      })
     );
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,16 +105,17 @@ function ManifestContent() {
     const p = passengers.find((x) => x.id === id);
     if (!p) return;
 
-    const next = {
-      is_boarded: status === "boarded" ? !p.isBoarded : false,
-      is_no_show: status === "no_show" ? !p.isNoShow : false,
-    };
+    const boarded = status === "boarded" ? !p.isBoarded : false;
+    const noShow = status === "no_show" ? !p.isNoShow : false;
 
     // Optimistic update, revert on failure
     setPassengers((prev) =>
-      prev.map((x) => (x.id === id ? { ...x, isBoarded: next.is_boarded, isNoShow: next.is_no_show } : x))
+      prev.map((x) => (x.id === id ? { ...x, isBoarded: boarded, isNoShow: noShow } : x))
     );
-    const { error: err } = await sb.from("reservation_passengers").update(next).eq("id", id);
+    const { error: err } = await sb
+      .from("reservation_passengers")
+      .update(legStatus(p.isReturnLeg, boarded, noShow))
+      .eq("id", id);
     if (err) {
       setError("Couldn't save boarding status — check your connection.");
       await load();
@@ -98,11 +125,16 @@ function ManifestContent() {
   const markAllBoarded = async () => {
     setBusy(true);
     setError("");
-    const ids = passengers.filter((p) => !p.isNoShow).map((p) => p.id);
-    const { error: err } = await sb
-      .from("reservation_passengers")
-      .update({ is_boarded: true })
-      .in("id", ids);
+    const waiting = passengers.filter((p) => !p.isNoShow);
+    const [outRes, retRes] = await Promise.all(
+      [false, true].map((returnLeg) => {
+        const ids = waiting.filter((p) => p.isReturnLeg === returnLeg).map((p) => p.id);
+        return ids.length
+          ? sb.from("reservation_passengers").update(legStatus(returnLeg, true, false)).in("id", ids)
+          : Promise.resolve({ error: null });
+      })
+    );
+    const err = outRes.error ?? retRes.error;
     if (err) setError(err.message);
     await load();
     setBusy(false);
@@ -225,6 +257,9 @@ function ManifestContent() {
                       {p.isPrimary && (
                         <span className="text-[#7C3AED] text-xs bg-[#7C3AED]/10 px-1.5 py-0.5 rounded">Lead</span>
                       )}
+                      {p.isReturnLeg && (
+                        <span className="text-[#A1A1AA] text-xs bg-white/10 px-1.5 py-0.5 rounded">Return</span>
+                      )}
                       <span className="text-[#A1A1AA] text-xs font-mono">{p.confirmation}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-[#A1A1AA] text-xs flex-wrap">
@@ -232,6 +267,11 @@ function ManifestContent() {
                         <a href={`tel:${p.phone}`} className="flex items-center gap-1 hover:text-white transition-colors">
                           <Phone className="w-3 h-3" />{p.phone}
                         </a>
+                      )}
+                      {p.flight && (
+                        <span className="flex items-center gap-1 text-[#C4B5FD]">
+                          <Plane className="w-3 h-3" />{p.flight}
+                        </span>
                       )}
                       {p.notes && (
                         <span className="flex items-center gap-1 text-yellow-400">

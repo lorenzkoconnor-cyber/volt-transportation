@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
       primaryPassenger,    // { name, phone, email }
       additionalPassengers, // string[]
       specialNotes,
+      flights,             // [{ leg, tripId, direction, airline, flightNumber, terminal, date, time }] — flight mode only
       subtotalCents,
       totalCents,
       stripePaymentIntentId,
@@ -192,6 +193,38 @@ export async function POST(request: NextRequest) {
     ];
 
     await supabase.from("reservation_passengers").insert(passengerInserts);
+
+    // 3b. Flight details (flight-mode bookings). Each row must belong to one of
+    //     this reservation's own trips; malformed rows are dropped rather than
+    //     failing a booking that has already been paid for.
+    const flightRows = (Array.isArray(flights) ? flights : [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((f: any) => {
+        const tripForLeg = f?.leg === "outbound" ? tripId : f?.leg === "return" ? returnTripId : null;
+        const text = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
+        const row = {
+          reservation_id: reservation.id,
+          trip_id: tripForLeg,
+          leg: f?.leg,
+          direction: f?.direction === "arriving" ? "arriving" : "departing",
+          airline: text(f?.airline, 60),
+          flight_number: text(f?.flightNumber, 10).toUpperCase(),
+          terminal: text(f?.terminal, 60),
+          flight_date: text(f?.date, 10),
+          flight_time: text(f?.time, 5),
+        };
+        const valid =
+          tripForLeg && f?.tripId === tripForLeg &&
+          row.airline && row.flight_number && row.terminal &&
+          /^\d{4}-\d{2}-\d{2}$/.test(row.flight_date) && /^\d{2}:\d{2}$/.test(row.flight_time);
+        return valid ? row : null;
+      })
+      .filter(Boolean);
+
+    if (flightRows.length > 0) {
+      const { error: flightError } = await supabase.from("reservation_flights").insert(flightRows);
+      if (flightError) console.error("[booking/create] flight details not saved", flightError);
+    }
 
     // 4. Record payment
     await supabase.from("payments").insert({
