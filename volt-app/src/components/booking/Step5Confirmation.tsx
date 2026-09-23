@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Calendar, Clock, MapPin, Users, MessageSquare, Download, Plane } from "lucide-react";
+import { CheckCircle, Calendar, MapPin, Users, MessageSquare, Download, Plane } from "lucide-react";
 import {
   type BookingSearch,
   type Passenger,
@@ -13,6 +13,7 @@ import {
   LOCATIONS,
   flightDirection,
   flightSummary,
+  slotTimes,
 } from "@/lib/booking";
 import type { MilitaryResult } from "@/components/booking/Step4Checkout";
 
@@ -66,10 +67,10 @@ export default function Step5Confirmation({
         <table>
           <tr><td class="muted">Passenger</td><td style="text-align:right">${primary.name}</td></tr>
           <tr><td class="muted">${returnSlot ? "Outbound" : "Route"}</td><td style="text-align:right">${LOCATIONS[search.from].label} → ${LOCATIONS[search.to].label}</td></tr>
-          <tr><td class="muted">${returnSlot ? "Outbound Date" : "Date"}</td><td style="text-align:right">${formatDate(outbound.date || search.date)} · ${outbound.displayTime}</td></tr>
+          <tr><td class="muted">${returnSlot ? "Outbound Date" : "Date"}</td><td style="text-align:right">${formatDate(outbound.date || search.date)} · ${slotTimes(outbound, search.to)}</td></tr>
           ${outboundFlight ? `<tr><td class="muted">${returnSlot ? "Outbound Flight" : "Flight"}</td><td style="text-align:right">${esc(outboundFlight)}</td></tr>` : ""}
           ${returnSlot ? `<tr><td class="muted">Return</td><td style="text-align:right">${LOCATIONS[search.to].label} → ${LOCATIONS[search.from].label}</td></tr>
-          <tr><td class="muted">Return Date</td><td style="text-align:right">${formatDate(returnSlot.date || search.returnDate)} · ${returnSlot.displayTime}</td></tr>` : ""}
+          <tr><td class="muted">Return Date</td><td style="text-align:right">${formatDate(returnSlot.date || search.returnDate)} · ${slotTimes(returnSlot, search.from)}</td></tr>` : ""}
           ${returnFlight ? `<tr><td class="muted">Return Flight</td><td style="text-align:right">${esc(returnFlight)}</td></tr>` : ""}
           <tr><td class="muted">Contact</td><td style="text-align:right">${primary.phone}</td></tr>
         </table>
@@ -125,12 +126,12 @@ export default function Step5Confirmation({
               label: returnSlot ? "Outbound" : "Route",
               value: `${LOCATIONS[search.from].label} → ${LOCATIONS[search.to].label}`,
             },
-            { icon: Calendar, label: returnSlot ? "Outbound Date" : "Date", value: `${formatDate(outbound.date || search.date)} · ${outbound.displayTime}` },
+            { icon: Calendar, label: returnSlot ? "Outbound Date" : "Date", value: `${formatDate(outbound.date || search.date)} · ${slotTimes(outbound, search.to)}` },
             ...(outboundFlight ? [{ icon: Plane, label: returnSlot ? "Outbound Flight" : "Flight", value: outboundFlight }] : []),
             ...(returnSlot
               ? [
                   { icon: MapPin, label: "Return", value: `${LOCATIONS[search.to].label} → ${LOCATIONS[search.from].label}` },
-                  { icon: Calendar, label: "Return Date", value: `${formatDate(returnSlot.date || search.returnDate)} · ${returnSlot.displayTime}` },
+                  { icon: Calendar, label: "Return Date", value: `${formatDate(returnSlot.date || search.returnDate)} · ${slotTimes(returnSlot, search.from)}` },
                   ...(returnFlight ? [{ icon: Plane, label: "Return Flight", value: returnFlight }] : []),
                 ]
               : []),

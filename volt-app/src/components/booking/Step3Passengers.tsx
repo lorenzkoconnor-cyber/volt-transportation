@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowRight, ArrowLeft, User, Plus, X } from "lucide-react";
-import { type BookingSearch, type Passenger, LOCATIONS, formatDate } from "@/lib/booking";
+import { type BookingSearch, type Passenger, LOCATIONS, formatDate, slotTimes } from "@/lib/booking";
 import type { DepartureSlot } from "@/lib/booking";
 import PriceSummary from "./PriceSummary";
 
@@ -50,7 +50,7 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
         <div>
           <h2 className="text-white text-2xl font-bold mb-1">Passenger Information</h2>
           <p className="text-[#A1A1AA] text-sm">
-            {LOCATIONS[search.from].label} → {LOCATIONS[search.to].label} · {outbound.displayTime} · {formatDate(outbound.date || search.date)}
+            {LOCATIONS[search.from].label} → {LOCATIONS[search.to].label} · {slotTimes(outbound, search.to)} · {formatDate(outbound.date || search.date)}
           </p>
         </div>
         <button type="button" onClick={onBack} className="text-[#A1A1AA] hover:text-white text-sm flex items-center gap-1 transition-colors">

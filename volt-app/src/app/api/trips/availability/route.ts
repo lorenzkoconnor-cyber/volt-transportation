@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl, SUPABASE_ANON_KEY } from "@/lib/supabase/url";
-import { DEFAULT_FLIGHT_TIMING, displayTime12h, type FlightTimingSettings } from "@/lib/booking";
+import { DEFAULT_FLIGHT_TIMING, arrivalFor, displayTime12h, type FlightTimingSettings } from "@/lib/booking";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createClient(): Promise<any> {
@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
 
     if (tripsError) throw tripsError;
 
+    const routeMinutes = route.duration_minutes ?? DEFAULT_FLIGHT_TIMING.routeMinutes;
+
     // Format response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const slots = (trips || []).map((trip: any) => {
@@ -65,6 +67,7 @@ export async function GET(request: NextRequest) {
         date,
         time: trip.departure_time.slice(0, 5),
         displayTime: displayTime12h(trip.departure_time),
+        ...arrivalFor(date, trip.departure_time.slice(0, 5), routeMinutes),
         available: seatsLeft > 0,
         seatsLeft,
         totalSeats: trip.total_capacity,
@@ -72,7 +75,7 @@ export async function GET(request: NextRequest) {
     });
 
     const timing: FlightTimingSettings = {
-      routeMinutes: route.duration_minutes ?? DEFAULT_FLIGHT_TIMING.routeMinutes,
+      routeMinutes,
       departMinBufferMinutes: settings?.depart_min_buffer_minutes ?? DEFAULT_FLIGHT_TIMING.departMinBufferMinutes,
       departMaxBufferMinutes: settings?.depart_max_buffer_minutes ?? DEFAULT_FLIGHT_TIMING.departMaxBufferMinutes,
       arriveMinWaitMinutes: settings?.arrive_min_wait_minutes ?? DEFAULT_FLIGHT_TIMING.arriveMinWaitMinutes,
