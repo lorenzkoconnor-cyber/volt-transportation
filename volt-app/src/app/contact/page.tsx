@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, Clock, CheckCircle } from "lucide-react";
+import { Phone, Mail, Clock, CheckCircle, MapPin } from "lucide-react";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -57,11 +57,27 @@ export default function ContactPage() {
 
               <div className="glass rounded-2xl p-6">
                 <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mb-4">
+                  <MapPin className="w-5 h-5 text-[#7C3AED]" />
+                </div>
+                <h3 className="text-white font-semibold mb-1">Address</h3>
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=3885+Miller+Road+Suite+C+Columbus+GA+31909"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#A1A1AA] hover:text-white text-sm transition-colors"
+                >
+                  3885 Miller Road, Suite C<br />
+                  Columbus, GA 31909
+                </a>
+              </div>
+
+              <div className="glass rounded-2xl p-6">
+                <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mb-4">
                   <Phone className="w-5 h-5 text-[#7C3AED]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Phone</h3>
-                <a href="tel:+11234567890" className="text-[#A1A1AA] hover:text-white text-sm transition-colors">
-                  (123) 456-7890
+                <a href="tel:+17065305896" className="text-[#A1A1AA] hover:text-white text-sm transition-colors">
+                  (706) 530-5896
                 </a>
               </div>
 

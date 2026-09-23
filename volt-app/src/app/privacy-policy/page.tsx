@@ -47,7 +47,7 @@ const sections = [
   },
   {
     title: "Contact",
-    body: `If you have questions about this Privacy Policy, please contact us at hello@volttransportation.com or by phone at (123) 456-7890.`,
+    body: `If you have questions about this Privacy Policy, please contact us at hello@volttransportation.com or by phone at (706) 530-5896.`,
   },
 ];
 

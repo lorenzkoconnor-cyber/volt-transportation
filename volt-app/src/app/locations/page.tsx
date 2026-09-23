@@ -50,7 +50,15 @@ export default function LocationsPage() {
                       <MapPin className="w-4 h-4 text-[#A1A1AA] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-white font-medium text-sm">Address</div>
-                        <div className="text-[#A1A1AA] text-sm mt-0.5">Columbus, GA — Exact address provided in booking confirmation</div>
+                        <a
+                          href="https://www.google.com/maps/dir/?api=1&destination=3885+Miller+Road+Suite+C+Columbus+GA+31909"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-[#A1A1AA] hover:text-white text-sm mt-0.5 transition-colors"
+                        >
+                          3885 Miller Road, Suite C<br />
+                          Columbus, GA 31909
+                        </a>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -71,18 +79,20 @@ export default function LocationsPage() {
 
                   <div className="glass rounded-xl p-4 border border-[#7C3AED]/20">
                     <p className="text-[#7C3AED] text-sm font-medium">
-                      📍 Your exact pickup address and any special instructions will be included in your SMS confirmation after booking.
+                      📍 This is our only Columbus departure point. Every Columbus trip leaves from 3885 Miller Road, Suite C.
                     </p>
                   </div>
                 </div>
 
-                {/* Map placeholder */}
-                <div className="bg-[#0F0F0F] min-h-[280px] flex items-center justify-center border-t lg:border-t-0 lg:border-l border-white/8">
-                  <div className="text-center p-8">
-                    <MapPin className="w-12 h-12 text-[#7C3AED]/40 mx-auto mb-3" />
-                    <p className="text-[#A1A1AA] text-sm">Map coming soon</p>
-                    <p className="text-[#A1A1AA] text-xs mt-1">Columbus, GA pickup location</p>
-                  </div>
+                {/* Map */}
+                <div className="bg-[#0F0F0F] min-h-[280px] relative border-t lg:border-t-0 lg:border-l border-white/8">
+                  <iframe
+                    title="Map of Volt Transportation's Columbus pickup location"
+                    src="https://www.google.com/maps?q=3885+Miller+Road+Suite+C+Columbus+GA+31909&output=embed"
+                    className="absolute inset-0 w-full h-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
                 </div>
               </div>
             </div>
@@ -153,7 +163,7 @@ export default function LocationsPage() {
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <div className="glass rounded-xl px-6 py-4">
                 <div className="text-white font-bold">Columbus, GA</div>
-                <div className="text-[#A1A1AA] text-xs">Starting point</div>
+                <div className="text-[#A1A1AA] text-xs">3885 Miller Road</div>
               </div>
               <ArrowRight className="w-6 h-6 text-[#7C3AED]" />
               <div className="glass rounded-xl px-6 py-4 border border-[#7C3AED]/30">
@@ -173,7 +183,7 @@ export default function LocationsPage() {
         <section className="py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-white mb-4">Ready to reserve your seat?</h2>
-            <p className="text-[#A1A1AA] mb-8">Your exact pickup address is included in your confirmation text — book now and we'll handle the rest.</p>
+            <p className="text-[#A1A1AA] mb-8">All Columbus trips depart from 3885 Miller Road, Suite C — book now and we'll handle the rest.</p>
             <Link href="/book">
               <Button size="lg" className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold px-10 py-6 text-base rounded-xl purple-glow">
                 Book Your Ride <ArrowRight className="ml-2 w-5 h-5" />

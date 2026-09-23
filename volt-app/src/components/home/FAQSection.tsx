@@ -12,7 +12,7 @@ const faqs = [
   {
     question: "Where does Volt pick up passengers in Columbus?",
     answer:
-      "We have a designated pickup location in Columbus, GA. You'll receive the exact pickup address with instructions in your booking confirmation text message.",
+      "All Columbus trips depart from our office at 3885 Miller Road, Suite C, Columbus, GA 31909. Free parking is available on site. Please arrive at least 10 minutes before your scheduled departure.",
   },
   {
     question: "Can I bring luggage?",
