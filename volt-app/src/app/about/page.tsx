@@ -79,18 +79,32 @@ export default function AboutPage() {
 
         {/* Why We Started */}
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A]">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-white mb-6">Why We Started Volt</h2>
-            <div className="glass rounded-2xl p-8 sm:p-12 text-left">
-              <p className="text-[#A1A1AA] leading-relaxed mb-4 text-lg">
-                Columbus travelers heading to Atlanta Airport had limited options — crowded buses, expensive rideshares with surge pricing, or asking someone to make a 5-hour round trip.
-              </p>
-              <p className="text-[#A1A1AA] leading-relaxed mb-4">
-                We saw an opportunity to build something better. A dedicated, premium shuttle service with fixed pricing, professional drivers, and a real commitment to the Columbus community.
-              </p>
-              <p className="text-[#A1A1AA] leading-relaxed">
-                Volt was built from the ground up for this route. Every detail — from the vehicles we chose to the 8-passenger limit — was a deliberate decision to prioritize your comfort and peace of mind.
-              </p>
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-6">Why We Started Volt</h2>
+              <div className="glass rounded-2xl p-8 sm:p-10">
+                <p className="text-[#A1A1AA] leading-relaxed mb-4 text-lg">
+                  Columbus travelers heading to Atlanta Airport had limited options — crowded buses, expensive rideshares with surge pricing, or asking someone to make a 5-hour round trip.
+                </p>
+                <p className="text-[#A1A1AA] leading-relaxed mb-4">
+                  We saw an opportunity to build something better. A dedicated, premium shuttle service with fixed pricing, professional drivers, and a real commitment to the Columbus community.
+                </p>
+                <p className="text-[#A1A1AA] leading-relaxed">
+                  Volt was built from the ground up for this route. Every detail — from the vehicles we chose to the 8-passenger limit — was a deliberate decision to prioritize your comfort and peace of mind.
+                </p>
+              </div>
+            </div>
+            {/* Volt lobby */}
+            <div className="relative rounded-2xl overflow-hidden bg-[#171717] aspect-[4/3] glass">
+              <Image
+                src="/images/volt-lobby.webp"
+                alt="The Volt Transportation lobby with leather seating and the Volt logo on the wall"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/80 via-transparent to-transparent pointer-events-none" />
+              <span className="absolute bottom-4 left-5 text-white text-sm font-semibold">Our Lobby</span>
             </div>
           </div>
         </section>
