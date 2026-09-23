@@ -34,12 +34,14 @@ const jsonLd = {
       description:
         "Premium airport shuttle service between Columbus, GA and Atlanta Hartsfield-Jackson Airport.",
       url: "https://volttransportation.com",
-      telephone: "+11234567890",
+      telephone: "+17065305896",
       email: "hello@volttransportation.com",
       address: {
         "@type": "PostalAddress",
+        streetAddress: "3885 Miller Road, Suite C",
         addressLocality: "Columbus",
         addressRegion: "GA",
+        postalCode: "31909",
         addressCountry: "US",
       },
       priceRange: "$$",

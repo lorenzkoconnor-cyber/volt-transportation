@@ -39,12 +39,17 @@ export default function Footer() {
               Premium shuttle service between Columbus, GA and Atlanta
               Hartsfield-Jackson Airport.
             </p>
-            <p className="text-[#A1A1AA] text-sm mt-4">
+            <p className="text-[#A1A1AA] text-sm mt-4 leading-relaxed">
+              3885 Miller Road, Suite C
+              <br />
+              Columbus, GA 31909
+            </p>
+            <p className="text-[#A1A1AA] text-sm mt-2">
               <a
-                href="tel:+11234567890"
+                href="tel:+17065305896"
                 className="hover:text-white transition-colors"
               >
-                (123) 456-7890
+                (706) 530-5896
               </a>
             </p>
             <p className="text-[#A1A1AA] text-sm">

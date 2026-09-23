@@ -29,7 +29,7 @@ const steps = [
     number: "03",
     icon: MapPin,
     title: "Arrive at Your Pickup Location",
-    desc: "Head to the designated Columbus pickup location at least 10 minutes before your scheduled departure time.",
+    desc: "Head to our Columbus pickup location at 3885 Miller Road, Suite C at least 10 minutes before your scheduled departure time.",
   },
   {
     number: "04",
