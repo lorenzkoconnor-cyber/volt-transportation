@@ -14,6 +14,7 @@ import {
   type BookingSearch,
   type DepartureSlot,
   type Passenger,
+  EMPTY_FLIGHT,
 } from "@/lib/booking";
 
 function BookingFlow() {
@@ -30,6 +31,9 @@ function BookingFlow() {
     pets: Number(params.get("pets") || 0),
     extraBags: Number(params.get("extraBags") || 0),
     roundTrip: params.get("roundTrip") === "true",
+    hasFlight: false,
+    outboundFlight: EMPTY_FLIGHT,
+    returnFlight: EMPTY_FLIGHT,
   });
   const [outbound, setOutbound] = useState<DepartureSlot | null>(null);
   const [returnSlot, setReturnSlot] = useState<DepartureSlot | null>(null);

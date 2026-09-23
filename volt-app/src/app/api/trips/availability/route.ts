@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl, SUPABASE_ANON_KEY } from "@/lib/supabase/url";
+import { DEFAULT_FLIGHT_TIMING, displayTime12h, type FlightTimingSettings } from "@/lib/booking";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createClient(): Promise<any> {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     // Find the route
     const { data: route, error: routeError } = await supabase
       .from("routes")
-      .select("id")
+      .select("id, duration_minutes")
       .eq("origin_key", originKey)
       .eq("destination_key", destinationKey)
       .eq("is_active", true)
@@ -39,37 +40,46 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Route not found" }, { status: 404 });
     }
 
-    // Get all trips for this route and date with availability
-    const { data: trips, error: tripsError } = await supabase
-      .from("trips")
-      .select("id, departure_time, total_capacity, seats_booked, status")
-      .eq("route_id", route.id)
-      .eq("departure_date", date)
-      .eq("status", "scheduled")
-      .order("departure_time");
+    // Get all trips for this route and date with availability, plus the
+    // flight-fit settings the booking flow uses to match departures to flights.
+    const [{ data: trips, error: tripsError }, { data: settings }] = await Promise.all([
+      supabase
+        .from("trips")
+        .select("id, departure_time, total_capacity, seats_booked, status")
+        .eq("route_id", route.id)
+        .eq("departure_date", date)
+        .eq("status", "scheduled")
+        .order("departure_time"),
+      supabase.from("booking_settings").select("*").maybeSingle(),
+    ]);
 
     if (tripsError) throw tripsError;
 
     // Format response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const slots = (trips || []).map((trip: any) => {
-      const [hourStr] = trip.departure_time.split(":");
-      const hour = parseInt(hourStr, 10);
-      const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      const ampm = hour < 12 ? "AM" : "PM";
       const seatsLeft = trip.total_capacity - trip.seats_booked;
 
       return {
         id: trip.id,
-        time: trip.departure_time,
-        displayTime: `${h12}:00 ${ampm}`,
+        date,
+        time: trip.departure_time.slice(0, 5),
+        displayTime: displayTime12h(trip.departure_time),
         available: seatsLeft > 0,
         seatsLeft,
         totalSeats: trip.total_capacity,
       };
     });
 
-    return NextResponse.json({ slots });
+    const timing: FlightTimingSettings = {
+      routeMinutes: route.duration_minutes ?? DEFAULT_FLIGHT_TIMING.routeMinutes,
+      departMinBufferMinutes: settings?.depart_min_buffer_minutes ?? DEFAULT_FLIGHT_TIMING.departMinBufferMinutes,
+      departMaxBufferMinutes: settings?.depart_max_buffer_minutes ?? DEFAULT_FLIGHT_TIMING.departMaxBufferMinutes,
+      arriveMinWaitMinutes: settings?.arrive_min_wait_minutes ?? DEFAULT_FLIGHT_TIMING.arriveMinWaitMinutes,
+      arriveMaxWaitMinutes: settings?.arrive_max_wait_minutes ?? DEFAULT_FLIGHT_TIMING.arriveMaxWaitMinutes,
+    };
+
+    return NextResponse.json({ slots, timing });
   } catch (err) {
     console.error("[trips/availability]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { ArrowRight, ArrowLeftRight, ChevronDown } from "lucide-react";
-import { type BookingSearch, LOCATIONS } from "@/lib/booking";
+import { type BookingSearch, type FlightInfo, LOCATIONS, flightDirection } from "@/lib/booking";
+import { localDateString } from "@/lib/format";
+import FlightFields from "./FlightFields";
 
 const LOCATION_LABELS: Record<string, string> = {
   columbus: "Columbus, GA",
@@ -23,6 +25,24 @@ export default function Step1Search({ initial, onNext }: Props) {
 
   const set = (key: keyof BookingSearch, value: string | number | boolean) =>
     setSearch((prev) => ({ ...prev, [key]: value }));
+
+  const today = localDateString();
+
+  // Turning flight mode on carries over any travel dates already chosen
+  // (e.g. from the homepage widget) as the flight dates.
+  const toggleFlight = () =>
+    setSearch((prev) => ({
+      ...prev,
+      hasFlight: !prev.hasFlight,
+      outboundFlight: { ...prev.outboundFlight, date: prev.outboundFlight.date || prev.date },
+      returnFlight: { ...prev.returnFlight, date: prev.returnFlight.date || prev.returnDate },
+    }));
+
+  const setFlight = (leg: "outboundFlight" | "returnFlight", flight: FlightInfo) =>
+    setSearch((prev) => ({ ...prev, [leg]: flight }));
+
+  const flightIncomplete = (f: FlightInfo) =>
+    !f.date || !f.time || !f.airline.trim() || !f.flightNumber.trim() || !f.terminal;
 
   const toggleRoundTrip = () =>
     setSearch((prev) => ({
@@ -52,6 +72,29 @@ export default function Step1Search({ initial, onNext }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (search.hasFlight) {
+      if (flightIncomplete(search.outboundFlight) || (search.roundTrip && flightIncomplete(search.returnFlight))) {
+        setError("Please fill in every flight detail, including the ATL terminal.");
+        return;
+      }
+      if (search.roundTrip) {
+        const out = `${search.outboundFlight.date}T${search.outboundFlight.time}`;
+        const ret = `${search.returnFlight.date}T${search.returnFlight.time}`;
+        if (ret <= out) {
+          setError("Your return flight must be after your outbound flight.");
+          return;
+        }
+      }
+      // Flight dates drive the search. Step 2 may still pick a shuttle on the
+      // day before/after when the flight is near midnight.
+      setError("");
+      onNext({
+        ...search,
+        date: search.outboundFlight.date,
+        returnDate: search.roundTrip ? search.returnFlight.date : "",
+      });
+      return;
+    }
     if (search.roundTrip) {
       if (!search.returnDate) {
         setError("Please select a return date for your round trip.");
@@ -120,60 +163,74 @@ export default function Step1Search({ initial, onNext }: Props) {
         </div>
       </div>
 
-      {/* Round trip */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={toggleRoundTrip}
-          className={`relative w-11 h-6 rounded-full transition-colors ${search.roundTrip ? "bg-[#7C3AED]" : "bg-white/10"}`}
-        >
-          <span
-            className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${search.roundTrip ? "translate-x-5" : ""}`}
-          />
-        </button>
-        <Label className="text-[#A1A1AA] text-sm cursor-pointer" onClick={toggleRoundTrip}>
-          Round Trip
-        </Label>
+      {/* Round trip + flight toggles */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <Toggle on={search.roundTrip} onToggle={toggleRoundTrip} label="Round Trip" />
+        <Toggle on={search.hasFlight} onToggle={toggleFlight} label="I have a flight" />
       </div>
 
-      {/* Dates */}
-      <div className={`grid gap-3 ${search.roundTrip ? "sm:grid-cols-2" : "grid-cols-1"}`}>
-        <div>
-          <Label className="text-[#A1A1AA] text-xs mb-2 block">
-            {search.roundTrip ? "Departure Date" : "Travel Date"}
-          </Label>
-          <input
-            type="date"
-            required
-            value={search.date}
-            onChange={(e) => {
-              const date = e.target.value;
-              setSearch((prev) => ({
-                ...prev,
-                date,
-                // keep the return date valid if departure moves past it
-                returnDate: prev.returnDate && prev.returnDate < date ? "" : prev.returnDate,
-              }));
-            }}
-            min={new Date().toISOString().split("T")[0]}
-            className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+      {search.hasFlight ? (
+        <div className="space-y-3">
+          <p className="text-[#A1A1AA] text-xs">
+            Tell us about your flight and we&apos;ll show the Volt departures that fit it.
+          </p>
+          <FlightFields
+            title={search.roundTrip ? "Outbound Flight" : "Your Flight"}
+            direction={flightDirection(search.from)}
+            flight={search.outboundFlight}
+            minDate={today}
+            onChange={(f) => setFlight("outboundFlight", f)}
           />
+          {search.roundTrip && (
+            <FlightFields
+              title="Return Flight"
+              direction={flightDirection(search.to)}
+              flight={search.returnFlight}
+              minDate={search.outboundFlight.date || today}
+              onChange={(f) => setFlight("returnFlight", f)}
+            />
+          )}
         </div>
-
-        {search.roundTrip && (
+      ) : (
+        /* Dates */
+        <div className={`grid gap-3 ${search.roundTrip ? "sm:grid-cols-2" : "grid-cols-1"}`}>
           <div>
-            <Label className="text-[#A1A1AA] text-xs mb-2 block">Return Date</Label>
+            <Label className="text-[#A1A1AA] text-xs mb-2 block">
+              {search.roundTrip ? "Departure Date" : "Travel Date"}
+            </Label>
             <input
               type="date"
               required
-              value={search.returnDate}
-              onChange={(e) => set("returnDate", e.target.value)}
-              min={search.date || new Date().toISOString().split("T")[0]}
+              value={search.date}
+              onChange={(e) => {
+                const date = e.target.value;
+                setSearch((prev) => ({
+                  ...prev,
+                  date,
+                  // keep the return date valid if departure moves past it
+                  returnDate: prev.returnDate && prev.returnDate < date ? "" : prev.returnDate,
+                }));
+              }}
+              min={today}
               className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
             />
           </div>
-        )}
-      </div>
+
+          {search.roundTrip && (
+            <div>
+              <Label className="text-[#A1A1AA] text-xs mb-2 block">Return Date</Label>
+              <input
+                type="date"
+                required
+                value={search.returnDate}
+                onChange={(e) => set("returnDate", e.target.value)}
+                min={search.date || today}
+                className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Passenger counts */}
       <div>
@@ -229,5 +286,27 @@ export default function Step1Search({ initial, onNext }: Props) {
         <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
       </Button>
     </form>
+  );
+}
+
+function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        onClick={onToggle}
+        className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-[#7C3AED]" : "bg-white/10"}`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : ""}`}
+        />
+      </button>
+      <Label className="text-[#A1A1AA] text-sm cursor-pointer" onClick={onToggle}>
+        {label}
+      </Label>
+    </div>
   );
 }

@@ -21,6 +21,9 @@ import {
   money,
   LOCATIONS,
   formatDate,
+  bookingFlights,
+  flightDirection,
+  flightSummary,
 } from "@/lib/booking";
 import {
   MILITARY_CATEGORIES,
@@ -69,13 +72,19 @@ function TripSummary({
         {[
           {
             label: "Outbound",
-            value: `${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short} · ${formatDate(search.date)} · ${outbound.displayTime}`,
+            value: `${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short} · ${formatDate(outbound.date || search.date)} · ${outbound.displayTime}`,
           },
+          ...(search.hasFlight
+            ? [{ label: returnSlot ? "Outbound Flight" : "Flight", value: flightSummary(search.outboundFlight, flightDirection(search.from)) }]
+            : []),
           ...(returnSlot
             ? [{
                 label: "Return",
-                value: `${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short} · ${formatDate(search.returnDate)} · ${returnSlot.displayTime}`,
+                value: `${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short} · ${formatDate(returnSlot.date || search.returnDate)} · ${returnSlot.displayTime}`,
               }]
+            : []),
+          ...(returnSlot && search.hasFlight
+            ? [{ label: "Return Flight", value: flightSummary(search.returnFlight, flightDirection(search.to)) }]
             : []),
           { label: "Passenger", value: primary.name },
         ].map((row) => (
@@ -568,7 +577,7 @@ export default function Step4Checkout({
             metadata: {
               tripFrom: LOCATIONS[search.from].label,
               tripTo: LOCATIONS[search.to].label,
-              tripDate: search.date,
+              tripDate: outbound.date || search.date,
               tripTime: outbound.time,
               customerPhone: primary.phone,
               passengerName: primary.name.split(" ")[0],
@@ -640,6 +649,7 @@ export default function Step4Checkout({
           primaryPassenger: primary,
           additionalPassengers,
           specialNotes,
+          flights: bookingFlights(search, outbound, returnSlot),
           subtotalCents: breakdown.subtotalCents,
           totalCents: breakdown.totalCents,
           stripePaymentIntentId: paymentIntentId,
