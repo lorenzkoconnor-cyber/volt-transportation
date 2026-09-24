@@ -116,7 +116,15 @@ export default function LocationsPage() {
                       <MapPin className="w-4 h-4 text-[#A1A1AA] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-white font-medium text-sm">Airport Address</div>
-                        <div className="text-[#A1A1AA] text-sm mt-0.5">6000 N Terminal Pkwy, Atlanta, GA 30320</div>
+                        <a
+                          href="https://www.google.com/maps/dir/?api=1&destination=6000+North+Terminal+Parkway+Suite+4000+Atlanta+GA+30320"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-[#A1A1AA] hover:text-white text-sm mt-0.5 transition-colors"
+                        >
+                          6000 North Terminal Parkway, Suite 4000<br />
+                          Atlanta, GA 30320
+                        </a>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -142,13 +150,15 @@ export default function LocationsPage() {
                   </div>
                 </div>
 
-                {/* Map placeholder */}
-                <div className="bg-[#0F0F0F] min-h-[280px] flex items-center justify-center border-t lg:border-t-0 lg:border-l border-white/8">
-                  <div className="text-center p-8">
-                    <Plane className="w-12 h-12 text-[#7C3AED]/40 mx-auto mb-3" />
-                    <p className="text-[#A1A1AA] text-sm">Map coming soon</p>
-                    <p className="text-[#A1A1AA] text-xs mt-1">ATL Airport pickup location</p>
-                  </div>
+                {/* Map */}
+                <div className="bg-[#0F0F0F] min-h-[280px] relative border-t lg:border-t-0 lg:border-l border-white/8">
+                  <iframe
+                    title="Map of Hartsfield-Jackson Atlanta International Airport"
+                    src="https://www.google.com/maps?q=6000+North+Terminal+Parkway+Suite+4000+Atlanta+GA+30320&output=embed"
+                    className="absolute inset-0 w-full h-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
                 </div>
               </div>
             </div>
