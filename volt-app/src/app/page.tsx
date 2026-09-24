@@ -61,6 +61,14 @@ const jsonLd = {
           "@type": "Airport",
           name: "Hartsfield-Jackson Atlanta International Airport",
           iataCode: "ATL",
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: "6000 North Terminal Parkway, Suite 4000",
+            addressLocality: "Atlanta",
+            addressRegion: "GA",
+            postalCode: "30320",
+            addressCountry: "US",
+          },
         },
       ],
       offers: {
