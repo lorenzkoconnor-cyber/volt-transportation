@@ -1,4 +1,6 @@
-@import "tailwindcss";
+/* Only scan src/ for class names: auto-detection can wander into build
+   caches/node_modules on the host and crash the CSS worker. */
+@import "tailwindcss" source("..");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
