@@ -33,7 +33,7 @@ interface VehicleForm {
 }
 
 const EMPTY_FORM: VehicleForm = {
-  name: "", license_plate: "", make: "Mercedes", model: "Sprinter 2500",
+  name: "", license_plate: "", make: "Ford", model: "Transit Passenger Van",
   year: new Date().getFullYear(), capacity: 8, status: "active", notes: "",
 };
 
@@ -121,7 +121,7 @@ export default function VehiclesPage() {
     await load();
   };
 
-  const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]";
+  const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]";
 
   return (
     <div className="space-y-6">
@@ -133,7 +133,7 @@ export default function VehiclesPage() {
           </p>
         </div>
         <Button onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(""); setConfirmDelete(false); }}
-          className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+          className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
           <Plus className="w-4 h-4 mr-1.5" /> Add Vehicle
         </Button>
       </div>
@@ -147,7 +147,7 @@ export default function VehiclesPage() {
 
       {loading ? (
         <div className="glass rounded-2xl p-16 flex justify-center">
-          <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -157,8 +157,8 @@ export default function VehiclesPage() {
               <div key={v.id} className="glass rounded-2xl overflow-hidden">
                 <div className="flex items-center justify-between p-5 border-b border-white/8">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center">
-                      <Car className="w-5 h-5 text-[#7C3AED]" />
+                    <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center">
+                      <Car className="w-5 h-5 text-[#FCC300]" />
                     </div>
                     <div>
                       <div className="text-white font-bold">{v.name}</div>
@@ -198,10 +198,10 @@ export default function VehiclesPage() {
           {/* Add vehicle placeholder */}
           <button
             onClick={() => { setForm({ ...EMPTY_FORM }); setFormError(""); setConfirmDelete(false); }}
-            className="glass rounded-2xl p-8 flex flex-col items-center justify-center gap-3 border-dashed border-white/15 hover:border-[#7C3AED]/40 transition-all group min-h-[200px]"
+            className="glass rounded-2xl p-8 flex flex-col items-center justify-center gap-3 border-dashed border-white/15 hover:border-[#FCC300]/40 transition-all group min-h-[200px]"
           >
-            <div className="w-12 h-12 rounded-xl bg-white/5 group-hover:bg-[#7C3AED]/15 flex items-center justify-center transition-colors">
-              <Plus className="w-6 h-6 text-[#A1A1AA] group-hover:text-[#7C3AED] transition-colors" />
+            <div className="w-12 h-12 rounded-xl bg-white/5 group-hover:bg-[#FCC300]/15 flex items-center justify-center transition-colors">
+              <Plus className="w-6 h-6 text-[#A1A1AA] group-hover:text-[#FCC300] transition-colors" />
             </div>
             <span className="text-[#A1A1AA] group-hover:text-white text-sm transition-colors">Add New Vehicle</span>
           </button>
@@ -224,7 +224,7 @@ export default function VehiclesPage() {
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Name *</Label>
                   <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Sprinter 03" className={inputCls} />
+                    placeholder="Transit 03" className={inputCls} />
                 </div>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">License Plate *</Label>
@@ -257,7 +257,7 @@ export default function VehiclesPage() {
               <div>
                 <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Status *</Label>
                 <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]">
+                  className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#FCC300]">
                   <option value="active" className="bg-[#171717]">Active</option>
                   <option value="maintenance" className="bg-[#171717]">In Maintenance</option>
                   <option value="retired" className="bg-[#171717]">Retired</option>
@@ -267,7 +267,7 @@ export default function VehiclesPage() {
                 <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Notes</Label>
                 <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   placeholder="Service history, quirks…"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#7C3AED] min-h-[60px]" />
+                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#FCC300] min-h-[60px]" />
               </div>
 
               {formError && (
@@ -275,7 +275,7 @@ export default function VehiclesPage() {
               )}
 
               <Button type="submit" disabled={saving}
-                className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
+                className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
                 {saving
                   ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
                   : form.id ? "Save Changes" : "Add Vehicle"}

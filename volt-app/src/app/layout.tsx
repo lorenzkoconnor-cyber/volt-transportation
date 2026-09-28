@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s | Volt Transportation",
   },
   description:
-    "Premium airport shuttle service between Columbus, GA and Atlanta Airport (ATL). Comfortable Mercedes Sprinters, professional drivers, and reliable schedules.",
+    "Premium airport shuttle service between Columbus, GA and Atlanta Airport (ATL). Comfortable Ford Transit Passenger Vans, professional drivers, and reliable schedules.",
   keywords: [
     "Columbus GA to Atlanta Airport Shuttle",
     "Columbus GA airport transportation",

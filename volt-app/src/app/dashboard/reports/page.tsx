@@ -171,7 +171,7 @@ export default function ReportsPage() {
         <div className="flex items-center gap-2">
           {(["7d", "30d", "90d"] as const).map((p) => (
             <button key={p} onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${period === p ? "bg-[#7C3AED] text-white" : "glass text-[#A1A1AA] hover:text-white"}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${period === p ? "bg-[#FCC300] text-[#0A0A0A]" : "glass text-[#A1A1AA] hover:text-white"}`}>
               {p === "7d" ? "7 Days" : p === "30d" ? "30 Days" : "90 Days"}
             </button>
           ))}
@@ -198,7 +198,7 @@ export default function ReportsPage() {
       {/* Military & First Responder donation tracking */}
       <div className="glass rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/8 flex items-center gap-2.5">
-          <HeartHandshake className="w-5 h-5 text-[#7C3AED] flex-shrink-0" />
+          <HeartHandshake className="w-5 h-5 text-[#FCC300] flex-shrink-0" />
           <div>
             <h2 className="text-white font-bold text-lg">Military &amp; First Responder Program</h2>
             <p className="text-[#A1A1AA] text-xs">
@@ -209,7 +209,7 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/6">
           <div className="bg-[#0F0F0F] p-5">
             <div className="text-[#A1A1AA] text-xs mb-1">{monthLabel(donation.currentMonth)} — to donate</div>
-            <div className="text-[#7C3AED] font-bold text-2xl">{milLoading ? "…" : formatCents(donation.currentTotal)}</div>
+            <div className="text-[#FCC300] font-bold text-2xl">{milLoading ? "…" : formatCents(donation.currentTotal)}</div>
             <div className="text-[#A1A1AA] text-xs mt-1">Member savings this month</div>
           </div>
           <div className="bg-[#0F0F0F] p-5">
@@ -240,7 +240,7 @@ export default function ReportsPage() {
 
       {loading ? (
         <div className="glass rounded-2xl p-16 flex justify-center">
-          <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
         </div>
       ) : daily.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center">
@@ -263,7 +263,7 @@ export default function ReportsPage() {
                   </div>
                   <div className="w-full flex items-end" style={{ height: "140px" }}>
                     <div
-                      className="w-full rounded-t-lg bg-[#7C3AED] hover:bg-[#9D5FF5] transition-colors cursor-default"
+                      className="w-full rounded-t-lg bg-[#FCC300] hover:bg-[#FFD54A] transition-colors cursor-default"
                       style={{ height: `${Math.max(2, (day.revenue / maxRevenue) * 100)}%` }}
                       title={`${formatDateShort(day.date)}: ${formatCents(day.revenue)}`}
                     />
@@ -321,11 +321,11 @@ export default function ReportsPage() {
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-4 gap-4 px-6 py-4 border-t border-white/10 bg-[#7C3AED]/5">
+            <div className="grid grid-cols-4 gap-4 px-6 py-4 border-t border-white/10 bg-[#FCC300]/5">
               <div className="text-white font-bold text-sm">Totals</div>
               <div className="text-center text-white font-bold text-sm">{totals.trips}</div>
               <div className="text-center text-white font-bold text-sm">{totals.passengers}</div>
-              <div className="text-right text-[#7C3AED] font-bold text-sm">{formatCents(totals.revenue)}</div>
+              <div className="text-right text-[#FCC300] font-bold text-sm">{formatCents(totals.revenue)}</div>
             </div>
           </div>
         </>

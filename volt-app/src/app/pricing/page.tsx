@@ -42,7 +42,7 @@ export default function PricingPage() {
       <main className="pt-20">
         {/* Hero */}
         <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-          <div className="absolute top-0 right-1/4 w-[400px] h-[300px] bg-[#7C3AED]/8 blur-[100px] pointer-events-none" />
+          <div className="absolute top-0 right-1/4 w-[400px] h-[300px] bg-[#FCC300]/8 blur-[100px] pointer-events-none" />
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-5">Pricing</h1>
             <p className="text-[#A1A1AA] text-lg">
@@ -75,9 +75,9 @@ export default function PricingPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="p-5 bg-[#7C3AED]/5 border-t border-[#7C3AED]/20 flex items-start gap-2">
-                    <Info className="w-4 h-4 text-[#7C3AED] flex-shrink-0 mt-0.5" />
-                    <p className="text-[#7C3AED] text-sm">
+                  <div className="p-5 bg-[#FCC300]/5 border-t border-[#FCC300]/20 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-[#FCC300] flex-shrink-0 mt-0.5" />
+                    <p className="text-[#FCC300] text-sm">
                       Military discount available — contact us or mention at booking and we'll apply it.
                     </p>
                   </div>
@@ -89,7 +89,7 @@ export default function PricingPage() {
                     Toggle "Round Trip" in the booking form to add your return leg. Pricing is calculated automatically. Both trips are managed under one confirmation.
                   </p>
                   <Link href="/book">
-                    <Button className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold group">
+                    <Button className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold group">
                       Book Now
                       <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
@@ -104,8 +104,8 @@ export default function PricingPage() {
                   <ul className="space-y-3">
                     {included.map((item) => (
                       <li key={item} className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded-full bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0">
-                          <Check className="w-3 h-3 text-[#7C3AED]" />
+                        <div className="w-5 h-5 rounded-full bg-[#FCC300]/15 flex items-center justify-center flex-shrink-0">
+                          <Check className="w-3 h-3 text-[#FCC300]" />
                         </div>
                         <span className="text-[#A1A1AA] text-sm">{item}</span>
                       </li>
@@ -152,7 +152,7 @@ export default function PricingPage() {
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between px-5 py-4 bg-[#7C3AED]/8 border-t border-[#7C3AED]/20">
+              <div className="flex items-center justify-between px-5 py-4 bg-[#FCC300]/8 border-t border-[#FCC300]/20">
                 <span className="text-white font-bold">Total</span>
                 <span className="text-white text-2xl font-bold">$226</span>
               </div>
@@ -166,7 +166,7 @@ export default function PricingPage() {
             <h2 className="text-3xl font-bold text-white mb-4">Ready to book your ride?</h2>
             <p className="text-[#A1A1AA] mb-8">No account needed. Book in under 2 minutes.</p>
             <Link href="/book">
-              <Button size="lg" className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold px-10 py-6 text-base rounded-xl purple-glow">
+              <Button size="lg" className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold px-10 py-6 text-base rounded-xl volt-glow">
                 Book Your Ride <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>

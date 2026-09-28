@@ -11,10 +11,10 @@ interface StatCardProps {
 
 export default function StatCard({ label, value, sub, icon: Icon, trend, accent }: StatCardProps) {
   return (
-    <div className={`glass rounded-2xl p-5 ${accent ? "border-[#7C3AED]/30" : ""}`}>
+    <div className={`glass rounded-2xl p-5 ${accent ? "border-[#FCC300]/30" : ""}`}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${accent ? "bg-[#7C3AED]/20" : "bg-white/6"}`}>
-          <Icon className={`w-4.5 h-4.5 ${accent ? "text-[#7C3AED]" : "text-[#A1A1AA]"}`} size={18} />
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${accent ? "bg-[#FCC300]/20" : "bg-white/6"}`}>
+          <Icon className={`w-4.5 h-4.5 ${accent ? "text-[#FCC300]" : "text-[#A1A1AA]"}`} size={18} />
         </div>
         {trend && (
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${

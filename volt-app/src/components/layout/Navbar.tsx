@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import Logo from "@/components/ui/Logo";
 
 const navLinks = [
   { href: "/",           label: "Home" },
@@ -44,16 +45,9 @@ export default function Navbar() {
       <nav className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="flex items-center justify-between h-16 lg:h-20">
 
-          {/* Logo — text-based like the image */}
-          <Link href="/" className="flex flex-col leading-none group">
-            <div className="flex items-center gap-0">
-              {/* V with purple accent */}
-              <span className="text-[#7C3AED] text-xl font-black tracking-widest">V</span>
-              <span className="text-white text-xl font-black tracking-widest">OLT</span>
-            </div>
-            <span className="text-[#A1A1AA] text-[9px] font-semibold tracking-[0.25em] uppercase">
-              Transportation
-            </span>
+          {/* Logo */}
+          <Link href="/" className="flex items-center group" aria-label="Volt Transportation home">
+            <Logo className="h-9 sm:h-10 w-auto" priority />
           </Link>
 
           {/* Desktop nav — centered */}
@@ -65,7 +59,7 @@ export default function Navbar() {
                 className="text-[#C0C0C0] hover:text-white text-sm font-medium transition-colors relative group"
               >
                 {link.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#7C3AED] group-hover:w-full transition-all duration-200" />
+                <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#FCC300] group-hover:w-full transition-all duration-200" />
               </Link>
             ))}
           </div>
@@ -101,7 +95,7 @@ export default function Navbar() {
             <Link href="/book">
               <Button
                 size="sm"
-                className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-bold px-6 rounded-md tracking-wide"
+                className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold px-6 rounded-md tracking-wide"
               >
                 Book Now
               </Button>
@@ -157,7 +151,7 @@ export default function Navbar() {
                 </Link>
               )}
               <Link href="/book" onClick={() => setOpen(false)}>
-                <Button className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-bold">
+                <Button className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold">
                   Book Now
                 </Button>
               </Link>

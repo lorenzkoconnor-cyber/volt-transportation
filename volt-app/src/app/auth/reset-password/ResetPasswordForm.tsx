@@ -3,11 +3,12 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Zap, ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import Logo from "@/components/ui/Logo";
 
 function ResetPasswordForm() {
   const params = useSearchParams();
@@ -38,21 +39,18 @@ function ResetPasswordForm() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] grid-bg flex flex-col items-center justify-center px-4">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[300px] bg-[#7C3AED]/6 blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[300px] bg-[#FCC300]/6 blur-[100px] pointer-events-none" />
 
       <div className="w-full max-w-sm relative">
         <Link href="/" className="flex items-center justify-center gap-2 mb-10">
-          <div className="w-9 h-9 rounded-xl bg-[#7C3AED] flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" fill="white" />
-          </div>
-          <span className="text-white font-semibold text-xl">Volt</span>
+          <Logo className="h-12 w-auto" priority />
         </Link>
 
         <div className="glass rounded-2xl p-8">
           {sent ? (
             <div className="text-center py-4">
-              <div className="w-14 h-14 rounded-full bg-[#7C3AED]/15 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-7 h-7 text-[#7C3AED]" />
+              <div className="w-14 h-14 rounded-full bg-[#FCC300]/15 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-7 h-7 text-[#FCC300]" />
               </div>
               <h2 className="text-white font-bold text-lg mb-2">Check your email</h2>
               <p className="text-[#A1A1AA] text-sm mb-6">
@@ -89,13 +87,13 @@ function ResetPasswordForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@email.com"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
                   />
                 </div>
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60"
+                  className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60"
                 >
                   {loading ? "Sending…" : "Send Reset Link"}
                 </Button>

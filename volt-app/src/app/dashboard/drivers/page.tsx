@@ -140,7 +140,7 @@ export default function DriversPage() {
     await load();
   };
 
-  const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]";
+  const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]";
 
   return (
     <div className="space-y-6">
@@ -152,7 +152,7 @@ export default function DriversPage() {
           </p>
         </div>
         <Button onClick={() => openForm()}
-          className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+          className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
           <Plus className="w-4 h-4 mr-1.5" /> Add Driver
         </Button>
       </div>
@@ -166,7 +166,7 @@ export default function DriversPage() {
 
       {loading ? (
         <div className="glass rounded-2xl p-16 flex justify-center">
-          <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -174,7 +174,7 @@ export default function DriversPage() {
             <div key={d.id} className="glass rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between p-5 border-b border-white/8">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#7C3AED]/20 flex items-center justify-center text-white font-bold">
+                  <div className="w-10 h-10 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-white font-bold">
                     {d.first_name[0]}{d.last_name[0]}
                   </div>
                   <div>
@@ -201,12 +201,12 @@ export default function DriversPage() {
                 <div className="space-y-1.5">
                   {d.phone && (
                     <a href={`tel:${d.phone}`} className="flex items-center gap-2 text-[#A1A1AA] hover:text-white text-sm transition-colors">
-                      <Phone className="w-3.5 h-3.5 text-[#7C3AED]" />{d.phone}
+                      <Phone className="w-3.5 h-3.5 text-[#FCC300]" />{d.phone}
                     </a>
                   )}
                   {d.email && (
                     <a href={`mailto:${d.email}`} className="flex items-center gap-2 text-[#A1A1AA] hover:text-white text-sm transition-colors truncate">
-                      <Mail className="w-3.5 h-3.5 text-[#7C3AED]" />{d.email}
+                      <Mail className="w-3.5 h-3.5 text-[#FCC300]" />{d.email}
                     </a>
                   )}
                 </div>
@@ -226,10 +226,10 @@ export default function DriversPage() {
 
           <button
             onClick={() => openForm()}
-            className="glass rounded-2xl p-8 flex flex-col items-center justify-center gap-3 border-dashed border-white/15 hover:border-[#7C3AED]/40 transition-all group min-h-[200px]"
+            className="glass rounded-2xl p-8 flex flex-col items-center justify-center gap-3 border-dashed border-white/15 hover:border-[#FCC300]/40 transition-all group min-h-[200px]"
           >
-            <div className="w-12 h-12 rounded-full bg-white/5 group-hover:bg-[#7C3AED]/15 flex items-center justify-center transition-colors">
-              <Plus className="w-6 h-6 text-[#A1A1AA] group-hover:text-[#7C3AED] transition-colors" />
+            <div className="w-12 h-12 rounded-full bg-white/5 group-hover:bg-[#FCC300]/15 flex items-center justify-center transition-colors">
+              <Plus className="w-6 h-6 text-[#A1A1AA] group-hover:text-[#FCC300] transition-colors" />
             </div>
             <span className="text-[#A1A1AA] group-hover:text-white text-sm transition-colors">Add New Driver</span>
           </button>
@@ -281,7 +281,7 @@ export default function DriversPage() {
               )}
 
               <Button type="submit" disabled={saving}
-                className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
+                className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
                 {saving
                   ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
                   : form.id ? "Save Changes" : "Add Driver"}

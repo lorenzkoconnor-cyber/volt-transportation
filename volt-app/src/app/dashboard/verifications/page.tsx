@@ -97,7 +97,7 @@ export default function VerificationsPage() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-[#7C3AED]" />
+            <ShieldCheck className="w-6 h-6 text-[#FCC300]" />
             Verifications
           </h1>
           <p className="text-[#A1A1AA] text-sm mt-0.5">
@@ -123,7 +123,7 @@ export default function VerificationsPage() {
 
       {loading ? (
         <div className="glass rounded-2xl p-16 flex justify-center">
-          <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
         </div>
       ) : rows.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center">
@@ -138,7 +138,7 @@ export default function VerificationsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-white font-semibold">{r.first_name} {r.last_name}</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#7C3AED]/15 text-[#7C3AED] font-medium">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FCC300]/15 text-[#FCC300] font-medium">
                     {categoryLabel(r.military_category)}
                   </span>
                 </div>

@@ -19,7 +19,7 @@ interface Props {
 }
 
 const inputClass =
-  "w-full h-11 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm placeholder:text-[#A1A1AA]/40 focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]";
+  "w-full h-11 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm placeholder:text-[#A1A1AA]/40 focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]";
 
 export default function FlightFields({ title, direction, flight, minDate, onChange }: Props) {
   const set = (key: keyof FlightInfo, value: string) => onChange({ ...flight, [key]: value });
@@ -36,8 +36,8 @@ export default function FlightFields({ title, direction, flight, minDate, onChan
   return (
     <div className="glass rounded-2xl p-4 sm:p-5 space-y-4">
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-full bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
-          <Icon className="w-3 h-3 text-white" />
+        <div className="w-6 h-6 rounded-full bg-[#FCC300] flex items-center justify-center flex-shrink-0">
+          <Icon className="w-3 h-3 text-[#0A0A0A]" />
         </div>
         <h3 className="text-white font-semibold text-sm">{title}</h3>
         <span className="text-[#A1A1AA] text-xs">

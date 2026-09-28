@@ -156,7 +156,7 @@ function ManifestContent() {
   if (loading) {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
       </div>
     );
   }
@@ -167,7 +167,7 @@ function ManifestContent() {
         <AlertCircle className="w-10 h-10 text-[#A1A1AA]" />
         <p className="text-white font-semibold">Trip not found</p>
         <p className="text-[#A1A1AA] text-sm">Open a manifest from the Dispatch page.</p>
-        <Link href="/dashboard/dispatch" className="text-[#7C3AED] hover:underline text-sm">← Back to dispatch</Link>
+        <Link href="/dashboard/dispatch" className="text-[#FCC300] hover:underline text-sm">← Back to dispatch</Link>
       </div>
     );
   }
@@ -222,7 +222,7 @@ function ManifestContent() {
           <span className="text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">Passenger Manifest</span>
           {passengers.length > 0 && (
             <Button variant="ghost" size="sm" disabled={busy} onClick={markAllBoarded}
-              className="text-[#7C3AED] hover:text-[#9D5FF5] text-xs">
+              className="text-[#FCC300] hover:text-[#FFD54A] text-xs">
               Mark All Boarded
             </Button>
           )}
@@ -255,7 +255,7 @@ function ManifestContent() {
                         {p.name}
                       </span>
                       {p.isPrimary && (
-                        <span className="text-[#7C3AED] text-xs bg-[#7C3AED]/10 px-1.5 py-0.5 rounded">Lead</span>
+                        <span className="text-[#FCC300] text-xs bg-[#FCC300]/10 px-1.5 py-0.5 rounded">Lead</span>
                       )}
                       {p.isReturnLeg && (
                         <span className="text-[#A1A1AA] text-xs bg-white/10 px-1.5 py-0.5 rounded">Return</span>
@@ -269,7 +269,7 @@ function ManifestContent() {
                         </a>
                       )}
                       {p.flight && (
-                        <span className="flex items-center gap-1 text-[#C4B5FD]">
+                        <span className="flex items-center gap-1 text-[#FFE08A]">
                           <Plane className="w-3 h-3" />{p.flight}
                         </span>
                       )}
@@ -325,7 +325,7 @@ function ManifestContent() {
         <div className="flex items-center gap-2">
           {trip.status === "scheduled" || trip.status === "boarding" ? (
             <Button disabled={busy} onClick={() => setTripStatus("in_progress")}
-              className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+              className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
               <MapPin className="w-4 h-4 mr-2" />
               Mark Trip Departed
             </Button>

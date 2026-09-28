@@ -22,7 +22,7 @@ export default function ScrollProgress() {
     <div className="fixed top-0 left-0 right-0 z-[200] h-[2px] pointer-events-none">
       <div
         ref={barRef}
-        className="h-full bg-gradient-to-r from-[#7C3AED] to-[#9D5FF5]"
+        className="h-full bg-gradient-to-r from-[#FCC300] to-[#FFD54A]"
         style={{ width: "0%" }}
       />
     </div>

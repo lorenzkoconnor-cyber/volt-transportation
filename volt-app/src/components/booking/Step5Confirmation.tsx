@@ -49,7 +49,7 @@ export default function Step5Confirmation({
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Volt Receipt ${confirmationNumber}</title>
       <style>
         body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:40px auto;padding:0 24px;color:#111}
-        h1{color:#7C3AED;margin-bottom:4px}
+        h1{color:#FCC300;margin-bottom:4px}
         .muted{color:#666;font-size:13px}
         .box{border:1px solid #eee;border-radius:12px;padding:20px;margin-top:20px}
         table{width:100%;border-collapse:collapse;margin-top:8px}
@@ -96,10 +96,10 @@ export default function Step5Confirmation({
       {/* Success header */}
       <div className="flex flex-col items-center gap-4 py-4">
         <div className="relative">
-          <div className="w-20 h-20 rounded-full bg-[#7C3AED]/15 flex items-center justify-center">
-            <CheckCircle className="w-10 h-10 text-[#7C3AED]" />
+          <div className="w-20 h-20 rounded-full bg-[#FCC300]/15 flex items-center justify-center">
+            <CheckCircle className="w-10 h-10 text-[#FCC300]" />
           </div>
-          <div className="absolute inset-0 rounded-full bg-[#7C3AED]/10 animate-ping" />
+          <div className="absolute inset-0 rounded-full bg-[#FCC300]/10 animate-ping" />
         </div>
         <div>
           <h2 className="text-white text-2xl font-bold mb-1">You&apos;re booked!</h2>
@@ -110,7 +110,7 @@ export default function Step5Confirmation({
       </div>
 
       {/* Confirmation number */}
-      <div className="glass rounded-2xl p-6 border border-[#7C3AED]/30">
+      <div className="glass rounded-2xl p-6 border border-[#FCC300]/30">
         <p className="text-[#A1A1AA] text-xs uppercase tracking-widest mb-2">Confirmation Number</p>
         <p className="text-white text-3xl font-bold tracking-wider">{confirmationNumber}</p>
         <p className="text-[#A1A1AA] text-xs mt-2">Save this number to manage your reservation</p>
@@ -145,8 +145,8 @@ export default function Step5Confirmation({
             const Icon = item.icon;
             return (
               <div key={item.label} className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-[#7C3AED]" />
+                <div className="w-8 h-8 rounded-lg bg-[#FCC300]/15 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-[#FCC300]" />
                 </div>
                 <div>
                   <div className="text-[#A1A1AA] text-xs">{item.label}</div>
@@ -190,7 +190,7 @@ export default function Step5Confirmation({
             "A reminder SMS will be sent the day before your trip",
           ].map((item, i) => (
             <li key={i} className="flex items-start gap-2.5 text-sm text-[#A1A1AA]">
-              <span className="w-5 h-5 rounded-full bg-[#7C3AED]/20 flex items-center justify-center text-[#7C3AED] text-xs flex-shrink-0 mt-0.5">
+              <span className="w-5 h-5 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-[#FCC300] text-xs flex-shrink-0 mt-0.5">
                 {i + 1}
               </span>
               {item}
@@ -213,7 +213,7 @@ export default function Step5Confirmation({
       </div>
 
       <Link href="/">
-        <Button className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-12 rounded-xl">
+        <Button className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-12 rounded-xl">
           Back to Home
         </Button>
       </Link>

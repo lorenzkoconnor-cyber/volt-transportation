@@ -95,7 +95,7 @@ export default function EditProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
       </div>
     );
   }
@@ -189,8 +189,8 @@ export default function EditProfilePage() {
           {/* Profile details */}
           <form onSubmit={handleSave} className="glass rounded-2xl p-6 sm:p-7 space-y-5 mb-8">
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 rounded-full bg-[#7C3AED]/20 flex items-center justify-center">
-                <User className="w-4.5 h-4.5 text-[#7C3AED]" size={18} />
+              <div className="w-9 h-9 rounded-full bg-[#FCC300]/20 flex items-center justify-center">
+                <User className="w-4.5 h-4.5 text-[#FCC300]" size={18} />
               </div>
               <h2 className="text-white font-semibold">Personal Information</h2>
             </div>
@@ -203,7 +203,7 @@ export default function EditProfilePage() {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="First name"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
                 />
               </div>
               <div>
@@ -213,7 +213,7 @@ export default function EditProfilePage() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Last name"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
                 />
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function EditProfilePage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(706) 555-0000"
-                className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
               />
               <p className="text-[#A1A1AA] text-xs mt-1.5">
                 We use this to reach you about your trips (delays, reminders, pickup updates).
@@ -261,7 +261,7 @@ export default function EditProfilePage() {
             <Button
               type="submit"
               disabled={saving}
-              className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60"
+              className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60"
             >
               {saving
                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
@@ -272,8 +272,8 @@ export default function EditProfilePage() {
           {/* Military & First Responder discount */}
           <div className="glass rounded-2xl p-6 sm:p-7 space-y-5 mb-8">
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 rounded-full bg-[#7C3AED]/20 flex items-center justify-center">
-                <ShieldCheck className="w-4.5 h-4.5 text-[#7C3AED]" size={18} />
+              <div className="w-9 h-9 rounded-full bg-[#FCC300]/20 flex items-center justify-center">
+                <ShieldCheck className="w-4.5 h-4.5 text-[#FCC300]" size={18} />
               </div>
               <div>
                 <h2 className="text-white font-semibold">Military &amp; First Responder Discount</h2>
@@ -327,7 +327,7 @@ export default function EditProfilePage() {
                         onClick={() => setMilCategory(c.value)}
                         className={`text-left rounded-xl border px-3 py-2 transition-colors ${
                           milCategory === c.value
-                            ? "border-[#7C3AED] bg-[#7C3AED]/10"
+                            ? "border-[#FCC300] bg-[#FCC300]/10"
                             : "border-white/10 hover:border-white/25"
                         }`}
                       >
@@ -340,8 +340,8 @@ export default function EditProfilePage() {
 
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Proof of service / department ID</Label>
-                  <label className="flex items-center gap-2 rounded-xl border border-dashed border-white/20 hover:border-[#7C3AED] px-3 py-3 cursor-pointer transition-colors">
-                    <Upload className="w-4 h-4 text-[#7C3AED] flex-shrink-0" />
+                  <label className="flex items-center gap-2 rounded-xl border border-dashed border-white/20 hover:border-[#FCC300] px-3 py-3 cursor-pointer transition-colors">
+                    <Upload className="w-4 h-4 text-[#FCC300] flex-shrink-0" />
                     <span className="text-sm text-[#A1A1AA] truncate">
                       {milFile?.name || "Upload a photo or PDF (JPG, PNG, HEIC, PDF · max 10 MB)"}
                     </span>
@@ -368,7 +368,7 @@ export default function EditProfilePage() {
                   type="button"
                   onClick={handleMilitarySubmit}
                   disabled={milUploading}
-                  className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60"
+                  className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60"
                 >
                   {milUploading
                     ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting…</>
@@ -381,8 +381,8 @@ export default function EditProfilePage() {
           {/* Change password */}
           <form onSubmit={handlePasswordChange} className="glass rounded-2xl p-6 sm:p-7 space-y-5">
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 rounded-full bg-[#7C3AED]/20 flex items-center justify-center">
-                <KeyRound className="w-4.5 h-4.5 text-[#7C3AED]" size={18} />
+              <div className="w-9 h-9 rounded-full bg-[#FCC300]/20 flex items-center justify-center">
+                <KeyRound className="w-4.5 h-4.5 text-[#FCC300]" size={18} />
               </div>
               <h2 className="text-white font-semibold">Change Password</h2>
             </div>
@@ -396,7 +396,7 @@ export default function EditProfilePage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Min. 8 characters"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED] pr-10"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300] pr-10"
                   />
                   <button
                     type="button"
@@ -414,7 +414,7 @@ export default function EditProfilePage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat password"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
                 />
               </div>
             </div>

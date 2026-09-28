@@ -10,7 +10,7 @@ export default function CTASection() {
         <ScrollReveal direction="up">
           <div className="relative">
             {/* Glow */}
-            <div className="absolute inset-0 bg-[#7C3AED]/10 rounded-3xl blur-3xl" />
+            <div className="absolute inset-0 bg-[#FCC300]/10 rounded-3xl blur-3xl" />
             <div className="relative glass rounded-3xl px-8 py-16 sm:py-20">
               <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
                 Ready to ride in comfort?
@@ -23,7 +23,7 @@ export default function CTASection() {
                 <Link href="/book">
                   <Button
                     size="lg"
-                    className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold px-10 py-6 text-base rounded-xl purple-glow group"
+                    className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold px-10 py-6 text-base rounded-xl volt-glow group"
                   >
                     Book Your Ride
                     <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />

@@ -64,18 +64,18 @@ export default function BookingWidget() {
   return (
     <section className="relative z-20 -mt-8 px-4 sm:px-6 lg:px-8 pb-16">
       <div className="max-w-5xl mx-auto">
-        <div className="glass rounded-2xl p-6 sm:p-8 purple-glow">
+        <div className="glass rounded-2xl p-6 sm:p-8 volt-glow">
 
           {/* Round trip toggle */}
           <div className="flex items-center gap-4 mb-6">
             <span className="text-[#A1A1AA] text-sm font-medium">Trip Type</span>
             <div className="flex rounded-lg overflow-hidden border border-white/10">
               <button type="button" onClick={selectOneWay}
-                className={`px-4 py-1.5 text-sm font-medium transition-colors ${!roundTrip ? "bg-[#7C3AED] text-white" : "text-[#A1A1AA] hover:text-white"}`}>
+                className={`px-4 py-1.5 text-sm font-medium transition-colors ${!roundTrip ? "bg-[#FCC300] text-[#0A0A0A]" : "text-[#A1A1AA] hover:text-white"}`}>
                 One Way
               </button>
               <button type="button" onClick={() => setRoundTrip(true)}
-                className={`px-4 py-1.5 text-sm font-medium transition-colors ${roundTrip ? "bg-[#7C3AED] text-white" : "text-[#A1A1AA] hover:text-white"}`}>
+                className={`px-4 py-1.5 text-sm font-medium transition-colors ${roundTrip ? "bg-[#FCC300] text-[#0A0A0A]" : "text-[#A1A1AA] hover:text-white"}`}>
                 Round Trip
               </button>
             </div>
@@ -104,7 +104,7 @@ export default function BookingWidget() {
               <button
                 type="button"
                 onClick={swapLocations}
-                className="mb-[1px] flex-shrink-0 w-10 h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#7C3AED] hover:border-[#7C3AED]/50 transition-colors"
+                className="mb-[1px] flex-shrink-0 w-10 h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
                 aria-label="Switch directions"
               >
                 <ArrowLeftRight className="w-4 h-4" />
@@ -144,7 +144,7 @@ export default function BookingWidget() {
                   }}
                   min={new Date().toISOString().split("T")[0]}
                   required
-                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]"
                 />
               </div>
               {roundTrip && (
@@ -159,7 +159,7 @@ export default function BookingWidget() {
                     onChange={(e) => setReturnDate(e.target.value)}
                     min={date || new Date().toISOString().split("T")[0]}
                     required
-                    className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+                    className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]"
                   />
                 </div>
               )}
@@ -227,7 +227,7 @@ export default function BookingWidget() {
             </div>
 
             <Button type="submit" size="lg"
-              className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-14 text-base rounded-xl transition-all group">
+              className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-14 text-base rounded-xl transition-all group">
               Find Available Rides
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>

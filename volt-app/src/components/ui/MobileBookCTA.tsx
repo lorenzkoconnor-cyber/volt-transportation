@@ -60,7 +60,7 @@ export default function MobileBookCTA() {
       }}
     >
       <Link href="/book" className="block">
-        <div className="flex items-center justify-center gap-2 h-14 rounded-2xl font-bold text-white text-base bg-[#7C3AED] shadow-2xl shadow-[#7C3AED]/40 active:scale-[0.97] transition-transform">
+        <div className="flex items-center justify-center gap-2 h-14 rounded-2xl font-bold text-[#0A0A0A] text-base bg-[#FCC300] shadow-2xl shadow-[#FCC300]/40 active:scale-[0.97] transition-transform">
           Book Your Ride
           <ArrowRight className="w-5 h-5" />
         </div>

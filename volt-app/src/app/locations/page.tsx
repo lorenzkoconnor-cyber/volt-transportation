@@ -19,7 +19,7 @@ export default function LocationsPage() {
       <main className="pt-20">
         {/* Hero */}
         <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-          <div className="absolute top-0 left-0 w-[400px] h-[300px] bg-[#7C3AED]/8 blur-[100px] pointer-events-none" />
+          <div className="absolute top-0 left-0 w-[400px] h-[300px] bg-[#FCC300]/8 blur-[100px] pointer-events-none" />
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-5">Locations</h1>
             <p className="text-[#A1A1AA] text-lg">
@@ -36,8 +36,8 @@ export default function LocationsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2">
                 <div className="p-8 lg:p-10">
                   <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-[#7C3AED]" />
+                    <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-[#FCC300]" />
                     </div>
                     <div>
                       <p className="text-[#A1A1AA] text-xs uppercase tracking-wider">Departure Point</p>
@@ -77,8 +77,8 @@ export default function LocationsPage() {
                     </div>
                   </div>
 
-                  <div className="glass rounded-xl p-4 border border-[#7C3AED]/20">
-                    <p className="text-[#7C3AED] text-sm font-medium">
+                  <div className="glass rounded-xl p-4 border border-[#FCC300]/20">
+                    <p className="text-[#FCC300] text-sm font-medium">
                       📍 This is our only Columbus departure point. Every Columbus trip leaves from 3885 Miller Road, Suite C.
                     </p>
                   </div>
@@ -102,8 +102,8 @@ export default function LocationsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2">
                 <div className="p-8 lg:p-10">
                   <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center">
-                      <Plane className="w-5 h-5 text-[#7C3AED]" />
+                    <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center">
+                      <Plane className="w-5 h-5 text-[#FCC300]" />
                     </div>
                     <div>
                       <p className="text-[#A1A1AA] text-xs uppercase tracking-wider">Airport Location</p>
@@ -143,8 +143,8 @@ export default function LocationsPage() {
                     </div>
                   </div>
 
-                  <div className="glass rounded-xl p-4 border border-[#7C3AED]/20">
-                    <p className="text-[#7C3AED] text-sm font-medium">
+                  <div className="glass rounded-xl p-4 border border-[#FCC300]/20">
+                    <p className="text-[#FCC300] text-sm font-medium">
                       ✈️ Volt picks up from ATL in the ground transportation area after baggage claim. Your driver will be waiting with a Volt sign.
                     </p>
                   </div>
@@ -175,12 +175,12 @@ export default function LocationsPage() {
                 <div className="text-white font-bold">Columbus, GA</div>
                 <div className="text-[#A1A1AA] text-xs">3885 Miller Road</div>
               </div>
-              <ArrowRight className="w-6 h-6 text-[#7C3AED]" />
-              <div className="glass rounded-xl px-6 py-4 border border-[#7C3AED]/30">
+              <ArrowRight className="w-6 h-6 text-[#FCC300]" />
+              <div className="glass rounded-xl px-6 py-4 border border-[#FCC300]/30">
                 <div className="text-white font-bold">I-185 / I-85</div>
                 <div className="text-[#A1A1AA] text-xs">~100 miles</div>
               </div>
-              <ArrowRight className="w-6 h-6 text-[#7C3AED]" />
+              <ArrowRight className="w-6 h-6 text-[#FCC300]" />
               <div className="glass rounded-xl px-6 py-4">
                 <div className="text-white font-bold">ATL Airport</div>
                 <div className="text-[#A1A1AA] text-xs">Terminal drop-off</div>
@@ -195,7 +195,7 @@ export default function LocationsPage() {
             <h2 className="text-3xl font-bold text-white mb-4">Ready to reserve your seat?</h2>
             <p className="text-[#A1A1AA] mb-8">All Columbus trips depart from 3885 Miller Road, Suite C — book now and we'll handle the rest.</p>
             <Link href="/book">
-              <Button size="lg" className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold px-10 py-6 text-base rounded-xl purple-glow">
+              <Button size="lg" className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold px-10 py-6 text-base rounded-xl volt-glow">
                 Book Your Ride <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>

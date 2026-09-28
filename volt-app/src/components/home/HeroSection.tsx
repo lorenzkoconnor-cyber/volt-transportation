@@ -107,7 +107,7 @@ export default function HeroSection() {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/20 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A]/60 via-transparent to-transparent" />
       </div>
-      <div className="absolute bottom-32 left-0 w-[600px] h-[400px] bg-[#7C3AED]/10 blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-32 left-0 w-[600px] h-[400px] bg-[#FCC300]/10 blur-[140px] pointer-events-none" />
 
       {/* Content */}
       <div className="relative z-10 flex flex-col justify-between min-h-screen max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10">
@@ -115,17 +115,17 @@ export default function HeroSection() {
 
         {/* Hero text */}
         <div className="pt-4 pb-6 max-w-3xl">
-          <p className="text-[#7C3AED] text-xs sm:text-sm font-bold tracking-[0.25em] uppercase mb-3 sm:mb-4">
+          <p className="text-[#FCC300] text-xs sm:text-sm font-bold tracking-[0.25em] uppercase mb-3 sm:mb-4">
             Premium Airport Transportation
           </p>
           <h1 className="text-4xl sm:text-5xl lg:text-[4.5rem] font-black leading-[0.95] tracking-tight text-white mb-3 sm:mb-4 uppercase">
             Columbus GA<br />to Atlanta Airport
           </h1>
-          <p className="text-[#9D5FF5] text-lg sm:text-xl lg:text-2xl font-bold tracking-wide uppercase mb-4 sm:mb-5">
+          <p className="text-[#FFD54A] text-lg sm:text-xl lg:text-2xl font-bold tracking-wide uppercase mb-4 sm:mb-5">
             Ride in Comfort. Arrive Relaxed.
           </p>
           <p className="text-[#B8B8B8] text-sm sm:text-base lg:text-lg leading-relaxed">
-            Luxury Mercedes Sprinter vans. Professional chauffeurs.{" "}
+            Spacious Ford Transit Passenger Vans. Professional chauffeurs.{" "}
             <br className="hidden sm:block" />
             Reserved seating.{" "}
             <span className="text-white font-semibold">Starting at $59.</span>
@@ -148,7 +148,7 @@ export default function HeroSection() {
                 <h2 className="text-white font-bold text-sm sm:text-base">Plan Your Trip</h2>
                 <p className="text-[#A1A1AA] text-xs mt-0.5 hidden sm:block">Columbus ⇄ Atlanta Airport · Hourly departures</p>
               </div>
-              <a href="/manage-reservation" className="text-[#7C3AED] text-xs hover:text-[#9D5FF5] transition-colors font-medium whitespace-nowrap ml-2">
+              <a href="/manage-reservation" className="text-[#FCC300] text-xs hover:text-[#FFD54A] transition-colors font-medium whitespace-nowrap ml-2">
                 Manage Reservation
               </a>
             </div>
@@ -175,7 +175,7 @@ export default function HeroSection() {
 
                 {/* Swap button — visible on all sizes */}
                 <button type="button" onClick={swapLocations}
-                  className="absolute left-1/2 -translate-x-1/2 top-7 z-10 flex w-8 h-8 rounded-full bg-[#171717] border border-white/10 items-center justify-center text-[#A1A1AA] hover:text-[#7C3AED] hover:border-[#7C3AED]/50 transition-colors"
+                  className="absolute left-1/2 -translate-x-1/2 top-7 z-10 flex w-8 h-8 rounded-full bg-[#171717] border border-white/10 items-center justify-center text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
                   aria-label="Switch directions">
                   <ArrowLeftRight className="w-3.5 h-3.5" />
                 </button>
@@ -219,7 +219,7 @@ export default function HeroSection() {
                       if (returnDate && returnDate < d) setReturnDate("");
                     }}
                     min={new Date().toISOString().split("T")[0]}
-                    className="w-full min-w-0 h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
+                    className="w-full min-w-0 h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]" />
                 </div>
                 {roundTrip && (
                   <div className="min-w-0">
@@ -229,7 +229,7 @@ export default function HeroSection() {
                     <input type="date" required value={returnDate}
                       onChange={(e) => setReturnDate(e.target.value)}
                       min={date || new Date().toISOString().split("T")[0]}
-                      className="w-full min-w-0 h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]" />
+                      className="w-full min-w-0 h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]" />
                   </div>
                 )}
               </div>
@@ -272,7 +272,7 @@ export default function HeroSection() {
               </div>
 
               <Button type="submit" size="lg"
-                className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-bold h-14 text-base rounded-xl group transition-colors">
+                className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-14 text-base rounded-xl group transition-colors">
                 Find Available Rides
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
@@ -292,7 +292,7 @@ export default function HeroSection() {
               { icon: "🤵", label: "White Glove Service", sub: "Chauffeur-style service." },
             ].map((item) => (
               <div key={item.label} className="flex items-start gap-2 sm:gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-[#7C3AED]/40 flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-[#FCC300]/40 flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
                   {item.icon}
                 </div>
                 <div>
@@ -312,7 +312,7 @@ function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; la
   return (
     <div className="flex items-center gap-3">
       <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onToggle}
-        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? "bg-[#7C3AED]" : "bg-white/10"}`}>
+        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? "bg-[#FCC300]" : "bg-white/10"}`}>
         <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : ""}`} />
       </button>
       <span className="text-[#A1A1AA] text-sm cursor-pointer select-none" onClick={onToggle}>

@@ -41,7 +41,7 @@ const steps = [
     number: "05",
     icon: Coffee,
     title: "Relax and Enjoy the Ride",
-    desc: "Sit back in your spacious Mercedes Sprinter. Enjoy complimentary water, USB charging, and a smooth, comfortable ride.",
+    desc: "Sit back in your spacious Ford Transit Passenger Van. Enjoy complimentary water, USB charging, and a smooth, comfortable ride.",
   },
   {
     number: "06",
@@ -58,7 +58,7 @@ export default function HowItWorksPage() {
       <main className="pt-20">
         {/* Hero */}
         <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#7C3AED]/8 blur-[100px] pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#FCC300]/8 blur-[100px] pointer-events-none" />
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-5">
               How It Works
@@ -74,7 +74,7 @@ export default function HowItWorksPage() {
           <div className="max-w-4xl mx-auto">
             <div className="relative">
               {/* Vertical line */}
-              <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-[#7C3AED] via-[#7C3AED]/30 to-transparent hidden sm:block" />
+              <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-[#FCC300] via-[#FCC300]/30 to-transparent hidden sm:block" />
 
               <div className="space-y-6">
                 {steps.map((step, index) => {
@@ -83,10 +83,10 @@ export default function HowItWorksPage() {
                     <div key={step.number} className="relative flex gap-6 sm:gap-10 items-start">
                       {/* Step number / icon */}
                       <div className="relative flex-shrink-0">
-                        <div className="w-16 h-16 rounded-2xl bg-[#7C3AED] flex items-center justify-center purple-glow z-10 relative">
-                          <Icon className="w-7 h-7 text-white" />
+                        <div className="w-16 h-16 rounded-2xl bg-[#FCC300] flex items-center justify-center volt-glow z-10 relative">
+                          <Icon className="w-7 h-7 text-[#0A0A0A]" />
                         </div>
-                        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#0A0A0A] border border-[#7C3AED]/50 flex items-center justify-center text-[#7C3AED] text-xs font-bold">
+                        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#0A0A0A] border border-[#FCC300]/50 flex items-center justify-center text-[#FCC300] text-xs font-bold">
                           {index + 1}
                         </span>
                       </div>
@@ -94,7 +94,7 @@ export default function HowItWorksPage() {
                       {/* Content */}
                       <div className="flex-1 glass rounded-2xl p-6 mb-2">
                         <div className="flex items-center gap-3 mb-2">
-                          <span className="text-[#7C3AED] text-xs font-bold tracking-wider">STEP {step.number}</span>
+                          <span className="text-[#FCC300] text-xs font-bold tracking-wider">STEP {step.number}</span>
                         </div>
                         <h2 className="text-white text-xl font-bold mb-2">{step.title}</h2>
                         <p className="text-[#A1A1AA] leading-relaxed">{step.desc}</p>
@@ -134,7 +134,7 @@ export default function HowItWorksPage() {
             <p className="text-[#A1A1AA] mb-8">It really is as simple as it looks. Book now and we'll take care of the rest.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/book">
-                <Button size="lg" className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold px-10 py-6 text-base rounded-xl purple-glow">
+                <Button size="lg" className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold px-10 py-6 text-base rounded-xl volt-glow">
                   Book Your Ride <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>

@@ -30,7 +30,7 @@ export default function ContactPage() {
       <main className="pt-20">
         {/* Hero */}
         <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-          <div className="absolute top-0 right-0 w-[400px] h-[300px] bg-[#7C3AED]/8 blur-[100px] pointer-events-none" />
+          <div className="absolute top-0 right-0 w-[400px] h-[300px] bg-[#FCC300]/8 blur-[100px] pointer-events-none" />
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-5">Contact Us</h1>
             <p className="text-[#A1A1AA] text-lg">
@@ -56,8 +56,8 @@ export default function ContactPage() {
               </div>
 
               <div className="glass rounded-2xl p-6">
-                <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mb-4">
-                  <MapPin className="w-5 h-5 text-[#7C3AED]" />
+                <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center mb-4">
+                  <MapPin className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Address</h3>
                 <a
@@ -72,8 +72,8 @@ export default function ContactPage() {
               </div>
 
               <div className="glass rounded-2xl p-6">
-                <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mb-4">
-                  <Phone className="w-5 h-5 text-[#7C3AED]" />
+                <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center mb-4">
+                  <Phone className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Phone</h3>
                 <a href="tel:+17065305896" className="text-[#A1A1AA] hover:text-white text-sm transition-colors">
@@ -82,8 +82,8 @@ export default function ContactPage() {
               </div>
 
               <div className="glass rounded-2xl p-6">
-                <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mb-4">
-                  <Mail className="w-5 h-5 text-[#7C3AED]" />
+                <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center mb-4">
+                  <Mail className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Email</h3>
                 <a href="mailto:hello@volttransportation.com" className="text-[#A1A1AA] hover:text-white text-sm transition-colors break-all">
@@ -92,18 +92,18 @@ export default function ContactPage() {
               </div>
 
               <div className="glass rounded-2xl p-6">
-                <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mb-4">
-                  <Clock className="w-5 h-5 text-[#7C3AED]" />
+                <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center mb-4">
+                  <Clock className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Hours</h3>
                 <p className="text-[#A1A1AA] text-sm">Daily · 5:00 AM – 10:00 PM</p>
               </div>
 
-              <div className="glass rounded-xl p-5 border border-[#7C3AED]/20">
-                <p className="text-[#7C3AED] text-sm font-medium mb-1">Already booked?</p>
+              <div className="glass rounded-xl p-5 border border-[#FCC300]/20">
+                <p className="text-[#FCC300] text-sm font-medium mb-1">Already booked?</p>
                 <p className="text-[#A1A1AA] text-sm mb-3">Manage or modify your existing reservation.</p>
                 <Link href="/manage-reservation">
-                  <Button variant="outline" size="sm" className="w-full border-[#7C3AED]/40 text-[#7C3AED] hover:bg-[#7C3AED]/10">
+                  <Button variant="outline" size="sm" className="w-full border-[#FCC300]/40 text-[#FCC300] hover:bg-[#FCC300]/10">
                     Manage Reservation
                   </Button>
                 </Link>
@@ -115,8 +115,8 @@ export default function ContactPage() {
               <div className="glass rounded-2xl p-8">
                 {submitted ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-16 h-16 rounded-full bg-[#7C3AED]/15 flex items-center justify-center mb-4">
-                      <CheckCircle className="w-8 h-8 text-[#7C3AED]" />
+                    <div className="w-16 h-16 rounded-full bg-[#FCC300]/15 flex items-center justify-center mb-4">
+                      <CheckCircle className="w-8 h-8 text-[#FCC300]" />
                     </div>
                     <h3 className="text-white font-bold text-xl mb-2">Message sent!</h3>
                     <p className="text-[#A1A1AA]">We'll get back to you within a few hours.</p>
@@ -130,7 +130,7 @@ export default function ContactPage() {
                           id="name"
                           required
                           placeholder="John Smith"
-                          className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#7C3AED]"
+                          className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
                         />
                       </div>
                       <div>
@@ -139,7 +139,7 @@ export default function ContactPage() {
                           id="phone"
                           type="tel"
                           placeholder="(706) 555-0000"
-                          className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#7C3AED]"
+                          className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
                         />
                       </div>
                     </div>
@@ -150,7 +150,7 @@ export default function ContactPage() {
                         type="email"
                         required
                         placeholder="you@email.com"
-                        className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#7C3AED]"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
                       />
                     </div>
                     <div>
@@ -159,7 +159,7 @@ export default function ContactPage() {
                         id="subject"
                         required
                         placeholder="How can we help?"
-                        className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#7C3AED]"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
                       />
                     </div>
                     <div>
@@ -169,13 +169,13 @@ export default function ContactPage() {
                         required
                         placeholder="Tell us what you need..."
                         rows={5}
-                        className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 rounded-xl focus:border-[#7C3AED] resize-none"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 rounded-xl focus:border-[#FCC300] resize-none"
                       />
                     </div>
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-12 rounded-xl disabled:opacity-60"
+                      className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-12 rounded-xl disabled:opacity-60"
                     >
                       {loading ? "Sending..." : "Send Message"}
                     </Button>

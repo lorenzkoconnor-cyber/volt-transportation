@@ -13,7 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 
 const ROLE_STYLES: Record<string, { label: string; class: string; icon: React.ComponentType<{ className?: string }> }> = {
-  owner:        { label: "Owner",        class: "bg-[#7C3AED]/20 text-[#7C3AED] border border-[#7C3AED]/30", icon: Crown },
+  owner:        { label: "Owner",        class: "bg-[#FCC300]/20 text-[#FCC300] border border-[#FCC300]/30", icon: Crown },
   manager:      { label: "Manager",      class: "bg-blue-500/15 text-blue-400",   icon: Shield },
   office_staff: { label: "Office Staff", class: "bg-cyan-500/15 text-cyan-400",   icon: Shield },
   driver:       { label: "Driver",       class: "bg-green-500/15 text-green-400", icon: Shield },
@@ -179,7 +179,7 @@ function EmployeesContent() {
         </div>
         <Button
           onClick={() => { setShowModal(true); setInviteSuccess(""); setInviteError(""); }}
-          className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold"
+          className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold"
         >
           <Plus className="w-4 h-4 mr-1.5" /> Add Employee
         </Button>
@@ -193,7 +193,7 @@ function EmployeesContent() {
           return (
             <div key={role} className={`glass rounded-xl p-4 ${count === 0 ? "opacity-40" : ""}`}>
               <div className="flex items-center gap-2 mb-1">
-                <Icon className="w-3.5 h-3.5 text-[#7C3AED]" />
+                <Icon className="w-3.5 h-3.5 text-[#FCC300]" />
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${info.class}`}>
                   {info.label}
                 </span>
@@ -216,7 +216,7 @@ function EmployeesContent() {
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+            <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
           </div>
         ) : employees.length === 0 ? (
           <div className="flex flex-col items-center py-16 gap-3">
@@ -231,7 +231,7 @@ function EmployeesContent() {
               return (
                 <div key={emp.id} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center">
                   <div className="col-span-3 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#7C3AED]/20 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                       {emp.first_name[0]}{emp.last_name[0]}
                     </div>
                     <span className="text-white font-medium text-sm truncate">
@@ -258,7 +258,7 @@ function EmployeesContent() {
                       <select
                         value={emp.role}
                         onChange={(e) => changeRole(emp, e.target.value)}
-                        className="bg-[#171717] border border-white/10 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#7C3AED]"
+                        className="bg-[#171717] border border-white/10 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#FCC300]"
                       >
                         <option value="manager">Manager</option>
                         <option value="office_staff">Office Staff</option>
@@ -277,7 +277,7 @@ function EmployeesContent() {
                   <div className="col-span-2 flex justify-end gap-3">
                     <button
                       onClick={() => { setResetTarget(emp); setResetPassword(""); setResetError(""); setResetSuccess(""); }}
-                      className="text-xs text-[#A1A1AA] hover:text-[#7C3AED] transition-colors"
+                      className="text-xs text-[#A1A1AA] hover:text-[#FCC300] transition-colors"
                       title="Reset password"
                     >
                       <KeyRound className="w-3.5 h-3.5" />
@@ -304,12 +304,12 @@ function EmployeesContent() {
 
       {/* How it works note */}
       <div className="glass rounded-xl p-4 flex items-start gap-3">
-        <UserPlus className="w-4 h-4 text-[#7C3AED] flex-shrink-0 mt-0.5" />
+        <UserPlus className="w-4 h-4 text-[#FCC300] flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-white text-sm font-medium">How employee accounts work</p>
           <p className="text-[#A1A1AA] text-xs mt-0.5">
             You create each employee&apos;s account directly with a starting password — no email required.
-            They sign in immediately at <span className="text-[#7C3AED]">/emp-login</span> and see only what their role allows.
+            They sign in immediately at <span className="text-[#FCC300]">/emp-login</span> and see only what their role allows.
             Use the key icon (<KeyRound className="w-3 h-3 inline" />) next to any employee to reset their password at any time.
           </p>
         </div>
@@ -332,8 +332,8 @@ function EmployeesContent() {
 
             {inviteSuccess ? (
               <div className="text-center py-6">
-                <div className="w-14 h-14 rounded-full bg-[#7C3AED]/15 flex items-center justify-center mx-auto mb-4">
-                  <UserPlus className="w-7 h-7 text-[#7C3AED]" />
+                <div className="w-14 h-14 rounded-full bg-[#FCC300]/15 flex items-center justify-center mx-auto mb-4">
+                  <UserPlus className="w-7 h-7 text-[#FCC300]" />
                 </div>
                 <p className="text-white font-semibold mb-2">Account Created!</p>
                 <p className="text-[#A1A1AA] text-sm">{inviteSuccess}</p>
@@ -341,7 +341,7 @@ function EmployeesContent() {
                   <Button onClick={() => setInviteSuccess("")} variant="outline" className="flex-1 border-white/15 text-white hover:bg-white/5">
                     Add Another
                   </Button>
-                  <Button onClick={() => setShowModal(false)} className="flex-1 bg-[#7C3AED] hover:bg-[#9D5FF5] text-white">
+                  <Button onClick={() => setShowModal(false)} className="flex-1 bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A]">
                     Done
                   </Button>
                 </div>
@@ -352,28 +352,28 @@ function EmployeesContent() {
                   <div>
                     <Label className="text-[#A1A1AA] text-xs mb-1.5 block">First Name *</Label>
                     <Input required value={inviteFirst} onChange={(e) => setInviteFirst(e.target.value)}
-                      placeholder="Marcus" className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]" />
+                      placeholder="Marcus" className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]" />
                   </div>
                   <div>
                     <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Last Name *</Label>
                     <Input required value={inviteLast} onChange={(e) => setInviteLast(e.target.value)}
-                      placeholder="Johnson" className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]" />
+                      placeholder="Johnson" className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]" />
                   </div>
                 </div>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Work Email *</Label>
                   <Input required type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="employee@email.com" className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]" />
+                    placeholder="employee@email.com" className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]" />
                 </div>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Phone (optional)</Label>
                   <Input type="tel" value={invitePhone} onChange={(e) => setInvitePhone(e.target.value)}
-                    placeholder="(706) 555-0000" className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]" />
+                    placeholder="(706) 555-0000" className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]" />
                 </div>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Role *</Label>
                   <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}
-                    className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]">
+                    className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#FCC300]">
                     <option value="owner">Owner — full access, including employee management</option>
                     <option value="manager">Manager — full access except owner settings</option>
                     <option value="office_staff">Office Staff — bookings, check-in, payments</option>
@@ -392,7 +392,7 @@ function EmployeesContent() {
                       onChange={(e) => setInvitePassword(e.target.value)}
                       placeholder="Min. 8 characters"
                       minLength={8}
-                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED] pr-10" />
+                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300] pr-10" />
                     <button type="button" onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A1AA] hover:text-white transition-colors">
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -405,7 +405,7 @@ function EmployeesContent() {
                 )}
 
                 <Button type="submit" disabled={inviteLoading}
-                  className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
+                  className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
                   {inviteLoading
                     ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating account…</>
                     : <><UserPlus className="w-4 h-4 mr-2" />Create Account</>
@@ -437,7 +437,7 @@ function EmployeesContent() {
                 <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto mb-3" />
                 <p className="text-white font-semibold mb-1">Password Updated</p>
                 <p className="text-[#A1A1AA] text-sm mb-5">{resetSuccess}</p>
-                <Button onClick={() => { setResetTarget(null); setResetSuccess(""); }} className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white w-full">Done</Button>
+                <Button onClick={() => { setResetTarget(null); setResetSuccess(""); }} className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] w-full">Done</Button>
               </div>
             ) : (
               <form onSubmit={handleResetPassword} className="space-y-4">
@@ -448,7 +448,7 @@ function EmployeesContent() {
                       onChange={(e) => setResetPassword(e.target.value)}
                       placeholder="Min. 8 characters"
                       minLength={8}
-                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED] pr-10" />
+                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300] pr-10" />
                     <button type="button" onClick={() => setShowResetPw(!showResetPw)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A1AA] hover:text-white transition-colors">
                       {showResetPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -457,7 +457,7 @@ function EmployeesContent() {
                 </div>
                 {resetError && <p className="text-red-400 text-xs bg-red-500/10 rounded-lg px-3 py-2">{resetError}</p>}
                 <Button type="submit" disabled={resetLoading}
-                  className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
+                  className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
                   {resetLoading
                     ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Updating…</>
                     : <><KeyRound className="w-4 h-4 mr-2" />Set New Password</>
@@ -474,7 +474,7 @@ function EmployeesContent() {
 
 export default function EmployeesPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" /></div>}>
       <EmployeesContent />
     </Suspense>
   );

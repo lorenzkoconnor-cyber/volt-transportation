@@ -103,7 +103,7 @@ export default function PortalPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
       </div>
     );
   }
@@ -130,7 +130,7 @@ export default function PortalPage() {
             </div>
             <div className="flex items-center gap-3">
               <Link href="/book">
-                <Button className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+                <Button className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
                   Book a Ride
                 </Button>
               </Link>
@@ -149,7 +149,7 @@ export default function PortalPage() {
             <h2 className="text-white font-bold text-xl mb-4">Upcoming Trips</h2>
             {tripsLoading ? (
               <div className="glass rounded-2xl p-10 flex justify-center">
-                <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+                <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
               </div>
             ) : upcoming.length === 0 ? (
               <div className="glass rounded-2xl p-10 text-center">
@@ -159,7 +159,7 @@ export default function PortalPage() {
                   Ready for your next trip to Atlanta Airport?
                 </p>
                 <Link href="/book">
-                  <Button className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+                  <Button className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
                     Book Now
                   </Button>
                 </Link>
@@ -178,7 +178,7 @@ export default function PortalPage() {
             <h2 className="text-white font-bold text-xl mb-4">Trip History</h2>
             {tripsLoading ? (
               <div className="glass rounded-2xl p-8 flex justify-center">
-                <Loader2 className="w-5 h-5 text-[#7C3AED] animate-spin" />
+                <Loader2 className="w-5 h-5 text-[#FCC300] animate-spin" />
               </div>
             ) : history.length === 0 ? (
               <div className="glass rounded-2xl p-8 text-center">
@@ -198,8 +198,8 @@ export default function PortalPage() {
             <h2 className="text-white font-bold text-xl mb-4">Profile</h2>
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center gap-4 mb-5">
-                <div className="w-12 h-12 rounded-full bg-[#7C3AED]/20 flex items-center justify-center">
-                  <User className="w-6 h-6 text-[#7C3AED]" />
+                <div className="w-12 h-12 rounded-full bg-[#FCC300]/20 flex items-center justify-center">
+                  <User className="w-6 h-6 text-[#FCC300]" />
                 </div>
                 <div>
                   <div className="text-white font-semibold">
@@ -266,7 +266,7 @@ function TripCard({
                 trip.status === "confirmed"
                   ? "bg-green-500/15 text-green-400"
                   : trip.status === "completed"
-                  ? "bg-[#7C3AED]/15 text-[#7C3AED]"
+                  ? "bg-[#FCC300]/15 text-[#FCC300]"
                   : "bg-[#A1A1AA]/15 text-[#A1A1AA]"
               }`}
             >
@@ -274,7 +274,7 @@ function TripCard({
             </span>
           </div>
           <div className="flex items-center gap-2 text-white font-semibold mb-2">
-            <MapPin className="w-4 h-4 text-[#7C3AED] flex-shrink-0" />
+            <MapPin className="w-4 h-4 text-[#FCC300] flex-shrink-0" />
             <span className="truncate">{trip.from}</span>
             <ArrowRight className="w-3 h-3 text-[#A1A1AA] flex-shrink-0" />
             <span className="truncate">{trip.to}</span>

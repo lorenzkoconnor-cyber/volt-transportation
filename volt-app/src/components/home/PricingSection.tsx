@@ -62,8 +62,8 @@ export default function PricingSection() {
                 </div>
               ))}
             </div>
-            <div className="p-5 bg-[#7C3AED]/5 border-t border-[#7C3AED]/20">
-              <p className="text-[#7C3AED] text-sm font-medium">
+            <div className="p-5 bg-[#FCC300]/5 border-t border-[#FCC300]/20">
+              <p className="text-[#FCC300] text-sm font-medium">
                 Military discount available — applied by our team upon request.
               </p>
             </div>
@@ -78,8 +78,8 @@ export default function PricingSection() {
               <ul className="space-y-3">
                 {included.map((item) => (
                   <li key={item} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-3 h-3 text-[#7C3AED]" />
+                    <div className="w-5 h-5 rounded-full bg-[#FCC300]/15 flex items-center justify-center flex-shrink-0">
+                      <Check className="w-3 h-3 text-[#FCC300]" />
                     </div>
                     <span className="text-[#A1A1AA] text-sm">{item}</span>
                   </li>
@@ -96,7 +96,7 @@ export default function PricingSection() {
                 automatically at checkout.
               </p>
               <Link href="/book">
-                <Button className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+                <Button className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
                   Book Your Ride
                 </Button>
               </Link>
