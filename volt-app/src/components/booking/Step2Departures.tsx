@@ -179,7 +179,7 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
 
       {loading ? (
         <div className="glass rounded-2xl p-12 flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
           <p className="text-[#A1A1AA] text-sm">Checking live availability…</p>
         </div>
       ) : loadError ? (
@@ -210,8 +210,8 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
         </>
       ) : (
         <>
-          <div className="glass rounded-xl p-4 flex items-start gap-3 border border-[#7C3AED]/30">
-            <Timer className="w-5 h-5 text-[#C4B5FD] flex-shrink-0 mt-0.5" />
+          <div className="glass rounded-xl p-4 flex items-start gap-3 border border-[#FCC300]/30">
+            <Timer className="w-5 h-5 text-[#FFE08A] flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-white text-sm font-semibold">
                 Estimated travel time: {formatDuration(routeMinutes, true)} each way
@@ -252,7 +252,7 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
         disabled={!canProceed}
         onClick={() => canProceed && onNext(selectedOutbound!, selectedReturn)}
         size="lg"
-        className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-12 rounded-xl disabled:opacity-40 group"
+        className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-12 rounded-xl disabled:opacity-40 group"
       >
         Continue to Passenger Info
         <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -309,13 +309,13 @@ function FlightOptions({
                 onClick={() => onSelect(m.slot)}
                 className={`w-full text-left rounded-xl p-3 sm:p-4 border transition-all flex items-center gap-3 ${
                   isSelected
-                    ? "bg-[#7C3AED]/20 border-[#7C3AED]"
+                    ? "bg-[#FCC300]/20 border-[#FCC300]"
                     : full
                     ? "bg-white/3 border-white/5 opacity-40 cursor-not-allowed"
-                    : "glass border-white/10 hover:border-[#7C3AED]/50 hover:bg-[#7C3AED]/10"
+                    : "glass border-white/10 hover:border-[#FCC300]/50 hover:bg-[#FCC300]/10"
                 }`}
               >
-                <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isSelected ? "border-[#7C3AED] bg-[#7C3AED] ring-2 ring-inset ring-[#0A0A0A]" : "border-white/30"}`} />
+                <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isSelected ? "border-[#FCC300] bg-[#FCC300] ring-2 ring-inset ring-[#0A0A0A]" : "border-white/30"}`} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="text-white font-semibold">{m.slot.displayTime}</span>
@@ -327,7 +327,7 @@ function FlightOptions({
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`text-xs font-medium ${m.tight ? "text-amber-400" : "text-[#C4B5FD]"}`}>
+                    <span className={`text-xs font-medium ${m.tight ? "text-amber-400" : "text-[#FFE08A]"}`}>
                       {departing
                         ? `${formatDuration(m.gapMinutes)} before your flight`
                         : `${formatDuration(m.gapMinutes)} after you land`}
@@ -412,9 +412,9 @@ function DepartureGrid({
                 onClick={() => onSelect(slot)}
                 className={`relative rounded-xl p-3 text-center transition-all border ${
                   isSelected
-                    ? "bg-[#7C3AED] border-[#7C3AED] text-white"
+                    ? "bg-[#FCC300] border-[#FCC300] text-[#0A0A0A]"
                     : slot.available
-                    ? "glass border-white/10 text-white hover:border-[#7C3AED]/50 hover:bg-[#7C3AED]/10"
+                    ? "glass border-white/10 text-white hover:border-[#FCC300]/50 hover:bg-[#FCC300]/10"
                     : "bg-white/3 border-white/5 text-[#A1A1AA]/40 cursor-not-allowed"
                 }`}
               >

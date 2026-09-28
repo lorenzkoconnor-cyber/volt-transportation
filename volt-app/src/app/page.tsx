@@ -12,7 +12,7 @@ import MobileBookCTA from "@/components/ui/MobileBookCTA";
 export const metadata: Metadata = {
   title: "Columbus GA to Atlanta Airport Shuttle Service | Volt Transportation",
   description:
-    "Book your Columbus GA to Atlanta Airport shuttle today. Premium Mercedes Sprinter service — only 8 passengers, professional drivers, $59/adult. Reliable. Comfortable.",
+    "Book your Columbus GA to Atlanta Airport shuttle today. Premium Ford Transit Passenger Van service — only 8 passengers, professional drivers, $59/adult. Reliable. Comfortable.",
   openGraph: {
     title: "Columbus GA to Atlanta Airport Shuttle | Volt Transportation",
     description:

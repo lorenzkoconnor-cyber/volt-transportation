@@ -6,7 +6,7 @@ const reviews = [
     name: "Marcus T.",
     date: "November 2024",
     rating: 5,
-    text: "Absolutely the best way to get to ATL from Columbus. The Sprinter was spotless, driver was on time, and I made my flight with no stress. Will always use Volt.",
+    text: "Absolutely the best way to get to ATL from Columbus. The van was spotless, driver was on time, and I made my flight with no stress. Will always use Volt.",
   },
   {
     name: "Janelle R.",
@@ -32,7 +32,7 @@ export default function ReviewsSection() {
           </h2>
           <div className="flex items-center justify-center gap-1 mb-2">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-5 h-5 text-[#7C3AED]" fill="#7C3AED" />
+              <Star key={i} className="w-5 h-5 text-[#FCC300]" fill="#FCC300" />
             ))}
           </div>
           <p className="text-[#A1A1AA]">5.0 average rating</p>
@@ -49,7 +49,7 @@ export default function ReviewsSection() {
               <div className="glass rounded-2xl p-6 h-full flex flex-col">
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(review.rating)].map((_, j) => (
-                    <Star key={j} className="w-4 h-4 text-[#7C3AED]" fill="#7C3AED" />
+                    <Star key={j} className="w-4 h-4 text-[#FCC300]" fill="#FCC300" />
                   ))}
                 </div>
                 <p className="text-[#A1A1AA] text-sm leading-relaxed mb-5 flex-1">

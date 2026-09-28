@@ -99,11 +99,11 @@ export default function TermsPage() {
             <div className="mt-8 glass rounded-xl p-5 text-center">
               <p className="text-[#A1A1AA] text-sm">
                 Questions about these terms?{" "}
-                <a href="/contact" className="text-[#7C3AED] hover:text-[#9D5FF5] transition-colors">
+                <a href="/contact" className="text-[#FCC300] hover:text-[#FFD54A] transition-colors">
                   Contact us
                 </a>{" "}
                 or see our{" "}
-                <a href="/privacy-policy" className="text-[#7C3AED] hover:text-[#9D5FF5] transition-colors">
+                <a href="/privacy-policy" className="text-[#FCC300] hover:text-[#FFD54A] transition-colors">
                   Privacy Policy
                 </a>.
               </p>

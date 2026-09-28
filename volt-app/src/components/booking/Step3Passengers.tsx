@@ -61,8 +61,8 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
       {/* Primary passenger */}
       <div className="glass rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-1">
-          <div className="w-6 h-6 rounded-full bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
-            <User className="w-3 h-3 text-white" />
+          <div className="w-6 h-6 rounded-full bg-[#FCC300] flex items-center justify-center flex-shrink-0">
+            <User className="w-3 h-3 text-[#0A0A0A]" />
           </div>
           <h3 className="text-white font-semibold">Primary Passenger</h3>
           <span className="text-[#A1A1AA] text-xs">(booking contact)</span>
@@ -76,7 +76,7 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
               value={primary.name}
               onChange={(e) => setPrimaryField("name", e.target.value)}
               placeholder="John Smith"
-              className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+              className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
             />
           </div>
           <div>
@@ -87,7 +87,7 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
               value={primary.phone}
               onChange={(e) => setPrimaryField("phone", e.target.value)}
               placeholder="(706) 555-0000"
-              className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+              className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
             />
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
             value={primary.email}
             onChange={(e) => setPrimaryField("email", e.target.value)}
             placeholder="you@email.com"
-            className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+            className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
           />
           <p className="text-[#A1A1AA] text-xs mt-1.5">Confirmation sent here and by SMS</p>
         </div>
@@ -121,7 +121,7 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
                 value={name}
                 onChange={(e) => setAdditionalName(i, e.target.value)}
                 placeholder={`Passenger ${i + 2} name`}
-                className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
               />
               <button
                 type="button"
@@ -136,7 +136,7 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
             <button
               type="button"
               onClick={addPassenger}
-              className="flex items-center gap-2 text-[#7C3AED] hover:text-[#9D5FF5] text-sm transition-colors"
+              className="flex items-center gap-2 text-[#FCC300] hover:text-[#FFD54A] text-sm transition-colors"
             >
               <Plus className="w-4 h-4" /> Add passenger name
             </button>
@@ -152,7 +152,7 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Any special requests, accessibility needs, or notes for your driver..."
           rows={3}
-          className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#7C3AED] resize-none"
+          className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#FCC300] resize-none"
         />
       </div>
 
@@ -161,7 +161,7 @@ export default function Step3Passengers({ search, outbound, onNext, onBack }: Pr
       <Button
         type="submit"
         size="lg"
-        className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-12 rounded-xl group"
+        className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-12 rounded-xl group"
       >
         Continue to Payment
         <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />

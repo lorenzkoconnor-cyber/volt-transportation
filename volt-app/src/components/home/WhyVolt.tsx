@@ -6,7 +6,7 @@ const features = [
     icon: Zap,
     title: "Luxury Vehicles",
     description:
-      "Travel in style aboard our fleet of black Mercedes Sprinter vans — the premium choice for airport transportation.",
+      "Travel in style aboard our fleet of Ford Transit Passenger Vans — the premium choice for airport transportation.",
   },
   {
     icon: Users,
@@ -46,9 +46,9 @@ export default function WhyVolt() {
             const Icon = feature.icon;
             return (
               <ScrollReveal key={feature.title} delay={i * 110} direction="up" className="h-full">
-                <div className="glass rounded-2xl p-6 hover:border-[#7C3AED]/30 transition-all group h-full">
-                  <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center mb-5 group-hover:bg-[#7C3AED]/25 transition-colors">
-                    <Icon className="w-5 h-5 text-[#7C3AED]" />
+                <div className="glass rounded-2xl p-6 hover:border-[#FCC300]/30 transition-all group h-full">
+                  <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center mb-5 group-hover:bg-[#FCC300]/25 transition-colors">
+                    <Icon className="w-5 h-5 text-[#FCC300]" />
                   </div>
                   <h3 className="text-white font-semibold text-lg mb-2">
                     {feature.title}

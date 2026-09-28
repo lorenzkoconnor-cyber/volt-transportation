@@ -110,7 +110,7 @@ function TripSummary({
         )}
         <div className="flex justify-between font-bold border-t border-white/10 pt-2 mt-2">
           <span className="text-white">Total Due</span>
-          <span className="text-[#7C3AED] text-xl">${money(total)}</span>
+          <span className="text-[#FCC300] text-xl">${money(total)}</span>
         </div>
       </div>
     </div>
@@ -178,11 +178,11 @@ function MilitaryDiscountSection({
           type="checkbox"
           checked={checked}
           onChange={(e) => onCheckedChange(e.target.checked)}
-          className="mt-0.5 w-4 h-4 accent-[#7C3AED] flex-shrink-0"
+          className="mt-0.5 w-4 h-4 accent-[#FCC300] flex-shrink-0"
         />
         <span>
           <span className="flex items-center gap-1.5 text-white text-sm font-medium">
-            <ShieldCheck className="w-4 h-4 text-[#7C3AED]" />
+            <ShieldCheck className="w-4 h-4 text-[#FCC300]" />
             I&apos;m active/veteran military or a first responder
           </span>
           <span className="block text-[#A1A1AA] text-xs mt-0.5">
@@ -204,7 +204,7 @@ function MilitaryDiscountSection({
                   onClick={() => onCategoryChange(c.value)}
                   className={`text-left rounded-xl border px-3 py-2 transition-colors ${
                     category === c.value
-                      ? "border-[#7C3AED] bg-[#7C3AED]/10"
+                      ? "border-[#FCC300] bg-[#FCC300]/10"
                       : "border-white/10 hover:border-white/25"
                   }`}
                 >
@@ -217,8 +217,8 @@ function MilitaryDiscountSection({
 
           <div>
             <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Proof of service / department ID</Label>
-            <label className="flex items-center gap-2 rounded-xl border border-dashed border-white/20 hover:border-[#7C3AED] px-3 py-3 cursor-pointer transition-colors">
-              <Upload className="w-4 h-4 text-[#7C3AED] flex-shrink-0" />
+            <label className="flex items-center gap-2 rounded-xl border border-dashed border-white/20 hover:border-[#FCC300] px-3 py-3 cursor-pointer transition-colors">
+              <Upload className="w-4 h-4 text-[#FCC300] flex-shrink-0" />
               <span className="text-sm text-[#A1A1AA] truncate">
                 {fileName || "Upload a photo or PDF (JPG, PNG, HEIC, PDF · max 10 MB)"}
               </span>
@@ -265,13 +265,13 @@ function TermsLine({ checked, onChange }: { checked: boolean; onChange: (v: bool
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 w-4 h-4 accent-[#7C3AED] flex-shrink-0"
+        className="mt-0.5 w-4 h-4 accent-[#FCC300] flex-shrink-0"
       />
       <span className="text-[#A1A1AA] text-xs leading-relaxed">
         I have read and agree to Volt Transportation&apos;s{" "}
-        <a href="/terms" target="_blank" className="text-[#7C3AED] hover:underline">Terms &amp; Conditions</a>
+        <a href="/terms" target="_blank" className="text-[#FCC300] hover:underline">Terms &amp; Conditions</a>
         {" "}and{" "}
-        <a href="/safety-rules" target="_blank" className="text-[#7C3AED] hover:underline">Safety &amp; Rules</a>.
+        <a href="/safety-rules" target="_blank" className="text-[#FCC300] hover:underline">Safety &amp; Rules</a>.
       </span>
     </label>
   );
@@ -338,7 +338,7 @@ function StripePaymentForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="glass rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-1">
-          <CreditCard className="w-4 h-4 text-[#7C3AED]" />
+          <CreditCard className="w-4 h-4 text-[#FCC300]" />
           <h3 className="text-white font-semibold">Card Details</h3>
           <span className="ml-auto text-[#A1A1AA] text-xs flex items-center gap-1">
             <Lock className="w-3 h-3" /> SSL Encrypted
@@ -356,7 +356,7 @@ function StripePaymentForm({
         />
 
         <p className="text-[#A1A1AA] text-xs flex items-start gap-1.5">
-          <Lock className="w-3.5 h-3.5 text-[#7C3AED] flex-shrink-0 mt-0.5" />
+          <Lock className="w-3.5 h-3.5 text-[#FCC300] flex-shrink-0 mt-0.5" />
           Your payment is encrypted and processed securely by Stripe. Volt never stores your card details.
         </p>
       </div>
@@ -378,7 +378,7 @@ function StripePaymentForm({
         type="submit"
         disabled={!stripe || busy || !termsAccepted}
         size="lg"
-        className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-bold h-14 text-base rounded-xl disabled:opacity-60"
+        className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-14 text-base rounded-xl disabled:opacity-60"
       >
         {busy ? (
           <span className="flex items-center gap-2">
@@ -441,13 +441,13 @@ function SimulatedPaymentForm({
 
       <div className="glass rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-1">
-          <CreditCard className="w-4 h-4 text-[#7C3AED]" />
+          <CreditCard className="w-4 h-4 text-[#FCC300]" />
           <h3 className="text-white font-semibold">Card Details</h3>
         </div>
         <div>
           <Label className="text-[#A1A1AA] text-xs mb-2 block">Name on Card</Label>
           <Input value={cardName} onChange={(e) => setCardName(e.target.value)} placeholder="John Smith"
-            className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]" />
+            className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]" />
         </div>
         <div>
           <Label className="text-[#A1A1AA] text-xs mb-2 block">Card Number</Label>
@@ -467,7 +467,7 @@ function SimulatedPaymentForm({
           </div>
         </div>
         <p className="text-[#A1A1AA] text-xs flex items-start gap-1.5">
-          <Lock className="w-3.5 h-3.5 text-[#7C3AED] flex-shrink-0 mt-0.5" />
+          <Lock className="w-3.5 h-3.5 text-[#FCC300] flex-shrink-0 mt-0.5" />
           In production, your payment will be processed securely by Stripe. Volt never stores card details.
         </p>
       </div>
@@ -489,7 +489,7 @@ function SimulatedPaymentForm({
         type="submit"
         disabled={submitting || !termsAccepted}
         size="lg"
-        className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-bold h-14 text-base rounded-xl disabled:opacity-60"
+        className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-14 text-base rounded-xl disabled:opacity-60"
       >
         {submitting ? (
           <span className="flex items-center gap-2">
@@ -675,7 +675,7 @@ export default function Step4Checkout({
     appearance: {
       theme: "night",
       variables: {
-        colorPrimary: "#7C3AED",
+        colorPrimary: "#FCC300",
         colorBackground: "#141414",
         colorText: "#ffffff",
         colorDanger: "#f87171",
@@ -717,7 +717,7 @@ export default function Step4Checkout({
 
       {mode === "loading" && (
         <div className="glass rounded-2xl p-10 flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
           <p className="text-[#A1A1AA] text-sm">Preparing secure checkout…</p>
         </div>
       )}

@@ -16,7 +16,7 @@ export default function StepIndicator({ currentStep }: { currentStep: number }) 
         <div className="absolute top-4 left-0 right-0 h-px bg-white/10" />
         {/* Progress line */}
         <div
-          className="absolute top-4 left-0 h-px bg-[#7C3AED] transition-all duration-500"
+          className="absolute top-4 left-0 h-px bg-[#FCC300] transition-all duration-500"
           style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
         />
 
@@ -27,16 +27,16 @@ export default function StepIndicator({ currentStep }: { currentStep: number }) 
             <div key={step.number} className="relative flex flex-col items-center gap-1.5 sm:gap-2 z-10">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                 done
-                  ? "bg-[#7C3AED] text-white"
+                  ? "bg-[#FCC300] text-[#0A0A0A]"
                   : active
-                  ? "bg-[#7C3AED] text-white ring-4 ring-[#7C3AED]/25"
+                  ? "bg-[#FCC300] text-[#0A0A0A] ring-4 ring-[#FCC300]/25"
                   : "bg-[#171717] border border-white/15 text-[#A1A1AA]"
               }`}>
                 {done ? <Check className="w-4 h-4" /> : step.number}
               </div>
               {/* On mobile show only active label, on sm+ show all */}
               <span className={`text-xs font-medium whitespace-nowrap transition-colors
-                ${active ? "block text-white" : done ? "hidden sm:block text-[#7C3AED]" : "hidden sm:block text-[#A1A1AA]"}`}>
+                ${active ? "block text-white" : done ? "hidden sm:block text-[#FCC300]" : "hidden sm:block text-[#A1A1AA]"}`}>
                 {step.label}
               </span>
             </div>

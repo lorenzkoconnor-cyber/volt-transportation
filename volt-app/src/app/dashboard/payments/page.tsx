@@ -129,7 +129,7 @@ export default function PaymentsPage() {
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A1A1AA]" />
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…"
-              className="pl-8 bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-9 rounded-lg text-sm focus:border-[#7C3AED]" />
+              className="pl-8 bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-9 rounded-lg text-sm focus:border-[#FCC300]" />
           </div>
         </div>
 
@@ -145,7 +145,7 @@ export default function PaymentsPage() {
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+            <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 gap-2">
@@ -165,7 +165,7 @@ export default function PaymentsPage() {
                 <div key={p.id} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center">
                   <div className="col-span-3 text-white text-sm">{name}</div>
                   <div className="col-span-2">
-                    <span className="text-[#7C3AED] text-xs font-mono">{p.reservation?.confirmation_number ?? "—"}</span>
+                    <span className="text-[#FCC300] text-xs font-mono">{p.reservation?.confirmation_number ?? "—"}</span>
                   </div>
                   <div className="col-span-2 text-[#A1A1AA] text-xs">
                     {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -226,7 +226,7 @@ export default function PaymentsPage() {
                   required
                   value={refundAmount}
                   onChange={(e) => setRefundAmount(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#7C3AED]"
+                  className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#FCC300]"
                 />
               </div>
               {refundTarget.method === "stripe" ? (
@@ -267,7 +267,7 @@ export default function PaymentsPage() {
 
       <p className="text-[#A1A1AA] text-xs">
         Looking for a specific booking? Open it from the{" "}
-        <Link href="/dashboard/reservations" className="text-[#7C3AED] hover:underline">Reservations</Link> page for full details.
+        <Link href="/dashboard/reservations" className="text-[#FCC300] hover:underline">Reservations</Link> page for full details.
       </p>
     </div>
   );

@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Zap, Eye, EyeOff, Shield } from "lucide-react";
+import { Eye, EyeOff, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import Logo from "@/components/ui/Logo";
 
 export default function EmpLoginPage() {
   const router = useRouter();
@@ -46,19 +47,16 @@ export default function EmpLoginPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0A] grid-bg flex flex-col items-center justify-center px-4">
       {/* Subtle glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-[#7C3AED]/6 blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-[#FCC300]/6 blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-sm relative">
         {/* Logo + badge */}
         <div className="flex flex-col items-center mb-10">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-[#7C3AED] flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" fill="white" />
-            </div>
-            <span className="text-white font-semibold text-xl tracking-tight">Volt</span>
+            <Logo className="h-12 w-auto" priority />
           </div>
           <div className="flex items-center gap-1.5 glass rounded-full px-3 py-1.5">
-            <Shield className="w-3 h-3 text-[#7C3AED]" />
+            <Shield className="w-3 h-3 text-[#FCC300]" />
             <span className="text-[#A1A1AA] text-xs font-medium">Employee Portal</span>
           </div>
         </div>
@@ -87,7 +85,7 @@ export default function EmpLoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@volttransportation.com"
                 autoComplete="email"
-                className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-12 rounded-xl focus:border-[#7C3AED]"
+                className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-12 rounded-xl focus:border-[#FCC300]"
               />
             </div>
 
@@ -101,7 +99,7 @@ export default function EmpLoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-12 rounded-xl focus:border-[#7C3AED] pr-10"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-12 rounded-xl focus:border-[#FCC300] pr-10"
                 />
                 <button
                   type="button"
@@ -116,7 +114,7 @@ export default function EmpLoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-12 rounded-xl disabled:opacity-60 mt-2"
+              className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-12 rounded-xl disabled:opacity-60 mt-2"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -131,7 +129,7 @@ export default function EmpLoginPage() {
 
           <p className="text-center text-[#A1A1AA] text-xs mt-5">
             Having trouble?{" "}
-            <a href="mailto:admin@volttransportation.com" className="text-[#7C3AED] hover:text-[#9D5FF5] transition-colors">
+            <a href="mailto:admin@volttransportation.com" className="text-[#FCC300] hover:text-[#FFD54A] transition-colors">
               Contact your administrator
             </a>
           </p>

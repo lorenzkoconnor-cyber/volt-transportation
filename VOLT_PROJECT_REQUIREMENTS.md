@@ -49,7 +49,7 @@ Homepage
 
 Section 1 — Hero
 
-Large image/video of black Mercedes Sprinter.
+Large image/video of Ford Transit Passenger Van.
 
 Headline:
 
@@ -108,7 +108,7 @@ Section 3 — Why Choose Volt
 
 Luxury Vehicles
 
-Black Mercedes Sprinters
+Ford Transit Passenger Vans
 
 More Comfort
 
@@ -513,7 +513,7 @@ Primary:
 Secondary:
 * Dark Graphite (#171717)
 Accent:
-* Electric Purple (#7C3AED)
+* Volt Yellow (#FCC300)
 Text:
 * White (#FFFFFF)
 Muted:
@@ -1007,7 +1007,7 @@ Explain the desire to provide a better alternative to crowded transportation opt
 
 What Makes Us Different
 
-* Mercedes Sprinter fleet
+* Ford Transit Passenger Van fleet
 * Maximum 8 passengers
 * Professional drivers
 * Complimentary water

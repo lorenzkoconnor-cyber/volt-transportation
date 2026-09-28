@@ -192,7 +192,7 @@ export default function NewReservationPage() {
     }
   };
 
-  const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#7C3AED]";
+  const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]";
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -213,7 +213,7 @@ export default function NewReservationPage() {
         {/* Trip */}
         <div className="glass rounded-2xl p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-[#7C3AED]" />
+            <MapPin className="w-4 h-4 text-[#FCC300]" />
             <h2 className="text-white font-semibold">Trip</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -222,7 +222,7 @@ export default function NewReservationPage() {
               <select
                 value={routeId}
                 onChange={(e) => setRouteId(e.target.value)}
-                className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]"
+                className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#FCC300]"
               >
                 {routes.map((r) => (
                   <option key={r.id} value={r.id} className="bg-[#171717]">{r.name}</option>
@@ -237,7 +237,7 @@ export default function NewReservationPage() {
                 value={date}
                 min={localDateString()}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] [color-scheme:dark]"
+                className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] [color-scheme:dark]"
               />
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function NewReservationPage() {
               </div>
             ) : slots.length === 0 ? (
               <p className="text-[#A1A1AA] text-sm py-3">
-                No scheduled departures for this date. Add one in <Link href="/dashboard/dispatch" className="text-[#7C3AED] hover:underline">Dispatch</Link>.
+                No scheduled departures for this date. Add one in <Link href="/dashboard/dispatch" className="text-[#FCC300] hover:underline">Dispatch</Link>.
               </p>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-56 overflow-y-auto pr-1">
@@ -264,14 +264,14 @@ export default function NewReservationPage() {
                       onClick={() => setTripId(s.id)}
                       className={`rounded-lg px-2 py-2 text-xs font-medium transition-all border ${
                         tripId === s.id
-                          ? "bg-[#7C3AED] text-white border-[#7C3AED]"
+                          ? "bg-[#FCC300] text-[#0A0A0A] border-[#FCC300]"
                           : full
                           ? "bg-white/3 text-[#A1A1AA]/40 border-white/5 cursor-not-allowed line-through"
-                          : "bg-white/5 text-white border-white/10 hover:border-[#7C3AED]/50"
+                          : "bg-white/5 text-white border-white/10 hover:border-[#FCC300]/50"
                       }`}
                     >
                       {formatTime12h(s.departure_time)}
-                      <span className={`block text-[10px] mt-0.5 ${tripId === s.id ? "text-white/80" : full ? "" : "text-[#A1A1AA]"}`}>
+                      <span className={`block text-[10px] mt-0.5 ${tripId === s.id ? "text-[#0A0A0A]/70" : full ? "" : "text-[#A1A1AA]"}`}>
                         {full ? "Full" : `${left} left`}
                       </span>
                     </button>
@@ -285,7 +285,7 @@ export default function NewReservationPage() {
         {/* Customer */}
         <div className="glass rounded-2xl p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-[#7C3AED]" />
+            <User className="w-4 h-4 text-[#FCC300]" />
             <h2 className="text-white font-semibold">Customer</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -357,7 +357,7 @@ export default function NewReservationPage() {
                 <button
                   type="button"
                   onClick={() => setExtraNames((prev) => [...prev, ""])}
-                  className="flex items-center gap-1.5 text-[#7C3AED] hover:text-[#9D5FF5] text-xs font-medium transition-colors"
+                  className="flex items-center gap-1.5 text-[#FCC300] hover:text-[#FFD54A] text-xs font-medium transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add passenger name
                 </button>
@@ -371,7 +371,7 @@ export default function NewReservationPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Wheelchair, oversized luggage, pickup notes…"
-              className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#7C3AED] min-h-[70px]"
+              className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#FCC300] min-h-[70px]"
             />
           </div>
         </div>
@@ -393,8 +393,8 @@ export default function NewReservationPage() {
                   onClick={() => setPayMethod(m.key)}
                   className={`rounded-xl px-3 py-3 text-sm font-medium transition-all border flex items-center justify-center gap-2 ${
                     payMethod === m.key
-                      ? "bg-[#7C3AED] text-white border-[#7C3AED]"
-                      : "bg-white/5 text-[#A1A1AA] border-white/10 hover:border-[#7C3AED]/50 hover:text-white"
+                      ? "bg-[#FCC300] text-[#0A0A0A] border-[#FCC300]"
+                      : "bg-white/5 text-[#A1A1AA] border-white/10 hover:border-[#FCC300]/50 hover:text-white"
                   }`}
                 >
                   <Icon className="w-4 h-4" />{m.label}
@@ -421,7 +421,7 @@ export default function NewReservationPage() {
                   type="checkbox"
                   checked={payNow}
                   onChange={(e) => setPayNow(e.target.checked)}
-                  className="w-4 h-4 accent-[#7C3AED]"
+                  className="w-4 h-4 accent-[#FCC300]"
                 />
                 <span className="text-white text-sm">
                   Payment collected {payMethod === "stripe" ? "(card charged)" : "(cash received)"}
@@ -444,7 +444,7 @@ export default function NewReservationPage() {
             )}
             <div className="flex justify-between font-bold border-t border-white/10 pt-2 mt-1">
               <span className="text-white">Total</span>
-              <span className="text-[#7C3AED] text-lg">${payMethod === "comp" ? 0 : total}</span>
+              <span className="text-[#FCC300] text-lg">${payMethod === "comp" ? 0 : total}</span>
             </div>
           </div>
         </div>
@@ -459,7 +459,7 @@ export default function NewReservationPage() {
         <Button
           type="submit"
           disabled={saving || !tripId}
-          className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-bold h-12 rounded-xl disabled:opacity-60"
+          className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-12 rounded-xl disabled:opacity-60"
         >
           {saving
             ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating reservation…</>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 
 const footerLinks = {
   Company: [
@@ -27,13 +27,8 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
           {/* Brand */}
           <div className="col-span-2 md:col-span-2 lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" fill="white" />
-              </div>
-              <span className="text-white font-semibold text-lg tracking-tight">
-                Volt Transportation
-              </span>
+            <Link href="/" className="inline-flex mb-4" aria-label="Volt Transportation home">
+              <Logo className="h-12 w-auto" />
             </Link>
             <p className="text-[#A1A1AA] text-sm leading-relaxed max-w-56">
               Premium shuttle service between Columbus, GA and Atlanta

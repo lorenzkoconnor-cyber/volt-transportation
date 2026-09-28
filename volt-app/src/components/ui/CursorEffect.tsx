@@ -49,14 +49,14 @@ export default function CursorEffect() {
       if (isInteractive) {
         ring.style.width  = "48px";
         ring.style.height = "48px";
-        ring.style.background = "rgba(124,58,237,0.12)";
+        ring.style.background = "rgba(252, 195, 0,0.12)";
         ring.style.borderColor = "rgba(157,95,245,0.9)";
         dot.style.opacity = "0";
       } else {
         ring.style.width  = "24px";
         ring.style.height = "24px";
         ring.style.background = "transparent";
-        ring.style.borderColor = "rgba(124,58,237,0.7)";
+        ring.style.borderColor = "rgba(252, 195, 0,0.7)";
         dot.style.opacity = "1";
       }
     };
@@ -94,7 +94,7 @@ export default function CursorEffect() {
       {/* Exact-position dot */}
       <div
         ref={dotRef}
-        className="fixed top-0 left-0 w-2 h-2 rounded-full bg-[#7C3AED] z-[9999]"
+        className="fixed top-0 left-0 w-2 h-2 rounded-full bg-[#FCC300] z-[9999]"
         style={{ opacity: 0, transition: "opacity 0.25s", willChange: "transform" }}
       />
       {/* Lagging ring */}
@@ -105,7 +105,7 @@ export default function CursorEffect() {
           width: "24px",
           height: "24px",
           opacity: 0,
-          borderColor: "rgba(124,58,237,0.7)",
+          borderColor: "rgba(252, 195, 0,0.7)",
           transition: "opacity 0.25s, width 0.22s ease, height 0.22s ease, background 0.22s, border-color 0.22s",
           willChange: "transform",
         }}
@@ -117,7 +117,7 @@ export default function CursorEffect() {
         style={{
           width: "420px",
           height: "420px",
-          background: "radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 68%)",
+          background: "radial-gradient(circle, rgba(252, 195, 0,0.06) 0%, transparent 68%)",
           opacity: 0,
           transition: "opacity 0.5s",
           willChange: "transform",

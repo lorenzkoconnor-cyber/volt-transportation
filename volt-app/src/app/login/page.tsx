@@ -3,11 +3,12 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Zap, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import Logo from "@/components/ui/Logo";
 
 function LoginForm() {
   const router = useRouter();
@@ -75,15 +76,12 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center px-4 grid-bg">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#7C3AED]/8 blur-[100px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#FCC300]/8 blur-[100px] pointer-events-none" />
 
       <div className="w-full max-w-sm relative">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center gap-2 mb-10">
-          <div className="w-9 h-9 rounded-xl bg-[#7C3AED] flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" fill="white" />
-          </div>
-          <span className="text-white font-semibold text-xl tracking-tight">Volt</span>
+          <Logo className="h-12 w-auto" priority />
         </Link>
 
         <div className="glass rounded-2xl p-8">
@@ -95,7 +93,7 @@ function LoginForm() {
                 type="button"
                 onClick={() => { setMode(m); setError(""); setSuccess(""); }}
                 className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                  mode === m ? "bg-[#7C3AED] text-white" : "text-[#A1A1AA] hover:text-white"
+                  mode === m ? "bg-[#FCC300] text-[#0A0A0A]" : "text-[#A1A1AA] hover:text-white"
                 }`}
               >
                 {m === "login" ? "Sign In" : "Create Account"}
@@ -136,7 +134,7 @@ function LoginForm() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="John"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
                   />
                 </div>
                 <div>
@@ -146,7 +144,7 @@ function LoginForm() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Smith"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
                   />
                 </div>
               </div>
@@ -161,7 +159,7 @@ function LoginForm() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="(706) 555-0000"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
                 />
               </div>
             )}
@@ -174,7 +172,7 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@email.com"
-                className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED]"
+                className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
               />
             </div>
 
@@ -185,7 +183,7 @@ function LoginForm() {
                   <button
                     type="button"
                     onClick={handleForgotPassword}
-                    className="text-[#7C3AED] text-xs hover:text-[#9D5FF5] transition-colors"
+                    className="text-[#FCC300] text-xs hover:text-[#FFD54A] transition-colors"
                   >
                     Forgot password?
                   </button>
@@ -199,7 +197,7 @@ function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   minLength={mode === "signup" ? 8 : 1}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#7C3AED] pr-10"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300] pr-10"
                 />
                 <button
                   type="button"
@@ -217,7 +215,7 @@ function LoginForm() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl mt-2 disabled:opacity-60"
+              className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl mt-2 disabled:opacity-60"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -235,7 +233,7 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}
-              className="text-[#7C3AED] hover:text-[#9D5FF5] transition-colors"
+              className="text-[#FCC300] hover:text-[#FFD54A] transition-colors"
             >
               {mode === "login" ? "Create one" : "Sign in"}
             </button>
@@ -245,7 +243,7 @@ function LoginForm() {
         <div className="mt-6 text-center space-y-2">
           <p className="text-[#A1A1AA] text-xs">
             No account needed to book.{" "}
-            <Link href="/book" className="text-[#7C3AED] hover:text-[#9D5FF5] transition-colors">
+            <Link href="/book" className="text-[#FCC300] hover:text-[#FFD54A] transition-colors">
               Book as guest →
             </Link>
           </p>
@@ -262,7 +260,7 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#7C3AED]/30 border-t-[#7C3AED] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-[#FCC300]/30 border-t-[#FCC300] animate-spin" />
       </div>
     }>
       <LoginForm />

@@ -12,7 +12,6 @@ import {
   CreditCard,
   BarChart3,
   ShieldCheck,
-  Zap,
   LogOut,
   ChevronRight,
   Shield,
@@ -22,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import Logo from "@/components/ui/Logo";
 
 interface NavItem {
   href: string;
@@ -90,13 +90,8 @@ export default function AdminSidebar({
       >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-6 h-16 border-b border-white/6">
-        <div className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
-          <Zap className="w-4 h-4 text-white" fill="white" />
-        </div>
-        <div>
-          <div className="text-white font-semibold text-sm leading-tight">Volt</div>
-          <div className="text-[#A1A1AA] text-xs">Operations</div>
-        </div>
+        <Logo className="h-8 w-auto" />
+        <span className="text-[#FCC300] text-[10px] font-semibold uppercase tracking-[0.2em] border-l border-white/10 pl-2.5">Ops</span>
         {/* Close button — mobile only */}
         <button
           onClick={onClose}
@@ -109,13 +104,13 @@ export default function AdminSidebar({
 
       {/* Role badge */}
       <div className="px-4 pt-4 pb-2">
-        <div className="flex items-center gap-2 bg-[#7C3AED]/10 border border-[#7C3AED]/20 rounded-lg px-3 py-2">
-          <Shield className="w-3.5 h-3.5 text-[#7C3AED] flex-shrink-0" />
+        <div className="flex items-center gap-2 bg-[#FCC300]/10 border border-[#FCC300]/20 rounded-lg px-3 py-2">
+          <Shield className="w-3.5 h-3.5 text-[#FCC300] flex-shrink-0" />
           <div className="min-w-0">
             <div className="text-white text-xs font-semibold truncate">
               {previewMode ? "Preview Owner" : (employee ? `${employee.firstName} ${employee.lastName}` : "Staff")}
             </div>
-            <div className="text-[#7C3AED] text-xs">{roleLabel[role]}</div>
+            <div className="text-[#FCC300] text-xs">{roleLabel[role]}</div>
           </div>
         </div>
       </div>
@@ -138,14 +133,14 @@ export default function AdminSidebar({
                   onClick={onClose}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
                     isActive
-                      ? "bg-[#7C3AED] text-white"
+                      ? "bg-[#FCC300] text-[#0A0A0A]"
                       : "text-[#A1A1AA] hover:text-white hover:bg-white/5"
                   }`}
                 >
-                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-white" : "text-[#A1A1AA] group-hover:text-white"}`} />
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-[#0A0A0A]" : "text-[#A1A1AA] group-hover:text-white"}`} />
                   <span className="flex-1">{item.label}</span>
                   {item.badge && (
-                    <span className="w-5 h-5 rounded-full bg-[#7C3AED] text-white text-xs flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-full bg-[#FCC300] text-[#0A0A0A] text-xs flex items-center justify-center">
                       {item.badge}
                     </span>
                   )}

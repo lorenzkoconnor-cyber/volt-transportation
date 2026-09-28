@@ -151,7 +151,7 @@ export default function AdminDashboardPage() {
         </div>
         {canAccessRoute("/dashboard/reservations/new", role) && (
           <Link href="/dashboard/reservations/new">
-            <Button className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+            <Button className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
               + New Reservation
             </Button>
           </Link>
@@ -177,13 +177,13 @@ export default function AdminDashboardPage() {
         <div className="xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white font-bold text-lg">Today&apos;s Schedule</h2>
-            <Link href="/dashboard/dispatch" className="text-[#7C3AED] text-sm hover:text-[#9D5FF5] flex items-center gap-1 transition-colors">
+            <Link href="/dashboard/dispatch" className="text-[#FCC300] text-sm hover:text-[#FFD54A] flex items-center gap-1 transition-colors">
               Full dispatch <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           {loading ? (
             <div className="glass rounded-xl p-10 flex justify-center">
-              <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+              <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
             </div>
           ) : trips.length === 0 ? (
             <div className="glass rounded-xl p-10 text-center">
@@ -197,8 +197,8 @@ export default function AdminDashboardPage() {
                 <div key={trip.id} className="glass rounded-xl p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0">
-                        <Clock className="w-4 h-4 text-[#7C3AED]" />
+                      <div className="w-8 h-8 rounded-lg bg-[#FCC300]/15 flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-4 h-4 text-[#FCC300]" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -225,7 +225,7 @@ export default function AdminDashboardPage() {
                       {/* Seat fill bar */}
                       <div className="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-[#7C3AED]"
+                          className="h-full rounded-full bg-[#FCC300]"
                           style={{ width: `${Math.min(100, (trip.passengers / trip.capacity) * 100)}%` }}
                         />
                       </div>
@@ -254,13 +254,13 @@ export default function AdminDashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white font-bold text-lg">Recent Bookings</h2>
-            <Link href="/dashboard/reservations" className="text-[#7C3AED] text-sm hover:text-[#9D5FF5] flex items-center gap-1 transition-colors">
+            <Link href="/dashboard/reservations" className="text-[#FCC300] text-sm hover:text-[#FFD54A] flex items-center gap-1 transition-colors">
               All <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           {loading ? (
             <div className="glass rounded-xl p-8 flex justify-center">
-              <Loader2 className="w-5 h-5 text-[#7C3AED] animate-spin" />
+              <Loader2 className="w-5 h-5 text-[#FCC300] animate-spin" />
             </div>
           ) : recent.length === 0 ? (
             <div className="glass rounded-xl p-8 text-center">
@@ -270,7 +270,7 @@ export default function AdminDashboardPage() {
             <div className="space-y-2">
               {recent.map((r) => (
                 <Link key={r.id} href={`/dashboard/reservations/${r.id}`}>
-                  <div className="glass rounded-xl p-4 flex items-center justify-between gap-3 hover:border-[#7C3AED]/30 transition-all cursor-pointer mb-2">
+                  <div className="glass rounded-xl p-4 flex items-center justify-between gap-3 hover:border-[#FCC300]/30 transition-all cursor-pointer mb-2">
                     <div className="min-w-0">
                       <div className="text-white text-sm font-medium truncate">{r.name}</div>
                       <div className="text-[#A1A1AA] text-xs truncate">{r.route}</div>
@@ -311,8 +311,8 @@ export default function AdminDashboardPage() {
             const Icon = action.icon;
             return (
               <Link key={action.label} href={action.href}>
-                <div className="glass rounded-xl p-4 flex items-center gap-3 hover:border-[#7C3AED]/30 transition-all group cursor-pointer">
-                  <Icon className="w-4 h-4 text-[#A1A1AA] group-hover:text-[#7C3AED] transition-colors flex-shrink-0" />
+                <div className="glass rounded-xl p-4 flex items-center gap-3 hover:border-[#FCC300]/30 transition-all group cursor-pointer">
+                  <Icon className="w-4 h-4 text-[#A1A1AA] group-hover:text-[#FCC300] transition-colors flex-shrink-0" />
                   <span className="text-[#A1A1AA] text-sm group-hover:text-white transition-colors">{action.label}</span>
                 </div>
               </Link>

@@ -18,7 +18,7 @@ const STATUS_STYLES: Record<string, string> = {
   confirmed: "bg-green-500/15 text-green-400",
   pending:   "bg-yellow-500/15 text-yellow-400",
   cancelled: "bg-red-500/15 text-red-400",
-  completed: "bg-[#7C3AED]/15 text-[#7C3AED]",
+  completed: "bg-[#FCC300]/15 text-[#FCC300]",
   no_show:   "bg-orange-500/15 text-orange-400",
 };
 
@@ -125,7 +125,7 @@ export default function ReservationDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
       </div>
     );
   }
@@ -135,7 +135,7 @@ export default function ReservationDetailPage() {
       <div className="flex flex-col items-center py-24 gap-3">
         <AlertCircle className="w-10 h-10 text-[#A1A1AA]" />
         <p className="text-white font-semibold">Reservation not found</p>
-        <Link href="/dashboard/reservations" className="text-[#7C3AED] hover:underline text-sm">
+        <Link href="/dashboard/reservations" className="text-[#FCC300] hover:underline text-sm">
           ← Back to reservations
         </Link>
       </div>
@@ -207,7 +207,7 @@ export default function ReservationDetailPage() {
       {/* Trip card */}
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-4 h-4 text-[#7C3AED]" />
+          <MapPin className="w-4 h-4 text-[#FCC300]" />
           <h2 className="text-white font-semibold">Trip</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -221,7 +221,7 @@ export default function ReservationDetailPage() {
             return (
               <div key={f.label} className="bg-white/3 rounded-xl p-3">
                 <div className="flex items-center gap-1.5 text-[#A1A1AA] text-xs mb-1">
-                  <Icon className="w-3 h-3 text-[#7C3AED]" />{f.label}
+                  <Icon className="w-3 h-3 text-[#FCC300]" />{f.label}
                 </div>
                 <div className="text-white text-sm font-medium">{f.value}</div>
               </div>
@@ -245,7 +245,7 @@ export default function ReservationDetailPage() {
               .sort((a: any, b: any) => (a.leg === "outbound" ? -1 : 1) - (b.leg === "outbound" ? -1 : 1))
               .map((f: any) => (
                 <div key={f.id} className="flex items-start gap-2 bg-white/3 rounded-xl p-3 text-sm">
-                  <Plane className="w-4 h-4 text-[#7C3AED] flex-shrink-0 mt-0.5" />
+                  <Plane className="w-4 h-4 text-[#FCC300] flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-white font-medium">
                       {f.airline} {f.flight_number}
@@ -264,11 +264,11 @@ export default function ReservationDetailPage() {
         )}
         {resv.trip_id && (
           <div className="mt-4">
-            <Link href={`/dashboard/manifest?tripId=${resv.trip_id}`} className="text-[#7C3AED] hover:text-[#9D5FF5] text-sm font-medium transition-colors">
+            <Link href={`/dashboard/manifest?tripId=${resv.trip_id}`} className="text-[#FCC300] hover:text-[#FFD54A] text-sm font-medium transition-colors">
               View trip manifest →
             </Link>
             {resv.return_trip_id && (
-              <Link href={`/dashboard/manifest?tripId=${resv.return_trip_id}`} className="ml-4 text-[#7C3AED] hover:text-[#9D5FF5] text-sm font-medium transition-colors">
+              <Link href={`/dashboard/manifest?tripId=${resv.return_trip_id}`} className="ml-4 text-[#FCC300] hover:text-[#FFD54A] text-sm font-medium transition-colors">
                 View return manifest →
               </Link>
             )}
@@ -287,12 +287,12 @@ export default function ReservationDetailPage() {
             <div className="flex items-center gap-4 mt-1.5 text-[#A1A1AA] text-sm flex-wrap">
               {resv.customer?.phone && (
                 <a href={`tel:${resv.customer.phone}`} className="flex items-center gap-1.5 hover:text-white transition-colors">
-                  <Phone className="w-3.5 h-3.5 text-[#7C3AED]" />{resv.customer.phone}
+                  <Phone className="w-3.5 h-3.5 text-[#FCC300]" />{resv.customer.phone}
                 </a>
               )}
               {resv.customer?.email && !resv.customer.email.endsWith("@walkin.volt") && (
                 <a href={`mailto:${resv.customer.email}`} className="flex items-center gap-1.5 hover:text-white transition-colors">
-                  <Mail className="w-3.5 h-3.5 text-[#7C3AED]" />{resv.customer.email}
+                  <Mail className="w-3.5 h-3.5 text-[#FCC300]" />{resv.customer.email}
                 </a>
               )}
             </div>
@@ -306,7 +306,7 @@ export default function ReservationDetailPage() {
             {passengers.map((p: any) => (
               <div key={p.id} className="flex items-center gap-2 text-sm">
                 <span className={p.is_no_show ? "text-red-400 line-through" : "text-white"}>{p.name}</span>
-                {p.is_primary && <span className="text-[#7C3AED] text-xs bg-[#7C3AED]/10 px-1.5 py-0.5 rounded">Lead</span>}
+                {p.is_primary && <span className="text-[#FCC300] text-xs bg-[#FCC300]/10 px-1.5 py-0.5 rounded">Lead</span>}
                 {p.is_boarded && <span className="text-green-400 text-xs">Boarded</span>}
                 {p.is_no_show && <span className="text-red-400 text-xs">No show</span>}
               </div>
@@ -333,7 +333,7 @@ export default function ReservationDetailPage() {
             )}
             <div className="flex justify-between font-bold border-t border-white/10 pt-2">
               <span className="text-white">Total</span>
-              <span className="text-[#7C3AED]">{formatCents(resv.total_cents)}</span>
+              <span className="text-[#FCC300]">{formatCents(resv.total_cents)}</span>
             </div>
           </div>
         )}
@@ -347,7 +347,7 @@ export default function ReservationDetailPage() {
               return (
                 <div key={p.id} className="flex items-center justify-between bg-white/3 rounded-xl px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <Icon className="w-4 h-4 text-[#7C3AED]" />
+                    <Icon className="w-4 h-4 text-[#FCC300]" />
                     <div>
                       <div className="text-white text-sm font-medium capitalize">
                         {p.method === "stripe" ? "Card" : p.method}
@@ -381,7 +381,7 @@ export default function ReservationDetailPage() {
         )}
         {showMoney && (
           <p className="text-[#A1A1AA] text-xs mt-3">
-            Refunds are issued from the <Link href="/dashboard/payments" className="text-[#7C3AED] hover:underline">Payments</Link> page.
+            Refunds are issued from the <Link href="/dashboard/payments" className="text-[#FCC300] hover:underline">Payments</Link> page.
           </p>
         )}
       </div>
@@ -389,18 +389,18 @@ export default function ReservationDetailPage() {
       {/* Notes */}
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
-          <FileText className="w-4 h-4 text-[#7C3AED]" />
+          <FileText className="w-4 h-4 text-[#FCC300]" />
           <h2 className="text-white font-semibold">Special Notes</h2>
         </div>
         <Textarea
           value={notes}
           onChange={(e) => { setNotes(e.target.value); setNotesSaved(false); }}
           placeholder="Wheelchair, oversized luggage, pickup notes…"
-          className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#7C3AED] min-h-[80px]"
+          className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#FCC300] min-h-[80px]"
         />
         <div className="flex items-center gap-3 mt-3">
           <Button size="sm" disabled={busy} onClick={saveNotes}
-            className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white text-xs font-semibold">
+            className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-xs font-semibold">
             Save Notes
           </Button>
           {notesSaved && (

@@ -3,13 +3,13 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Zap } from "lucide-react";
 import StepIndicator from "@/components/booking/StepIndicator";
 import Step1Search from "@/components/booking/Step1Search";
 import Step2Departures from "@/components/booking/Step2Departures";
 import Step3Passengers from "@/components/booking/Step3Passengers";
 import Step4Checkout, { type MilitaryResult } from "@/components/booking/Step4Checkout";
 import Step5Confirmation from "@/components/booking/Step5Confirmation";
+import Logo from "@/components/ui/Logo";
 import {
   type BookingSearch,
   type DepartureSlot,
@@ -51,10 +51,7 @@ function BookingFlow() {
       <div className="glass-dark border-b border-white/8 px-4 sm:px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" fill="white" />
-            </div>
-            <span className="text-white font-semibold">Volt</span>
+            <Logo className="h-8 w-auto" priority />
           </Link>
           {step < 5 && (
             <span className="text-[#A1A1AA] text-sm">Step {step} of 4</span>
@@ -64,8 +61,8 @@ function BookingFlow() {
 
       {/* Main content */}
       <div className="max-w-2xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
-        {/* Purple ambient glow */}
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[#7C3AED]/5 blur-[120px] pointer-events-none" />
+        {/* Yellow ambient glow */}
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[#FCC300]/5 blur-[120px] pointer-events-none" />
 
         {step < 5 && (
           <div className="relative">
@@ -147,7 +144,7 @@ export default function BookPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#7C3AED]/30 border-t-[#7C3AED] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-[#FCC300]/30 border-t-[#FCC300] animate-spin" />
       </div>
     }>
       <BookingFlow />

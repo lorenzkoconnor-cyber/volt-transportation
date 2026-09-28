@@ -59,10 +59,10 @@ export interface Database {
       vehicles: {
         Row: {
           id: string;
-          name: string;                    // "Sprinter 01"
+          name: string;                    // "Transit 01"
           license_plate: string;
-          make: string;                    // "Mercedes"
-          model: string;                   // "Sprinter"
+          make: string;                    // "Ford"
+          model: string;                   // "Transit Passenger Van"
           year: number;
           capacity: number;                // 8
           status: VehicleStatus;

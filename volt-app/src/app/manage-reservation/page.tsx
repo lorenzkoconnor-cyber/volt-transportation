@@ -77,7 +77,7 @@ export default function ManageReservationPage() {
       <Navbar />
       <main className="pt-20">
         <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#7C3AED]/8 blur-[100px] pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#FCC300]/8 blur-[100px] pointer-events-none" />
           <div className="max-w-lg mx-auto">
             <div className="text-center mb-10">
               <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-4">
@@ -101,7 +101,7 @@ export default function ManageReservationPage() {
                       value={confirmNumber}
                       onChange={(e) => setConfirmNumber(e.target.value)}
                       placeholder="e.g. VOLT-123456"
-                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#7C3AED] uppercase"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300] uppercase"
                     />
                   </div>
                   <div>
@@ -115,7 +115,7 @@ export default function ManageReservationPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="(706) 555-0000"
-                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#7C3AED]"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
                     />
                   </div>
                   {error && (
@@ -124,7 +124,7 @@ export default function ManageReservationPage() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-12 rounded-xl disabled:opacity-60 group"
+                    className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-12 rounded-xl disabled:opacity-60 group"
                   >
                     {loading ? (
                       "Looking up..."
@@ -150,7 +150,7 @@ export default function ManageReservationPage() {
                       reservation.status === "cancelled"
                         ? "bg-red-500/15 text-red-400"
                         : reservation.status === "completed"
-                        ? "bg-[#7C3AED]/15 text-[#7C3AED]"
+                        ? "bg-[#FCC300]/15 text-[#FCC300]"
                         : "bg-green-500/15 text-green-400"
                     }`}>
                       {reservation.status.replace("_", " ")}
@@ -168,7 +168,7 @@ export default function ManageReservationPage() {
                       return (
                         <div key={item.label} className="p-4 bg-[#0F0F0F]">
                           <div className="flex items-center gap-1.5 mb-1">
-                            <Icon className="w-3 h-3 text-[#7C3AED]" />
+                            <Icon className="w-3 h-3 text-[#FCC300]" />
                             <span className="text-[#A1A1AA] text-xs">{item.label}</span>
                           </div>
                           <div className="text-white text-sm font-medium">{item.value}</div>

@@ -24,7 +24,7 @@ interface Windows {
 }
 
 const inputClass =
-  "w-24 h-10 rounded-lg bg-white/5 border border-white/10 text-white px-3 text-sm text-right focus:outline-none focus:border-[#7C3AED] transition-colors";
+  "w-24 h-10 rounded-lg bg-white/5 border border-white/10 text-white px-3 text-sm text-right focus:outline-none focus:border-[#FCC300] transition-colors";
 
 // "10:30" minus N minutes → "08:45" (negative N adds)
 function minusMinutes(time: string, minutes: number): string {
@@ -123,7 +123,7 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Settings className="w-6 h-6 text-[#7C3AED]" />
+          <Settings className="w-6 h-6 text-[#FCC300]" />
           Settings
         </h1>
         <p className="text-[#A1A1AA] text-sm mt-0.5">
@@ -142,7 +142,7 @@ export default function SettingsPage() {
 
       {loading ? (
         <div className="glass rounded-2xl p-12 flex justify-center">
-          <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
         </div>
       ) : (
         <>
@@ -150,7 +150,7 @@ export default function SettingsPage() {
           <div className="glass rounded-2xl p-6 space-y-4">
             <div>
               <h2 className="text-white font-semibold flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#7C3AED]" /> Scheduled Route Time
+                <Clock className="w-4 h-4 text-[#FCC300]" /> Scheduled Route Time
               </h2>
               <p className="text-[#A1A1AA] text-xs mt-1">
                 How long Volt plans for the drive, used to estimate arrival times. Standard is 105 min
@@ -172,7 +172,7 @@ export default function SettingsPage() {
               </div>
             ))}
             {toAtl && exampleArrival && toAtl.duration_minutes < 210 && (
-              <p className="text-[#C4B5FD] text-xs bg-[#7C3AED]/10 rounded-lg px-3 py-2">
+              <p className="text-[#FFE08A] text-xs bg-[#FCC300]/10 rounded-lg px-3 py-2">
                 Example: 10:30 AM flight → 7:00 AM Volt departure → {displayTime12h(exampleArrival)} ATL arrival →{" "}
                 {formatDuration(210 - toAtl.duration_minutes)} before the flight
               </p>
@@ -184,7 +184,7 @@ export default function SettingsPage() {
             <div className="glass rounded-2xl p-6 space-y-5">
               <div>
                 <h2 className="text-white font-semibold flex items-center gap-2">
-                  <Plane className="w-4 h-4 text-[#7C3AED]" /> Flight Matching Windows
+                  <Plane className="w-4 h-4 text-[#FCC300]" /> Flight Matching Windows
                 </h2>
                 <p className="text-[#A1A1AA] text-xs mt-1">
                   Which departures customers are offered when they book with a flight.
@@ -217,7 +217,7 @@ export default function SettingsPage() {
           <Button
             disabled={saving}
             onClick={save}
-            className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold"
+            className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold"
           >
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Save Settings

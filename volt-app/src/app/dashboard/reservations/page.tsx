@@ -17,7 +17,7 @@ const STATUS_STYLES: Record<string, string> = {
   confirmed: "bg-green-500/15 text-green-400",
   pending:   "bg-yellow-500/15 text-yellow-400",
   cancelled: "bg-red-500/15 text-red-400",
-  completed: "bg-[#7C3AED]/15 text-[#7C3AED]",
+  completed: "bg-[#FCC300]/15 text-[#FCC300]",
   no_show:   "bg-orange-500/15 text-orange-400",
 };
 
@@ -100,7 +100,7 @@ export default function ReservationsPage() {
           </p>
         </div>
         <Link href="/dashboard/reservations/new">
-          <Button className="bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold">
+          <Button className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
             <Plus className="w-4 h-4 mr-1.5" /> New Reservation
           </Button>
         </Link>
@@ -114,7 +114,7 @@ export default function ReservationsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name, confirmation number, or phone…"
-            className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-11 rounded-xl focus:border-[#7C3AED]"
+            className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-11 rounded-xl focus:border-[#FCC300]"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -125,7 +125,7 @@ export default function ReservationsPage() {
               onClick={() => setFilter(s)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
                 filter === s
-                  ? "bg-[#7C3AED] text-white"
+                  ? "bg-[#FCC300] text-[#0A0A0A]"
                   : "glass text-[#A1A1AA] hover:text-white"
               }`}
             >
@@ -150,7 +150,7 @@ export default function ReservationsPage() {
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+            <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center">
@@ -171,7 +171,7 @@ export default function ReservationsPage() {
                   <div className="text-[#A1A1AA] text-xs">{r.phone}</div>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-[#7C3AED] text-xs font-mono">{r.confirmation}</span>
+                  <span className="text-[#FCC300] text-xs font-mono">{r.confirmation}</span>
                 </div>
                 <div className={showMoney ? "col-span-3" : "col-span-4"}>
                   <div className="text-white text-sm">{r.route}</div>
@@ -214,7 +214,7 @@ export default function ReservationsPage() {
             { icon: CheckCircle2, label: "Confirmed", count: rows.filter(r=>r.status==="confirmed").length, color: "text-green-400" },
             { icon: XCircle,      label: "Cancelled", count: rows.filter(r=>r.status==="cancelled").length, color: "text-red-400" },
             // Company revenue is owner/manager only.
-            ...(showMoney ? [{ icon: DollarSign, label: "Revenue", count: formatCents(revenueCents), color: "text-[#7C3AED]" }] : []),
+            ...(showMoney ? [{ icon: DollarSign, label: "Revenue", count: formatCents(revenueCents), color: "text-[#FCC300]" }] : []),
           ].map((item) => {
             const Icon = item.icon;
             return (

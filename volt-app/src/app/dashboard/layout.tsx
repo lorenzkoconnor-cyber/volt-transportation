@@ -6,7 +6,8 @@ import { Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { canAccessRoute } from "@/lib/permissions";
-import { Loader2, AlertTriangle, Menu, Zap, ShieldAlert } from "lucide-react";
+import { Loader2, AlertTriangle, Menu, ShieldAlert } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 
 // Dev preview mode — lets you see the dashboard without Supabase connected.
 // Access via: /dashboard?preview=true
@@ -45,7 +46,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
           <p className="text-[#A1A1AA] text-sm">Loading dashboard…</p>
         </div>
       </div>
@@ -71,11 +72,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#7C3AED] flex items-center justify-center">
-              <Zap className="w-3.5 h-3.5 text-white" fill="white" />
-            </div>
-            <span className="text-white font-semibold text-sm">Volt Operations</span>
+          <div className="flex items-center gap-2.5">
+            <Logo className="h-7 w-auto" />
+            <span className="text-[#FCC300] text-[10px] font-semibold uppercase tracking-[0.2em] border-l border-white/10 pl-2.5">Ops</span>
           </div>
         </div>
 
@@ -104,7 +103,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={() => router.replace("/dashboard")}
-                className="mt-1 px-4 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#9D5FF5] text-white text-sm font-semibold transition-colors"
+                className="mt-1 px-4 py-2 rounded-lg bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-sm font-semibold transition-colors"
               >
                 Back to dashboard
               </button>
@@ -122,7 +121,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
       </div>
     }>
       <AdminLayoutInner>{children}</AdminLayoutInner>

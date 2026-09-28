@@ -142,7 +142,7 @@ export default function Step1Search({ initial, onNext }: Props) {
           type="button"
           onClick={swapLocations}
           aria-label="Switch directions"
-          className="mb-[1px] flex-shrink-0 w-10 h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#7C3AED] hover:border-[#7C3AED]/50 transition-colors"
+          className="mb-[1px] flex-shrink-0 w-10 h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
         >
           <ArrowLeftRight className="w-4 h-4" />
         </button>
@@ -214,7 +214,7 @@ export default function Step1Search({ initial, onNext }: Props) {
                 }));
               }}
               min={today}
-              className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+              className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]"
             />
           </div>
 
@@ -227,7 +227,7 @@ export default function Step1Search({ initial, onNext }: Props) {
                 value={search.returnDate}
                 onChange={(e) => set("returnDate", e.target.value)}
                 min={search.date || today}
-                className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] transition-colors [color-scheme:dark]"
+                className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]"
               />
             </div>
           )}
@@ -282,7 +282,7 @@ export default function Step1Search({ initial, onNext }: Props) {
       <Button
         type="submit"
         size="lg"
-        className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-13 text-base rounded-xl group"
+        className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-13 text-base rounded-xl group"
       >
         Find Available Rides
         <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -300,7 +300,7 @@ function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; la
         aria-checked={on}
         aria-label={label}
         onClick={onToggle}
-        className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-[#7C3AED]" : "bg-white/10"}`}
+        className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-[#FCC300]" : "bg-white/10"}`}
       >
         <span
           className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : ""}`}

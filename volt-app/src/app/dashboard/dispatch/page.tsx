@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 const STATUS_MAP: Record<string, { label: string; class: string }> = {
   scheduled:   { label: "Scheduled",    class: "bg-blue-500/15 text-blue-400" },
   boarding:    { label: "Boarding",     class: "bg-yellow-500/15 text-yellow-400" },
-  in_progress: { label: "In Progress",  class: "bg-[#7C3AED]/15 text-[#7C3AED]" },
+  in_progress: { label: "In Progress",  class: "bg-[#FCC300]/15 text-[#FCC300]" },
   completed:   { label: "Completed",    class: "bg-green-500/15 text-green-400" },
   cancelled:   { label: "Cancelled",    class: "bg-red-500/15 text-red-400" },
 };
@@ -207,14 +207,14 @@ export default function DispatchPage() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="h-9 rounded-lg bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] [color-scheme:dark]"
+            className="h-9 rounded-lg bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] [color-scheme:dark]"
           />
           <label className="flex items-center gap-2 text-sm text-[#A1A1AA] cursor-pointer">
             <input
               type="checkbox"
               checked={showEmpty}
               onChange={(e) => setShowEmpty(e.target.checked)}
-              className="w-4 h-4 accent-[#7C3AED]"
+              className="w-4 h-4 accent-[#FCC300]"
             />
             Show empty departures
           </label>
@@ -235,7 +235,7 @@ export default function DispatchPage() {
       {/* Dispatch cards */}
       {loading ? (
         <div className="glass rounded-2xl p-16 flex justify-center">
-          <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#FCC300] animate-spin" />
         </div>
       ) : visible.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center">
@@ -262,8 +262,8 @@ export default function DispatchPage() {
                 {/* Trip header */}
                 <div className="flex items-center justify-between p-5 border-b border-white/8 flex-wrap gap-3">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/15 flex items-center justify-center flex-shrink-0">
-                      <Clock className="w-5 h-5 text-[#7C3AED]" />
+                    <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-5 h-5 text-[#FCC300]" />
                     </div>
                     <div>
                       <div className="flex items-center gap-3 flex-wrap">
@@ -316,7 +316,7 @@ export default function DispatchPage() {
                     </select>
                     {dep.seats_booked > 0 && (
                       <Link href={`/dashboard/manifest?tripId=${dep.id}`}>
-                        <span className="flex items-center gap-1 text-[#7C3AED] hover:text-[#9D5FF5] text-xs font-medium transition-colors cursor-pointer">
+                        <span className="flex items-center gap-1 text-[#FCC300] hover:text-[#FFD54A] text-xs font-medium transition-colors cursor-pointer">
                           Manifest <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </Link>
@@ -336,7 +336,7 @@ export default function DispatchPage() {
                             value={a.driver_id ?? ""}
                             disabled={busy}
                             onChange={(e) => changeAssignmentDriver(a.id, e.target.value)}
-                            className="bg-white/5 border border-white/10 text-[#A1A1AA] text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-[#7C3AED]"
+                            className="bg-white/5 border border-white/10 text-[#A1A1AA] text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-[#FCC300]"
                           >
                             <option value="" className="bg-[#171717]">No driver</option>
                             {drivers.map((d) => (
@@ -350,7 +350,7 @@ export default function DispatchPage() {
                           <div className="flex items-center gap-2">
                             <div className="w-24 h-1.5 rounded-full bg-white/10 overflow-hidden">
                               <div
-                                className={`h-full rounded-full ${dep.seats_booked >= dep.total_capacity ? "bg-red-400" : "bg-[#7C3AED]"}`}
+                                className={`h-full rounded-full ${dep.seats_booked >= dep.total_capacity ? "bg-red-400" : "bg-[#FCC300]"}`}
                                 style={{ width: `${Math.min(100, (dep.seats_booked / dep.total_capacity) * 100)}%` }}
                               />
                             </div>
@@ -372,7 +372,7 @@ export default function DispatchPage() {
                     <div className="px-5 py-2.5">
                       <button
                         onClick={() => { setAssignTrip(dep); setAssignVehicleId(vehicles[0]?.id ?? ""); setAssignDriverId(""); }}
-                        className="flex items-center gap-1 text-[#7C3AED] hover:text-[#9D5FF5] text-xs font-medium transition-colors"
+                        className="flex items-center gap-1 text-[#FCC300] hover:text-[#FFD54A] text-xs font-medium transition-colors"
                       >
                         <Plus className="w-3.5 h-3.5" /> Add another vehicle
                       </button>
@@ -385,7 +385,7 @@ export default function DispatchPage() {
                     </span>
                     <Button variant="ghost" size="sm" disabled={busy}
                       onClick={() => { setAssignTrip(dep); setAssignVehicleId(vehicles[0]?.id ?? ""); setAssignDriverId(""); }}
-                      className="text-[#7C3AED] hover:text-[#9D5FF5] hover:bg-[#7C3AED]/10 text-xs">
+                      className="text-[#FCC300] hover:text-[#FFD54A] hover:bg-[#FCC300]/10 text-xs">
                       Assign Vehicle
                     </Button>
                   </div>
@@ -414,7 +414,7 @@ export default function DispatchPage() {
               <div>
                 <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Route *</Label>
                 <select value={addRouteId} onChange={(e) => setAddRouteId(e.target.value)}
-                  className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]">
+                  className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#FCC300]">
                   {routes.map((r) => (
                     <option key={r.id} value={r.id} className="bg-[#171717]">{r.name}</option>
                   ))}
@@ -424,17 +424,17 @@ export default function DispatchPage() {
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Departure Time *</Label>
                   <input type="time" required value={addTime} onChange={(e) => setAddTime(e.target.value)}
-                    className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] [color-scheme:dark]" />
+                    className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] [color-scheme:dark]" />
                 </div>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Capacity *</Label>
                   <Input type="number" required min={1} max={64} value={addCapacity}
                     onChange={(e) => setAddCapacity(Math.max(1, parseInt(e.target.value || "8", 10)))}
-                    className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#7C3AED]" />
+                    className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#FCC300]" />
                 </div>
               </div>
               <Button type="submit" disabled={busy}
-                className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
+                className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1.5" />Add Trip</>}
               </Button>
             </form>
@@ -461,13 +461,13 @@ export default function DispatchPage() {
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Departure Time *</Label>
                   <input type="time" required value={editTime} onChange={(e) => setEditTime(e.target.value)}
-                    className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#7C3AED] [color-scheme:dark]" />
+                    className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] [color-scheme:dark]" />
                 </div>
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Capacity *</Label>
                   <Input type="number" required min={1} max={64} value={editCapacity}
                     onChange={(e) => setEditCapacity(Math.max(1, parseInt(e.target.value || "8", 10)))}
-                    className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#7C3AED]" />
+                    className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#FCC300]" />
                 </div>
               </div>
               {editTrip.seats_booked > 0 && (
@@ -475,7 +475,7 @@ export default function DispatchPage() {
               )}
               {editError && <p className="text-red-400 text-xs bg-red-500/10 rounded-lg px-3 py-2">{editError}</p>}
               <Button type="submit" disabled={busy}
-                className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
+                className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
               </Button>
             </form>
@@ -542,14 +542,14 @@ export default function DispatchPage() {
             {vehicles.length === 0 ? (
               <p className="text-[#A1A1AA] text-sm">
                 No active vehicles. Add one on the{" "}
-                <Link href="/dashboard/vehicles" className="text-[#7C3AED] hover:underline">Vehicles</Link> page first.
+                <Link href="/dashboard/vehicles" className="text-[#FCC300] hover:underline">Vehicles</Link> page first.
               </p>
             ) : (
               <form onSubmit={assignVehicle} className="space-y-4">
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Vehicle *</Label>
                   <select value={assignVehicleId} onChange={(e) => setAssignVehicleId(e.target.value)}
-                    className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]">
+                    className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#FCC300]">
                     {vehicles.map((v) => (
                       <option key={v.id} value={v.id} className="bg-[#171717]">
                         {v.name} ({v.capacity} seats)
@@ -560,7 +560,7 @@ export default function DispatchPage() {
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Driver</Label>
                   <select value={assignDriverId} onChange={(e) => setAssignDriverId(e.target.value)}
-                    className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#7C3AED]">
+                    className="w-full h-10 bg-white/5 border border-white/10 text-white rounded-xl px-3 text-sm focus:outline-none focus:border-[#FCC300]">
                     <option value="" className="bg-[#171717]">Assign later</option>
                     {drivers.map((d) => (
                       <option key={d.id} value={d.id} className="bg-[#171717]">
@@ -571,12 +571,12 @@ export default function DispatchPage() {
                   {drivers.length === 0 && (
                     <p className="text-[#A1A1AA] text-xs mt-1.5">
                       No drivers yet — add them on the{" "}
-                      <Link href="/dashboard/drivers" className="text-[#7C3AED] hover:underline">Drivers</Link> page.
+                      <Link href="/dashboard/drivers" className="text-[#FCC300] hover:underline">Drivers</Link> page.
                     </p>
                   )}
                 </div>
                 <Button type="submit" disabled={busy}
-                  className="w-full bg-[#7C3AED] hover:bg-[#9D5FF5] text-white font-semibold h-11 rounded-xl disabled:opacity-60">
+                  className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle2 className="w-4 h-4 mr-1.5" />Assign</>}
                 </Button>
               </form>
