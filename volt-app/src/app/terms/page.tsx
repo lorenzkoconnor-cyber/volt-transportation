@@ -73,6 +73,10 @@ const sections = [
     title: "16. Firearms & Ammunition",
     body: `Weapons and firearms may not be carried onto the shuttle or in carry-on items, except by federal or local law-enforcement officers where permitted by law. Unloaded firearms may be transported in checked luggage only, inside a locked, hard-sided case, and must be declared to a Volt Transportation representative at pickup. Ammunition may not be carried in any personal or carry-on bag.`,
   },
+  {
+    title: "17. Military Discount",
+    body: `Active-duty and retired members of the U.S. Armed Forces are eligible for a 10% discount on their entire booking after verifying eligibility with a valid military ID. Former service members who did not retire and first responders are not eligible. Verification is reviewed by Volt Transportation staff; bookings made while a verification is under review are charged the regular fare, and the 10% is refunded to the original payment method once eligibility is approved. Volt Transportation may deny the discount if eligibility cannot be verified.`,
+  },
 ];
 
 export default function TermsPage() {

@@ -13,6 +13,7 @@ const footerLinks = {
     { href: "/book", label: "Book a Ride" },
     { href: "/manage-reservation", label: "Manage Reservation" },
     { href: "/safety-rules", label: "Safety & Rules" },
+    { href: "/military", label: "Military & Giving Back" },
   ],
   Legal: [
     { href: "/terms", label: "Terms & Conditions" },

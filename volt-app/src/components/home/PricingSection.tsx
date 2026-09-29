@@ -64,7 +64,10 @@ export default function PricingSection() {
             </div>
             <div className="p-5 bg-[#FCC300]/5 border-t border-[#FCC300]/20">
               <p className="text-[#FCC300] text-sm font-medium">
-                Military discount available — applied by our team upon request.
+                Active-duty &amp; retired military save 10% ·{" "}
+                <Link href="/military" className="underline underline-offset-2 hover:text-[#FFD54A]">
+                  Learn more
+                </Link>
               </p>
             </div>
           </div>

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
-import { MILITARY_BUCKET, isAllowedIdFile, extForMime } from "@/lib/military";
+import { MILITARY_BUCKET, isAllowedIdFile, extForMime, isMilitaryCategory } from "@/lib/military";
 
 // POST /api/military/upload  (multipart/form-data)
-// Fields: file, category ('military'|'first_responder')
+// Fields: file, category ('active_duty'|'retired')
 //   Signed-in rider: the customer is resolved from their session (client-sent
 //   ids are ignored — no tampering).
 //   Guest: also send email, phone, firstName, lastName so we can find-or-create
@@ -11,7 +11,7 @@ import { MILITARY_BUCKET, isAllowedIdFile, extForMime } from "@/lib/military";
 //
 // Stores the ID in the PRIVATE `military-ids` bucket and flags the customer
 // 'pending'. Returns the resolved customerId so the checkout can link the
-// reservation that should later receive the 5% refund.
+// reservation that should later receive the discount refund.
 export async function POST(request: NextRequest) {
   try {
     const form = await request.formData();
@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
     if (!(file instanceof Blob) || file.size === 0) {
       return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
     }
-    if (category !== "military" && category !== "first_responder") {
-      return NextResponse.json({ error: "Please choose a category." }, { status: 400 });
+    if (!isMilitaryCategory(category)) {
+      return NextResponse.json({ error: "Please choose Active Duty or Retired Military." }, { status: 400 });
     }
     const check = isAllowedIdFile(file.type, file.size);
     if (!check.ok) {

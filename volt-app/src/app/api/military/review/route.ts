@@ -7,8 +7,8 @@ import { MILITARY_DISCOUNT_RATE } from "@/lib/booking";
 // Owner/manager only.
 //
 // Approve: mark the account verified, then settle every booking the rider made
-//   while pending — refund the 5% (charged at full price up front) and record
-//   the discount so it counts toward the monthly donation total.
+//   while pending — refund the military discount (charged at full price up
+//   front) and record it on the reservation.
 // Reject: mark rejected and clear the pending flag on those bookings (they keep
 //   the full price they paid).
 export async function POST(request: NextRequest) {

@@ -8,7 +8,7 @@ import { ArrowRight, Check, Info } from "lucide-react";
 export const metadata: Metadata = {
   title: "Pricing | Columbus GA to ATL Airport Shuttle Fares",
   description:
-    "Volt Transportation pricing: Adults $59, Children $49, Pets $25, Extra bags $10. Transparent fares, no hidden fees. Military discount available.",
+    "Volt Transportation pricing: Adults $59, Children $49, Pets $25, Extra bags $10. Transparent fares, no hidden fees. 10% off for active-duty and retired military.",
   alternates: { canonical: "https://volttransportation.com/pricing" },
 };
 
@@ -30,7 +30,7 @@ const included = [
 
 const policies = [
   { title: "No Hidden Fees", desc: "The price you see at checkout is the price you pay. No surge pricing, no service fees, no surprises." },
-  { title: "Military Discount", desc: "We proudly offer a military discount. Contact us or mention it at booking and our team will apply it." },
+  { title: "Military Discount", desc: "Active-duty and retired military save 10% on the whole booking. Tick the box at checkout and upload your military ID. Once you're verified, it applies automatically every time." },
   { title: "Round Trip", desc: "Book both legs at once and the total is calculated automatically at checkout. No separate booking needed." },
   { title: "Cancellation", desc: "Cancel or modify your reservation by 11:59 PM the day before your trip for a full refund." },
 ];
@@ -78,7 +78,10 @@ export default function PricingPage() {
                   <div className="p-5 bg-[#FCC300]/5 border-t border-[#FCC300]/20 flex items-start gap-2">
                     <Info className="w-4 h-4 text-[#FCC300] flex-shrink-0 mt-0.5" />
                     <p className="text-[#FCC300] text-sm">
-                      Military discount available — contact us or mention at booking and we'll apply it.
+                      Active-duty &amp; retired military save 10% on every booking.{" "}
+                      <Link href="/military" className="underline underline-offset-2 hover:text-[#FFD54A]">
+                        See who qualifies &amp; how we give back
+                      </Link>
                     </p>
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDateShort } from "@/lib/format";
 import { categoryLabel } from "@/lib/military";
+import { MILITARY_DISCOUNT_PERCENT } from "@/lib/booking";
 import {
   ShieldCheck, Loader2, Check, X, ExternalLink, Mail, Phone, Clock, BadgeCheck,
 } from "lucide-react";
@@ -76,7 +77,7 @@ export default function VerificationsPage() {
       if (!res.ok) throw new Error(data.error ?? "Failed");
       if (decision === "approve") {
         const refundNote = data.refundedCount > 0
-          ? ` Refunded 5% on ${data.refundedCount} booking${data.refundedCount > 1 ? "s" : ""} ($${(data.refundedCents / 100).toFixed(2)}).`
+          ? ` Refunded ${MILITARY_DISCOUNT_PERCENT}% on ${data.refundedCount} booking${data.refundedCount > 1 ? "s" : ""} ($${(data.refundedCents / 100).toFixed(2)}).`
           : "";
         const manualNote = data.manualRefundsNeeded > 0
           ? ` ${data.manualRefundsNeeded} booking(s) need a manual refund (Stripe not configured).`
@@ -101,7 +102,9 @@ export default function VerificationsPage() {
             Verifications
           </h1>
           <p className="text-[#A1A1AA] text-sm mt-0.5">
-            Review Military &amp; First Responder discount requests. Approving refunds the 5% on any
+            Review Military Discount requests. Only <strong className="text-white">active-duty</strong> and{" "}
+            <strong className="text-white">retired</strong> military qualify — former members who didn&apos;t
+            retire and first responders do not. Approving refunds the {MILITARY_DISCOUNT_PERCENT}% on any
             bookings made while pending, and applies it automatically going forward.
           </p>
         </div>
@@ -129,7 +132,7 @@ export default function VerificationsPage() {
         <div className="glass rounded-2xl p-12 text-center">
           <BadgeCheck className="w-10 h-10 text-[#A1A1AA] mx-auto mb-3" />
           <p className="text-white font-medium mb-1">No verifications waiting</p>
-          <p className="text-[#A1A1AA] text-sm">New Military &amp; First Responder requests will appear here.</p>
+          <p className="text-[#A1A1AA] text-sm">New Military Discount requests will appear here.</p>
         </div>
       ) : (
         <div className="space-y-3">

@@ -40,6 +40,11 @@ const faqs = [
       "You can cancel or make changes to your booking up until 11:59 PM the day before your scheduled trip for a full refund. Cancellations after that time are non-refundable.",
   },
   {
+    question: "Do you offer a military discount?",
+    answer:
+      "Yes. Active-duty and retired military save 10% on their whole booking after a one-time ID verification. Volt also donates 10% of its profits to Warrior Outreach Ranch to support local veterans. See our Military & Giving Back page for details.",
+  },
+  {
     question: "Do I need to create an account to book?",
     answer:
       "No account is required. You can book as a guest and manage your reservation using your confirmation number and phone number.",
