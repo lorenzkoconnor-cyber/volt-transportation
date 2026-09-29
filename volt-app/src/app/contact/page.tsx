@@ -96,7 +96,7 @@ export default function ContactPage() {
                   <Clock className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Hours</h3>
-                <p className="text-[#A1A1AA] text-sm">Daily · 5:00 AM – 10:00 PM</p>
+                <p className="text-[#A1A1AA] text-sm">Daily · 4:00 AM – 12:00 AM</p>
               </div>
 
               <div className="glass rounded-xl p-5 border border-[#FCC300]/20">

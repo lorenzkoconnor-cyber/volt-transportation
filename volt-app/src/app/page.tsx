@@ -94,7 +94,7 @@ const jsonLd = {
           name: "How long does the trip take?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "The trip from Columbus, GA to Atlanta Hartsfield-Jackson Airport takes approximately 2 to 2.5 hours depending on traffic conditions.",
+            text: "The trip from Columbus, GA to Atlanta Hartsfield-Jackson Airport takes about 2 hours each way. Vans leave Volt in Columbus every 2 hours from 4:00 AM to 8:00 PM, 7 days a week, and leave ATL every 2 hours from 6:00 AM to 10:00 PM.",
           },
         },
         {

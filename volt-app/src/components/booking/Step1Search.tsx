@@ -115,7 +115,7 @@ export default function Step1Search({ initial, onNext }: Props) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <h2 className="text-white text-2xl font-bold mb-1">Plan Your Trip</h2>
-        <p className="text-[#A1A1AA] text-sm">Columbus ⇄ Atlanta Airport · Hourly departures</p>
+        <p className="text-[#A1A1AA] text-sm">Columbus ⇄ Atlanta Airport · Departures every 2 hours</p>
       </div>
 
       {/* Route */}

@@ -169,7 +169,7 @@ export default function LocationsPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A]">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl font-bold text-white mb-4">The Route</h2>
-            <p className="text-[#A1A1AA] mb-8">Columbus, GA → Hartsfield-Jackson ATL International Airport · Approximately 2–2.5 hours</p>
+            <p className="text-[#A1A1AA] mb-8">Columbus, GA → Hartsfield-Jackson ATL International Airport · About 2 hours · Departs Volt every 2 hours, 4:00 AM–8:00 PM daily</p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <div className="glass rounded-xl px-6 py-4">
                 <div className="text-white font-bold">Columbus, GA</div>
