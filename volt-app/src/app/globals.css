@@ -206,3 +206,23 @@
 @media (prefers-reduced-motion: reduce) {
   .sr-init { opacity: 1; transform: none; transition: none; }
 }
+
+/* Volt arrow cursor. Unlayered so it wins over Tailwind cursor-* utilities.
+   Text fields keep the I-beam and disabled controls keep not-allowed. */
+html,
+body,
+a,
+button,
+[role="button"],
+label,
+select,
+summary,
+.cursor-pointer {
+  cursor: url("/volt-cursor-32.png") 1 1, auto;
+  cursor: -webkit-image-set(url("/volt-cursor-32.png") 1x, url("/volt-cursor-64.png") 2x) 1 1, auto;
+  cursor: image-set(url("/volt-cursor-32.png") 1x, url("/volt-cursor-64.png") 2x) 1 1, auto;
+}
+:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
