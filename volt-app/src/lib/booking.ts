@@ -7,9 +7,11 @@ export const PRICING = {
   extraBag: 10,
 } as const;
 
-// Military & First Responder discount — 5% off the whole booking, applied only
-// for verified accounts (see src/lib/military.ts and /api/military/*).
-export const MILITARY_DISCOUNT_RATE = 0.05;
+// Military discount — 10% off the whole booking for active-duty and retired
+// military, applied only for verified accounts (see src/lib/military.ts and
+// /api/military/*).
+export const MILITARY_DISCOUNT_RATE = 0.10;
+export const MILITARY_DISCOUNT_PERCENT = Math.round(MILITARY_DISCOUNT_RATE * 100); // 10
 
 // Format a dollar amount that may be fractional (e.g. after a % discount):
 // "59" stays "59", but "56.05" keeps its cents.
@@ -145,7 +147,7 @@ export interface PriceBreakdown {
   subtotalCents: number;
   discountCents: number;
   totalCents: number;
-  militaryDiscount: boolean; // whether the 5% was applied to these numbers
+  militaryDiscount: boolean; // whether the military discount was applied to these numbers
   lines: { label: string; amount: number }[];
 }
 
@@ -317,8 +319,8 @@ export function bookingFlights(search: BookingSearch, outbound: DepartureSlot, r
   return legs;
 }
 
-// Calculate price breakdown. Pass { militaryDiscount: true } to apply the 5%
-// Military & First Responder discount to the whole booking — do this only when
+// Calculate price breakdown. Pass { militaryDiscount: true } to apply the 10%
+// Military discount to the whole booking — do this only when
 // the customer's account is verified (checked server-side in /api/booking/create).
 export function calcPrice(
   search: BookingSearch,

@@ -135,7 +135,7 @@ export interface Database {
           phone: string;
           is_military: boolean;                 // convenience flag: true once approved
           military_status: "none" | "pending" | "approved" | "rejected";
-          military_category: string | null;     // 'military' | 'first_responder'
+          military_category: string | null;     // 'active_duty' | 'retired' (legacy: 'military' | 'first_responder')
           military_id_path: string | null;      // object path in the private bucket
           military_submitted_at: string | null;
           military_reviewed_at: string | null;
@@ -164,8 +164,8 @@ export interface Database {
           is_round_trip: boolean;
           special_notes: string | null;
           discount_id: string | null;
-          is_military: boolean;                 // part of the Military/First-Responder program
-          military_discount_pending: boolean;   // full price charged; 5% owed on approval
+          is_military: boolean;                 // part of the Military Discount program
+          military_discount_pending: boolean;   // full price charged; discount owed on approval
           subtotal_cents: number;          // stored in cents to avoid float issues
           discount_cents: number;
           total_cents: number;

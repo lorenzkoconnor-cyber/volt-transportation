@@ -19,6 +19,7 @@ import {
   type PriceBreakdown,
   calcPrice,
   money,
+  MILITARY_DISCOUNT_PERCENT,
   LOCATIONS,
   formatDate,
   bookingFlights,
@@ -34,10 +35,11 @@ import {
 } from "@/lib/military";
 import { getStripeClient } from "@/lib/stripe/client";
 import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
 
 export interface MilitaryResult {
-  applied: boolean;   // 5% taken off this booking now (verified account)
-  pending: boolean;   // full price charged; 5% refunded once approved
+  applied: boolean;   // discount taken off this booking now (verified account)
+  pending: boolean;   // full price charged; discount refunded once approved
 }
 
 interface Props {
@@ -104,7 +106,7 @@ function TripSummary({
         ))}
         {discountCents > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-green-400">Military & First Responder (−5%)</span>
+            <span className="text-green-400">Military Discount (−{MILITARY_DISCOUNT_PERCENT}%)</span>
             <span className="text-green-400">−${money(discountCents / 100)}</span>
           </div>
         )}
@@ -117,7 +119,7 @@ function TripSummary({
   );
 }
 
-// ── Military & First Responder discount box ────────────────────────────────────
+// ── Military discount box ──────────────────────────────────────────────────────
 function MilitaryDiscountSection({
   approved,
   pending,
@@ -145,9 +147,9 @@ function MilitaryDiscountSection({
       <div className="flex items-start gap-3 bg-green-500/10 border border-green-500/25 rounded-xl p-4">
         <BadgeCheck className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-green-400 text-sm font-medium">Military & First Responder discount applied</p>
+          <p className="text-green-400 text-sm font-medium">Military discount applied</p>
           <p className="text-[#A1A1AA] text-xs mt-0.5">
-            Your account is verified — 5% is taken off every booking. Thank you for your service.
+            Your account is verified — {MILITARY_DISCOUNT_PERCENT}% is taken off every booking. Thank you for your service.
           </p>
         </div>
       </div>
@@ -162,8 +164,8 @@ function MilitaryDiscountSection({
         <div>
           <p className="text-yellow-400 text-sm font-medium">Verification under review</p>
           <p className="text-[#A1A1AA] text-xs mt-0.5">
-            We&apos;re reviewing your ID. Once approved, your 5% discount applies automatically to
-            future bookings — and we&apos;ll refund the 5% on any booking you make in the meantime.
+            We&apos;re reviewing your ID. Once approved, your {MILITARY_DISCOUNT_PERCENT}% discount applies automatically to
+            future bookings — and we&apos;ll refund the {MILITARY_DISCOUNT_PERCENT}% on any booking you make in the meantime.
           </p>
         </div>
       </div>
@@ -183,11 +185,12 @@ function MilitaryDiscountSection({
         <span>
           <span className="flex items-center gap-1.5 text-white text-sm font-medium">
             <ShieldCheck className="w-4 h-4 text-[#FCC300]" />
-            I&apos;m active/veteran military or a first responder
+            I&apos;m active-duty or retired military
           </span>
           <span className="block text-[#A1A1AA] text-xs mt-0.5">
-            Get 5% off. Upload your ID for a quick review — this booking is charged full price today,
-            and we refund the 5% once you&apos;re verified. You&apos;ll stay verified for future trips.
+            Get {MILITARY_DISCOUNT_PERCENT}% off. Upload your military ID for a quick review — this booking is charged full price
+            today, and we refund the {MILITARY_DISCOUNT_PERCENT}% once you&apos;re verified. You&apos;ll stay verified for future trips.{" "}
+            <Link href="/military" target="_blank" className="text-[#FCC300] hover:underline">Who qualifies?</Link>
           </span>
         </span>
       </label>
@@ -216,7 +219,7 @@ function MilitaryDiscountSection({
           </div>
 
           <div>
-            <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Proof of service / department ID</Label>
+            <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Military ID (active-duty or retiree)</Label>
             <label className="flex items-center gap-2 rounded-xl border border-dashed border-white/20 hover:border-[#FCC300] px-3 py-3 cursor-pointer transition-colors">
               <Upload className="w-4 h-4 text-[#FCC300] flex-shrink-0" />
               <span className="text-sm text-[#A1A1AA] truncate">
@@ -610,7 +613,7 @@ export default function Step4Checkout({
       let pendingResult = false;
 
       // Not-yet-verified rider opting in: submit the ID for review. The booking
-      // is charged full price; the 5% is refunded once an owner/manager approves.
+      // is charged full price; the discount is refunded once an owner/manager approves.
       if (needsUpload && militaryFile && militaryCategory) {
         try {
           const fd = new FormData();

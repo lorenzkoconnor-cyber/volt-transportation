@@ -1,27 +1,53 @@
-// ─── Military & First Responder program — shared constants ────────────────────
+// ─── Military Discount program — shared constants ─────────────────────────────
 // One source of truth for both the customer-facing UI and the server routes.
+//
+// Eligibility: ACTIVE-DUTY and RETIRED military only. Former service members who
+// did not retire, and first responders, are not eligible.
 
 export const MILITARY_BUCKET = "military-ids";
 
 export type MilitaryStatus = "none" | "pending" | "approved" | "rejected";
-export type MilitaryCategory = "military" | "first_responder";
+export type MilitaryCategory = "active_duty" | "retired";
 
 export const MILITARY_CATEGORIES: { value: MilitaryCategory; label: string; hint: string }[] = [
   {
-    value: "military",
-    label: "Military",
-    hint: "Active duty, reserve, National Guard, or veteran",
+    value: "active_duty",
+    label: "Active Duty",
+    hint: "Currently serving on active duty",
   },
   {
-    value: "first_responder",
-    label: "First Responder",
-    hint: "Police, firefighter, EMT/paramedic, or dispatcher",
+    value: "retired",
+    label: "Retired Military",
+    hint: "Retired from the U.S. military",
   },
 ];
 
-export function categoryLabel(value: string | null | undefined): string {
-  return MILITARY_CATEGORIES.find((c) => c.value === value)?.label ?? "—";
+export function isMilitaryCategory(value: string): value is MilitaryCategory {
+  return MILITARY_CATEGORIES.some((c) => c.value === value);
 }
+
+// Legacy values from before eligibility was narrowed (Sept 2026) — shown so
+// staff can tell old records apart; they are no longer accepted on upload.
+const LEGACY_LABELS: Record<string, string> = {
+  military: "Military (old program)",
+  first_responder: "First Responder (no longer eligible)",
+};
+
+export function categoryLabel(value: string | null | undefined): string {
+  if (!value) return "—";
+  return MILITARY_CATEGORIES.find((c) => c.value === value)?.label ?? LEGACY_LABELS[value] ?? value;
+}
+
+// ─── Giving back ───────────────────────────────────────────────────────────────
+// Volt donates 10% of its profits to Warrior Outreach Ranch. This is separate
+// from the discount — it is NOT tied to how much riders save.
+export const DONATION_PERCENT_OF_PROFITS = 10;
+export const DONATION_PARTNER = {
+  name: "Warrior Outreach Ranch",
+  location: "Fortson, Georgia",
+  url: "https://warrioroutreachranch.org",
+  displayUrl: "warrioroutreachranch.org",
+} as const;
 
 // Accepted proof-of-service uploads. Kept small on purpose — a phone photo or a
 // scan of a service/department ID.

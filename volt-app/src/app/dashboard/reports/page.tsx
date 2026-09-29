@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCents, formatDateShort, localDateString } from "@/lib/format";
 import { TrendingUp, Users, Truck, DollarSign, Loader2, Download, HeartHandshake, Clock } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
+import { MILITARY_DISCOUNT_PERCENT } from "@/lib/booking";
+import { DONATION_PARTNER, DONATION_PERCENT_OF_PROFITS } from "@/lib/military";
 import { Button } from "@/components/ui/button";
 
 type Period = "7d" | "30d" | "90d";
@@ -29,7 +31,7 @@ export default function ReportsPage() {
   const [milRows, setMilRows] = useState<any[]>([]);
   const [milLoading, setMilLoading] = useState(true);
 
-  // Military & First Responder savings run program-wide by calendar month
+  // Military discount totals run program-wide by calendar month
   // (independent of the period selector above), so load them once.
   useEffect(() => {
     (async () => {
@@ -44,7 +46,7 @@ export default function ReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const donation = useMemo(() => {
+  const milSummary = useMemo(() => {
     const monthMap = new Map<string, number>();
     let allTime = 0;
     let pendingCount = 0;
@@ -195,40 +197,42 @@ export default function ReportsPage() {
         <StatCard label="Avg Occupancy"    value={loading ? "…" : `${totals.occupancy}%`} sub="Of booked trips" icon={TrendingUp} />
       </div>
 
-      {/* Military & First Responder donation tracking */}
+      {/* Military discount + giving back */}
       <div className="glass rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/8 flex items-center gap-2.5">
           <HeartHandshake className="w-5 h-5 text-[#FCC300] flex-shrink-0" />
           <div>
-            <h2 className="text-white font-bold text-lg">Military &amp; First Responder Program</h2>
+            <h2 className="text-white font-bold text-lg">Military Discount &amp; Giving Back</h2>
             <p className="text-[#A1A1AA] text-xs">
-              Volt donates 100% of each month&apos;s member savings to Warrior Outreach Ranch.
+              Volt donates {DONATION_PERCENT_OF_PROFITS}% of its profits to {DONATION_PARTNER.name}. The donation is
+              based on profit, not on discounts given — the app tracks revenue but not expenses, so calculate it
+              from your books. Figures below are the {MILITARY_DISCOUNT_PERCENT}% military discounts given.
             </p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/6">
           <div className="bg-[#0F0F0F] p-5">
-            <div className="text-[#A1A1AA] text-xs mb-1">{monthLabel(donation.currentMonth)} — to donate</div>
-            <div className="text-[#FCC300] font-bold text-2xl">{milLoading ? "…" : formatCents(donation.currentTotal)}</div>
-            <div className="text-[#A1A1AA] text-xs mt-1">Member savings this month</div>
+            <div className="text-[#A1A1AA] text-xs mb-1">{monthLabel(milSummary.currentMonth)} — discounts given</div>
+            <div className="text-[#FCC300] font-bold text-2xl">{milLoading ? "…" : formatCents(milSummary.currentTotal)}</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">Saved by verified military this month</div>
           </div>
           <div className="bg-[#0F0F0F] p-5">
-            <div className="text-[#A1A1AA] text-xs mb-1">All-time donation equivalent</div>
-            <div className="text-white font-bold text-2xl">{milLoading ? "…" : formatCents(donation.allTime)}</div>
-            <div className="text-[#A1A1AA] text-xs mt-1">Total member savings to date</div>
+            <div className="text-[#A1A1AA] text-xs mb-1">All-time discounts given</div>
+            <div className="text-white font-bold text-2xl">{milLoading ? "…" : formatCents(milSummary.allTime)}</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">Total military savings to date</div>
           </div>
           <div className="bg-[#0F0F0F] p-5">
             <div className="text-[#A1A1AA] text-xs mb-1 flex items-center gap-1"><Clock className="w-3 h-3" />Awaiting verification</div>
-            <div className="text-white font-bold text-2xl">{milLoading ? "…" : donation.pendingCount}</div>
-            <div className="text-[#A1A1AA] text-xs mt-1">Full-price now; 5% refunded on approval</div>
+            <div className="text-white font-bold text-2xl">{milLoading ? "…" : milSummary.pendingCount}</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">Full-price now; {MILITARY_DISCOUNT_PERCENT}% refunded on approval</div>
           </div>
         </div>
-        {donation.months.length > 0 && (
+        {milSummary.months.length > 0 && (
           <div className="divide-y divide-white/6">
             <div className="grid grid-cols-2 px-6 py-2.5 border-t border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
-              <div>Month</div><div className="text-right">Donation</div>
+              <div>Month</div><div className="text-right">Discounts given</div>
             </div>
-            {donation.months.map(([ym, cents]) => (
+            {milSummary.months.map(([ym, cents]) => (
               <div key={ym} className="grid grid-cols-2 px-6 py-3 hover:bg-white/3 transition-colors">
                 <div className="text-white text-sm">{monthLabel(ym)}</div>
                 <div className="text-right text-white font-semibold text-sm">{formatCents(cents as number)}</div>

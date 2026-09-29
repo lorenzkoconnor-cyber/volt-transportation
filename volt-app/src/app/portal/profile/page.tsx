@@ -20,6 +20,7 @@ import {
   isAllowedIdFile,
   type MilitaryCategory,
 } from "@/lib/military";
+import { MILITARY_DISCOUNT_PERCENT } from "@/lib/booking";
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function EditProfilePage() {
   const [pwError, setPwError]                 = useState("");
   const [pwSuccess, setPwSuccess]             = useState(false);
 
-  // Military & First Responder verification
+  // Military discount verification
   const [milCategory, setMilCategory]  = useState<MilitaryCategory | "">("");
   const [milFile, setMilFile]          = useState<File | null>(null);
   const [milError, setMilError]        = useState("");
@@ -269,15 +270,18 @@ export default function EditProfilePage() {
             </Button>
           </form>
 
-          {/* Military & First Responder discount */}
+          {/* Military discount */}
           <div className="glass rounded-2xl p-6 sm:p-7 space-y-5 mb-8">
             <div className="flex items-center gap-3 mb-1">
               <div className="w-9 h-9 rounded-full bg-[#FCC300]/20 flex items-center justify-center">
                 <ShieldCheck className="w-4.5 h-4.5 text-[#FCC300]" size={18} />
               </div>
               <div>
-                <h2 className="text-white font-semibold">Military &amp; First Responder Discount</h2>
-                <p className="text-[#A1A1AA] text-xs">5% off every booking for verified members</p>
+                <h2 className="text-white font-semibold">Military Discount</h2>
+                <p className="text-[#A1A1AA] text-xs">
+                  {MILITARY_DISCOUNT_PERCENT}% off every booking for verified active-duty &amp; retired military ·{" "}
+                  <Link href="/military" className="text-[#FCC300] hover:underline">Learn more</Link>
+                </p>
               </div>
             </div>
 
@@ -287,7 +291,7 @@ export default function EditProfilePage() {
                 <div>
                   <p className="text-green-400 text-sm font-medium">Verified</p>
                   <p className="text-[#A1A1AA] text-xs mt-0.5">
-                    Your 5% discount is applied automatically at checkout. Thank you for your service.
+                    Your {MILITARY_DISCOUNT_PERCENT}% discount is applied automatically at checkout. Thank you for your service.
                   </p>
                 </div>
               </div>
@@ -300,7 +304,7 @@ export default function EditProfilePage() {
                   <p className="text-yellow-400 text-sm font-medium">Under review</p>
                   <p className="text-[#A1A1AA] text-xs mt-0.5">
                     We&apos;re verifying your ID. Once approved, the discount applies automatically — and
-                    we&apos;ll refund the 5% on any booking you make in the meantime.
+                    we&apos;ll refund the {MILITARY_DISCOUNT_PERCENT}% on any booking you make in the meantime.
                   </p>
                 </div>
               </div>
@@ -339,7 +343,7 @@ export default function EditProfilePage() {
                 </div>
 
                 <div>
-                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Proof of service / department ID</Label>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Military ID (active-duty or retiree)</Label>
                   <label className="flex items-center gap-2 rounded-xl border border-dashed border-white/20 hover:border-[#FCC300] px-3 py-3 cursor-pointer transition-colors">
                     <Upload className="w-4 h-4 text-[#FCC300] flex-shrink-0" />
                     <span className="text-sm text-[#A1A1AA] truncate">
