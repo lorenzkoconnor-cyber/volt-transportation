@@ -223,7 +223,11 @@ export function candidateDatesForFlight(
   const flightAt = toMinutes(flight.date, flight.time);
   const [earliest, latest] =
     direction === "departing"
-      ? [flightAt - t.departMaxBufferMinutes - t.routeMinutes, flightAt - t.departMinBufferMinutes - t.routeMinutes]
+      ? [
+          // Reach back far enough for the extra earlier options too.
+          flightAt - t.departMaxBufferMinutes - t.routeMinutes - EXTRA_EARLIER_LOOKBACK_MINUTES,
+          flightAt - t.departMinBufferMinutes - t.routeMinutes,
+        ]
       : [flightAt + t.arriveMinWaitMinutes, flightAt + t.arriveMaxWaitMinutes];
   const dates: string[] = [];
   for (let d = fromMinutes(earliest).date; d <= fromMinutes(latest).date; d = shiftDate(d, 1)) dates.push(d);
@@ -238,6 +242,12 @@ export interface FlightMatch {
   tight: boolean;       // inside the window but on the short side — flagged to the rider
 }
 
+// Flying out: besides the departures inside the window, always offer this many
+// earlier departures for riders who want to reach ATL sooner.
+export const EXTRA_EARLIER_DEPARTURES = 3;
+// How far before the window to look for them (3 departures at up to 4-hour spacing).
+const EXTRA_EARLIER_LOOKBACK_MINUTES = 12 * 60;
+
 // A gap under this is still offered but labelled "tight".
 const TIGHT_DEPART_MINUTES = 90;
 const TIGHT_ARRIVE_MINUTES = 45;
@@ -245,6 +255,8 @@ const TIGHT_ARRIVE_MINUTES = 45;
 /**
  * Filters `slots` (each carrying its own `date`) down to departures that fit
  * the flight, annotated with arrival estimates and the gap to/from the flight.
+ * Flying out, up to EXTRA_EARLIER_DEPARTURES more departures before the window
+ * (same day) are included too, so riders can choose to reach ATL earlier.
  * Sorted by smallest gap first — i.e. departing: latest departure first (least
  * waiting at the airport); arriving: earliest pickup first.
  */
@@ -256,6 +268,7 @@ export function matchDeparturesToFlight(
 ): FlightMatch[] {
   const flightAt = toMinutes(flight.date, flight.time);
   const matches: FlightMatch[] = [];
+  const earlier: FlightMatch[] = [];
 
   for (const slot of slots) {
     if (!slot.date) continue;
@@ -266,8 +279,9 @@ export function matchDeparturesToFlight(
       direction === "departing"
         ? [t.departMinBufferMinutes, t.departMaxBufferMinutes]
         : [t.arriveMinWaitMinutes, t.arriveMaxWaitMinutes];
-    if (gap < min || gap > max) continue;
-    matches.push({
+    if (gap < min) continue;
+    if (gap > max && direction !== "departing") continue;
+    (gap > max ? earlier : matches).push({
       slot,
       departsAt: fromMinutes(dep),
       arrivesAt: fromMinutes(arr),
@@ -276,7 +290,13 @@ export function matchDeparturesToFlight(
     });
   }
 
-  return matches.sort((a, b) => a.gapMinutes - b.gapMinutes);
+  const byGap = (a: FlightMatch, b: FlightMatch) => a.gapMinutes - b.gapMinutes;
+  matches.sort(byGap);
+  // Earlier options stay on the same day as the earliest fitting departure —
+  // never an overnight wait at the airport.
+  const sameDay = matches.length ? matches[matches.length - 1].departsAt.date : null;
+  const extras = earlier.filter((m) => m.departsAt.date === sameDay).sort(byGap).slice(0, EXTRA_EARLIER_DEPARTURES);
+  return [...matches, ...extras];
 }
 
 // "Delta DL 1234 · departs 10:30 AM · Domestic – South"
