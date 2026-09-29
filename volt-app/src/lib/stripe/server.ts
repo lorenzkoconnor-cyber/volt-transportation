@@ -7,7 +7,8 @@ import Stripe from "stripe";
 
 function isStripeConfigured(): boolean {
   const key = process.env.STRIPE_SECRET_KEY ?? "";
-  return key.startsWith("sk_") && !key.includes("placeholder") && key.length > 20;
+  // Standard (sk_) or restricted (rk_) secret keys both work.
+  return /^(sk|rk)_/.test(key) && !key.includes("placeholder") && key.length > 20;
 }
 
 export function getStripeServer(): Stripe | null {

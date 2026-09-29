@@ -115,9 +115,9 @@ export default function SettingsPage() {
     setSaving(false);
   };
 
-  // Live example: a 7:00 AM departure for a 10:30 AM flight.
+  // Live example: a 6:00 AM departure for a 10:30 AM flight.
   const toAtl = routes.find((r) => r.origin_key !== "atl");
-  const exampleArrival = toAtl ? minusMinutes("07:00", -toAtl.duration_minutes) : null;
+  const exampleArrival = toAtl ? minusMinutes("06:00", -toAtl.duration_minutes) : null;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -153,8 +153,8 @@ export default function SettingsPage() {
                 <Clock className="w-4 h-4 text-[#FCC300]" /> Scheduled Route Time
               </h2>
               <p className="text-[#A1A1AA] text-xs mt-1">
-                How long Volt plans for the drive, used to estimate arrival times. Standard is 105 min
-                (Apple Maps&apos; ~1 hr 30 min plus a 15-min operational buffer). Refine it with real trip data.
+                How long Volt plans for the drive, used to estimate arrival times. Standard is 120 min
+                (2 hours each way). Refine it with real trip data.
               </p>
             </div>
             {routes.map((r) => (
@@ -171,10 +171,10 @@ export default function SettingsPage() {
                 </div>
               </div>
             ))}
-            {toAtl && exampleArrival && toAtl.duration_minutes < 210 && (
+            {toAtl && exampleArrival && toAtl.duration_minutes < 270 && (
               <p className="text-[#FFE08A] text-xs bg-[#FCC300]/10 rounded-lg px-3 py-2">
-                Example: 10:30 AM flight → 7:00 AM Volt departure → {displayTime12h(exampleArrival)} ATL arrival →{" "}
-                {formatDuration(210 - toAtl.duration_minutes)} before the flight
+                Example: 10:30 AM flight → 6:00 AM Volt departure → {displayTime12h(exampleArrival)} ATL arrival →{" "}
+                {formatDuration(270 - toAtl.duration_minutes)} before the flight
               </p>
             )}
           </div>

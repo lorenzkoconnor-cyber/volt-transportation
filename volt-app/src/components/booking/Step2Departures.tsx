@@ -11,6 +11,7 @@ import {
   type FlightMatch,
   type FlightTimingSettings,
   type LocationKey,
+  type RouteSchedule,
   DEFAULT_FLIGHT_TIMING,
   candidateDatesForFlight,
   displayTime12h,
@@ -32,11 +33,11 @@ interface Props {
 
 async function fetchDay(
   from: string, to: string, date: string,
-): Promise<{ slots: DepartureSlot[]; timing: FlightTimingSettings }> {
+): Promise<{ slots: DepartureSlot[]; timing: FlightTimingSettings; schedule: RouteSchedule | null }> {
   const res = await fetch(`/api/trips/availability?route_key=${from}-${to}&date=${date}`);
-  if (!res.ok) return { slots: [], timing: DEFAULT_FLIGHT_TIMING };
+  if (!res.ok) return { slots: [], timing: DEFAULT_FLIGHT_TIMING, schedule: null };
   const data = await res.json();
-  return { slots: data.slots ?? [], timing: data.timing ?? DEFAULT_FLIGHT_TIMING };
+  return { slots: data.slots ?? [], timing: data.timing ?? DEFAULT_FLIGHT_TIMING, schedule: data.schedule ?? null };
 }
 
 async function fetchSlots(from: string, to: string, date: string): Promise<DepartureSlot[]> {
@@ -72,6 +73,7 @@ export interface FlightLeg {
   flight: FlightInfo;
   direction: FlightDirection;
   timing: FlightTimingSettings;
+  schedule: RouteSchedule | null;
   matches: FlightMatch[];
 }
 
@@ -89,7 +91,7 @@ async function fetchFlightLeg(from: LocationKey, to: LocationKey, flight: Flight
   const matches = matchDeparturesToFlight([...first.slots, ...others.flat()], flight, direction, timing)
     .filter((m) => `${m.departsAt.date}T${m.departsAt.time}` > now);
 
-  return { flight, direction, timing, matches };
+  return { flight, direction, timing, schedule: first.schedule, matches };
 }
 
 interface LoadedDepartures {
@@ -272,7 +274,7 @@ function FlightOptions({
   selected: DepartureSlot | null;
   onSelect: (s: DepartureSlot) => void;
 }) {
-  const { flight, direction, timing, matches } = leg;
+  const { flight, direction, timing, schedule, matches } = leg;
   const departing = direction === "departing";
 
   return (
@@ -291,6 +293,12 @@ function FlightOptions({
       {matches.length === 0 ? (
         <div className="glass rounded-xl p-6 text-center">
           <p className="text-white font-medium text-sm mb-1">No Volt departures fit this flight</p>
+          {schedule && (
+            <p className="text-[#A1A1AA] text-xs mb-1">
+              Vans leave {LOCATIONS[from].short} every {formatDuration(schedule.intervalMinutes, true)} from{" "}
+              {schedule.firstDisplayTime} to {schedule.lastDisplayTime}, 7 days a week.
+            </p>
+          )}
           <p className="text-[#A1A1AA] text-xs">
             Double-check your flight time, or call us and we&apos;ll work something out.
           </p>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl, SUPABASE_ANON_KEY } from "@/lib/supabase/url";
-import { DEFAULT_FLIGHT_TIMING, arrivalFor, displayTime12h, type FlightTimingSettings } from "@/lib/booking";
+import { DEFAULT_FLIGHT_TIMING, arrivalFor, displayTime12h, type FlightTimingSettings, type RouteSchedule } from "@/lib/booking";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createClient(): Promise<any> {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     // Find the route
     const { data: route, error: routeError } = await supabase
       .from("routes")
-      .select("id, duration_minutes")
+      .select("id, duration_minutes, first_departure_time, last_departure_time, departure_interval_minutes")
       .eq("origin_key", originKey)
       .eq("destination_key", destinationKey)
       .eq("is_active", true)
@@ -82,7 +82,16 @@ export async function GET(request: NextRequest) {
       arriveMaxWaitMinutes: settings?.arrive_max_wait_minutes ?? DEFAULT_FLIGHT_TIMING.arriveMaxWaitMinutes,
     };
 
-    return NextResponse.json({ slots, timing });
+    // Daily service hours for this direction, e.g. "4:00 AM", "8:00 PM", 120.
+    const schedule: RouteSchedule | null = route.first_departure_time && route.last_departure_time
+      ? {
+          firstDisplayTime: displayTime12h(route.first_departure_time),
+          lastDisplayTime: displayTime12h(route.last_departure_time),
+          intervalMinutes: route.departure_interval_minutes,
+        }
+      : null;
+
+    return NextResponse.json({ slots, timing, schedule });
   } catch (err) {
     console.error("[trips/availability]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

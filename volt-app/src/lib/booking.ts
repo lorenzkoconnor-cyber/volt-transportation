@@ -99,12 +99,19 @@ export interface FlightTimingSettings {
 }
 
 export const DEFAULT_FLIGHT_TIMING: FlightTimingSettings = {
-  routeMinutes: 105,
+  routeMinutes: 120,
   departMinBufferMinutes: 60,
   departMaxBufferMinutes: 240,
   arriveMinWaitMinutes: 30,
   arriveMaxWaitMinutes: 180,
 };
+
+// A route's daily departure schedule (routes.first/last_departure_time + interval).
+export interface RouteSchedule {
+  firstDisplayTime: string;  // "4:00 AM"
+  lastDisplayTime: string;   // "8:00 PM"
+  intervalMinutes: number;   // 120
+}
 
 export interface DepartureSlot {
   id: string;
@@ -151,36 +158,6 @@ export interface PriceBreakdown {
   lines: { label: string; amount: number }[];
 }
 
-// Generate all 24 hourly departure slots for a given day
-export function generateDepartureSlots(date: string, from: LocationKey): DepartureSlot[] {
-  // TODO: Replace with Supabase query → trips table for actual availability
-  // Mock: generate hourly slots 12am–11pm, randomize seats remaining
-  const slots: DepartureSlot[] = [];
-
-  for (let hour = 0; hour < 24; hour++) {
-    const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    const ampm = hour < 12 ? "AM" : "PM";
-    const time = `${hour.toString().padStart(2, "0")}:00`;
-    const displayTime = `${h12}:00 ${ampm}`;
-
-    // Mock availability — seed by hour so it's deterministic
-    const totalSeats = 8;
-    const seatsLeft = hour % 4 === 0 ? Math.floor(Math.random() * 3) : totalSeats - Math.floor(hour % 3);
-    const available = seatsLeft > 0;
-
-    slots.push({
-      id: `${date}-${from}-${time}`,
-      time,
-      displayTime,
-      available,
-      seatsLeft: Math.max(0, Math.min(seatsLeft, totalSeats)),
-      totalSeats,
-    });
-  }
-
-  return slots;
-}
-
 // ─── Flight matching ─────────────────────────────────────────────────────────
 
 // Minutes since the Unix epoch for a local date + "HH:MM" (timezone-agnostic:
@@ -219,7 +196,7 @@ export function arrivalFor(date: string, time: string, routeMinutes: number) {
 }
 
 // "8:00 AM" or, when the arrival estimate is known,
-// "Departs 8:00 AM · arrives ATL ~9:45 AM".
+// "Departs 8:00 AM · arrives ATL ~10:00 AM".
 export function slotTimes(slot: DepartureSlot, to: LocationKey): string {
   if (!slot.arrivalDisplayTime) return slot.displayTime;
   return `Departs ${slot.displayTime} · arrives ${LOCATIONS[to].short} ~${slot.arrivalDisplayTime}`;

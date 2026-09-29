@@ -3,7 +3,8 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
 import { formatTime12h, formatDateLong } from "@/lib/format";
-import { MILITARY_DISCOUNT_RATE } from "@/lib/booking";
+import { MILITARY_DISCOUNT_RATE, PRICING } from "@/lib/booking";
+import { getStripeServer } from "@/lib/stripe/server";
 
 // Use raw supabase client to avoid TS inference issues during Supabase setup phase
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,6 +16,20 @@ function createAdminClient(): any {
   );
 }
 
+// Refund a PaymentIntent we can't honour (seat sold out, amount mismatch) so the
+// rider is never left charged without a booking. Best-effort: logged on failure.
+async function refundPayment(paymentIntentId: string, reason: string) {
+  const stripe = getStripeServer();
+  if (!stripe || !paymentIntentId.startsWith("pi_") || paymentIntentId.startsWith("pi_simulated")) return;
+  try {
+    await stripe.refunds.create({ payment_intent: paymentIntentId, metadata: { reason } });
+  } catch (err) {
+    console.error(`[booking/create] auto-refund failed for ${paymentIntentId}`, err);
+  }
+}
+
+const count = (v: unknown, min: number) => Math.max(min, Math.min(20, Math.floor(Number(v) || 0)));
+
 // POST /api/booking/create
 // Called after Stripe payment succeeds (from webhook or client confirmation)
 export async function POST(request: NextRequest) {
@@ -24,19 +39,13 @@ export async function POST(request: NextRequest) {
       tripId,
       returnTripId,
       customerId,
-      adults,
-      children,
-      pets,
-      extraBags,
-      isRoundTrip,
+      isRoundTrip: rawRoundTrip,
       primaryPassenger,    // { name, phone, email }
       additionalPassengers, // string[]
       specialNotes,
       flights,             // [{ leg, tripId, direction, airline, flightNumber, terminal, date, time }] — flight mode only
-      subtotalCents,
-      totalCents,
       stripePaymentIntentId,
-      militaryDiscountRequested, // rider ticked the Military/First-Responder box
+      militaryDiscountRequested, // rider ticked the Military Discount box
     } = body;
 
     // Validate required fields
@@ -45,6 +54,28 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    // Price is computed HERE from the passenger counts — never trusted from the
+    // browser — and the Stripe charge must match it exactly (checked below).
+    const adults = count(body.adults, 1);
+    const children = count(body.children, 0);
+    const pets = count(body.pets, 0);
+    const extraBags = count(body.extraBags, 0);
+    const isRoundTrip = !!rawRoundTrip && !!returnTripId;
+    const oneWayDollars =
+      adults * PRICING.adult + children * PRICING.child + pets * PRICING.pet + extraBags * PRICING.extraBag;
+    const subtotalCents = oneWayDollars * (isRoundTrip ? 2 : 1) * 100;
+
+    // Each PaymentIntent can pay for exactly one reservation.
+    const { data: usedPayment } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("stripe_payment_intent_id", stripePaymentIntentId)
+      .limit(1)
+      .maybeSingle();
+    if (usedPayment) {
+      return NextResponse.json({ error: "This payment has already been used for a booking." }, { status: 409 });
+    }
 
     // 0. Resolve the customer: use an existing id when the caller is signed in,
     //    otherwise find-or-create a record from the primary passenger's details.
@@ -85,15 +116,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 0b. Military & First Responder discount — decided SERVER-SIDE from the
+    // 0b. Military discount — decided SERVER-SIDE from the
     //     resolved customer's verification status, never trusted from the client.
-    //     • approved  → apply 5% now (the client already charged the discounted total)
-    //     • requested but not yet approved → full price now, flagged so the 5% is
+    //     • approved  → apply the discount now (the client already charged the discounted total)
+    //     • requested but not yet approved → full price now, flagged so the discount is
     //       refunded automatically once an owner/manager approves the account.
     let isMilitaryBooking = false;
     let militaryDiscountPending = false;
     let discountCents = 0;
-    let finalTotalCents: number = totalCents;
+    let finalTotalCents: number = subtotalCents;
 
     if (militaryDiscountRequested && resolvedCustomerId) {
       const { data: cust } = await supabase
@@ -104,25 +135,55 @@ export async function POST(request: NextRequest) {
       const status = cust?.military_status ?? "none";
       if (status === "approved") {
         isMilitaryBooking = true;
-        discountCents = Math.round((subtotalCents ?? 0) * MILITARY_DISCOUNT_RATE);
-        finalTotalCents = (subtotalCents ?? 0) - discountCents;
+        discountCents = Math.round(subtotalCents * MILITARY_DISCOUNT_RATE);
+        finalTotalCents = subtotalCents - discountCents;
       } else {
         // Charged full price now; the discount is owed as a refund on approval.
         isMilitaryBooking = true;
         militaryDiscountPending = true;
         discountCents = 0;
-        finalTotalCents = subtotalCents ?? totalCents;
+        finalTotalCents = subtotalCents;
       }
+    }
+
+    // 0c. Verify the payment with Stripe: it must have actually succeeded and be
+    //     for exactly the server-computed total. (Skipped only in simulated mode,
+    //     i.e. when no real Stripe keys are configured.)
+    const stripe = getStripeServer();
+    let stripeChargeId: string | null = null;
+    if (stripe) {
+      if (!String(stripePaymentIntentId).startsWith("pi_") || String(stripePaymentIntentId).startsWith("pi_simulated")) {
+        return NextResponse.json({ error: "Invalid payment reference." }, { status: 400 });
+      }
+      let pi;
+      try {
+        pi = await stripe.paymentIntents.retrieve(stripePaymentIntentId);
+      } catch {
+        return NextResponse.json({ error: "Payment could not be verified." }, { status: 400 });
+      }
+      if (pi.status !== "succeeded") {
+        return NextResponse.json({ error: "Payment has not completed." }, { status: 402 });
+      }
+      if (pi.amount !== finalTotalCents || pi.currency !== "usd") {
+        console.error(`[booking/create] amount mismatch on ${pi.id}: charged ${pi.amount}, expected ${finalTotalCents}`);
+        await refundPayment(pi.id, "amount_mismatch");
+        return NextResponse.json(
+          { error: "The payment amount didn't match the booking price, so it has been refunded. Please try again." },
+          { status: 400 }
+        );
+      }
+      stripeChargeId = typeof pi.latest_charge === "string" ? pi.latest_charge : null;
     }
 
     // 1. Reserve the seats FIRST — this atomically fails if the trip is full,
     //    so we never create a reservation we can't seat.
-    const totalPassengers = (adults ?? 1) + (children ?? 0);
+    const totalPassengers = adults + children;
     const { error: seatError } = await supabase.rpc("increment_seats_booked", {
       p_trip_id: tripId,
       p_count: totalPassengers,
     });
     if (seatError) {
+      await refundPayment(stripePaymentIntentId, "sold_out");
       return NextResponse.json(
         { error: "Sorry — that departure just sold out. Please pick another time." },
         { status: 409 }
@@ -137,6 +198,7 @@ export async function POST(request: NextRequest) {
       if (returnSeatError) {
         // Roll back the outbound seats
         await supabase.rpc("decrement_seats_booked", { p_trip_id: tripId, p_count: totalPassengers });
+        await refundPayment(stripePaymentIntentId, "sold_out");
         return NextResponse.json(
           { error: "Sorry — that return departure just sold out. Please pick another time." },
           { status: 409 }
@@ -233,6 +295,7 @@ export async function POST(request: NextRequest) {
       status: "paid",
       amount_cents: finalTotalCents,
       stripe_payment_intent_id: stripePaymentIntentId,
+      stripe_charge_id: stripeChargeId,
       refund_amount_cents: 0,
     });
 

@@ -27,7 +27,7 @@ export function checkEnvironment(): { ready: boolean; services: ServiceStatus[] 
       name: "Stripe",
       configured:
         !!process.env.STRIPE_SECRET_KEY &&
-        process.env.STRIPE_SECRET_KEY.startsWith("sk_") &&
+        /^(sk|rk)_/.test(process.env.STRIPE_SECRET_KEY) &&
         !process.env.STRIPE_SECRET_KEY.includes("placeholder"),
       instructions:
         "1. Create account at stripe.com\n" +

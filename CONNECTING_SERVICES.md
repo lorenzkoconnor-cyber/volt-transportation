@@ -65,7 +65,7 @@ Everything is built and working in demo mode. Follow these steps to connect real
 
 3. Set up the **Webhook**:
    - Go to **Developers → Webhooks → Add Endpoint**
-   - URL: `https://volttransportation.com/api/payments/webhook`
+   - URL: `https://bookwithvolt.com/api/payments/webhook`
    - Events to listen for:
      - `payment_intent.succeeded`
      - `payment_intent.payment_failed`

@@ -146,7 +146,7 @@ export default function HeroSection() {
             <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/8">
               <div>
                 <h2 className="text-white font-bold text-sm sm:text-base">Plan Your Trip</h2>
-                <p className="text-[#A1A1AA] text-xs mt-0.5 hidden sm:block">Columbus ⇄ Atlanta Airport · Hourly departures</p>
+                <p className="text-[#A1A1AA] text-xs mt-0.5 hidden sm:block">Columbus ⇄ Atlanta Airport · Departures every 2 hours</p>
               </div>
               <a href="/manage-reservation" className="text-[#FCC300] text-xs hover:text-[#FFD54A] transition-colors font-medium whitespace-nowrap ml-2">
                 Manage Reservation
