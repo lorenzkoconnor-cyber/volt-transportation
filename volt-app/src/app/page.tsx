@@ -17,10 +17,10 @@ export const metadata: Metadata = {
     title: "Columbus GA to Atlanta Airport Shuttle | Volt Transportation",
     description:
       "Premium shuttle service between Columbus, GA and ATL Airport. Book online in minutes.",
-    url: "https://volttransportation.com",
+    url: "https://volt-transportation.com",
   },
   alternates: {
-    canonical: "https://volttransportation.com",
+    canonical: "https://volt-transportation.com",
   },
 };
 
@@ -29,13 +29,13 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "LocalBusiness",
-      "@id": "https://volttransportation.com/#business",
+      "@id": "https://volt-transportation.com/#business",
       name: "Volt Transportation",
       description:
         "Premium airport shuttle service between Columbus, GA and Atlanta Hartsfield-Jackson Airport.",
-      url: "https://volttransportation.com",
+      url: "https://volt-transportation.com",
       telephone: "+17065305896",
-      email: "hello@volttransportation.com",
+      email: "support@contactvolt.com",
       address: {
         "@type": "PostalAddress",
         streetAddress: "3885 Miller Road, Suite C",
@@ -50,7 +50,7 @@ const jsonLd = {
     {
       "@type": "TransportationService",
       name: "Columbus GA to Atlanta Airport Shuttle",
-      provider: { "@id": "https://volttransportation.com/#business" },
+      provider: { "@id": "https://volt-transportation.com/#business" },
       areaServed: [
         {
           "@type": "City",

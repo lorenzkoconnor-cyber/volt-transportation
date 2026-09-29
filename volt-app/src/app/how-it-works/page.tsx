@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "How It Works | Volt Transportation Shuttle Service",
   description:
     "Booking your Columbus GA to Atlanta Airport shuttle with Volt is simple — 6 easy steps from online booking to arrival at your destination.",
-  alternates: { canonical: "https://volttransportation.com/how-it-works" },
+  alternates: { canonical: "https://volt-transportation.com/how-it-works" },
 };
 
 const steps = [

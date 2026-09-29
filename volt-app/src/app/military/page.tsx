@@ -21,7 +21,7 @@ import { DONATION_PARTNER, DONATION_PERCENT_OF_PROFITS } from "@/lib/military";
 export const metadata: Metadata = {
   title: "Military Discount & Giving Back",
   description: `Active-duty and retired military save ${MILITARY_DISCOUNT_PERCENT}% on every Volt shuttle booking between Columbus, GA and ATL. Volt donates ${DONATION_PERCENT_OF_PROFITS}% of its profits to ${DONATION_PARTNER.name}.`,
-  alternates: { canonical: "https://volttransportation.com/military" },
+  alternates: { canonical: "https://volt-transportation.com/military" },
 };
 
 const eligible = [

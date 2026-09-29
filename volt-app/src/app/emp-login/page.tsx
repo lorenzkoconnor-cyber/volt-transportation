@@ -83,7 +83,7 @@ export default function EmpLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@volttransportation.com"
+                placeholder="you@contactvolt.com"
                 autoComplete="email"
                 className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-12 rounded-xl focus:border-[#FCC300]"
               />
@@ -129,7 +129,7 @@ export default function EmpLoginPage() {
 
           <p className="text-center text-[#A1A1AA] text-xs mt-5">
             Having trouble?{" "}
-            <a href="mailto:admin@volttransportation.com" className="text-[#FCC300] hover:text-[#FFD54A] transition-colors">
+            <a href="mailto:support@contactvolt.com" className="text-[#FCC300] hover:text-[#FFD54A] transition-colors">
               Contact your administrator
             </a>
           </p>

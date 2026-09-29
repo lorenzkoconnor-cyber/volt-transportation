@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Safety & Rules | Volt Transportation Passenger Policies",
   description:
     "Volt Transportation passenger conduct, luggage policy, pet policy, cancellation rules, and safety guidelines for your Columbus GA to ATL airport shuttle.",
-  alternates: { canonical: "https://volttransportation.com/safety-rules" },
+  alternates: { canonical: "https://volt-transportation.com/safety-rules" },
 };
 
 const sections = [

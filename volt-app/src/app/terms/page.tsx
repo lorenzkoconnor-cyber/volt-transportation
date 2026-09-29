@@ -5,7 +5,7 @@ import Footer from "@/components/layout/Footer";
 export const metadata: Metadata = {
   title: "Terms & Conditions | Volt Transportation",
   description: "Volt Transportation terms and conditions — booking agreement, refund policy, liability limitations, no-show policy, and payment terms.",
-  alternates: { canonical: "https://volttransportation.com/terms" },
+  alternates: { canonical: "https://volt-transportation.com/terms" },
 };
 
 const sections = [

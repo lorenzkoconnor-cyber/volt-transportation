@@ -7,7 +7,7 @@ import { getSupabaseUrl } from "@/lib/supabase/url";
 // Stripe sends events here after payment success, failure, refund, etc.
 //
 // Register in Stripe Dashboard → Developers → Webhooks:
-//   URL: https://bookwithvolt.com/api/payments/webhook
+//   URL: https://volt-transportation.com/api/payments/webhook
 //   Events: payment_intent.succeeded, payment_intent.payment_failed,
 //            charge.refunded
 

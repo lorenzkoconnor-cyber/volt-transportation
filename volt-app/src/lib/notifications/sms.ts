@@ -103,7 +103,7 @@ export const SMS_TEMPLATES = {
   }) =>
     `Volt Transportation: Your reservation ${params.confirmationNumber} has been cancelled.\n\n` +
     `Refund of $${params.refundAmount} will appear in 5–10 business days.\n` +
-    `Book again anytime at volttransportation.com`,
+    `Book again anytime at volt-transportation.com`,
 
   reservationUpdated: (params: {
     confirmationNumber: string;
@@ -111,5 +111,5 @@ export const SMS_TEMPLATES = {
   }) =>
     `Volt Transportation: Your reservation ${params.confirmationNumber} has been updated.\n\n` +
     `Change: ${params.change}\n` +
-    `Questions? Call us or visit volttransportation.com`,
+    `Questions? Call us or visit volt-transportation.com`,
 } as const;

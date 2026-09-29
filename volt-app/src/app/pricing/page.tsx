@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Pricing | Columbus GA to ATL Airport Shuttle Fares",
   description:
     "Volt Transportation pricing: Adults $59, Children $49, Pets $25, Extra bags $10. Transparent fares, no hidden fees. 10% off for active-duty and retired military.",
-  alternates: { canonical: "https://volttransportation.com/pricing" },
+  alternates: { canonical: "https://volt-transportation.com/pricing" },
 };
 
 const fares = [

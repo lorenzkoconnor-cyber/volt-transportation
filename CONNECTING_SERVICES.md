@@ -42,8 +42,8 @@ Everything is built and working in demo mode. Follow these steps to connect real
 5. Update `.env.local` with the values from Step 2.
 
 6. Go to **Authentication → URL Configuration**:
-   - Site URL: `https://volttransportation.com`
-   - Redirect URLs: add `https://volttransportation.com/auth/callback`
+   - Site URL: `https://volt-transportation.com`
+   - Redirect URLs: add `https://volt-transportation.com/auth/callback`
 
 **Result:** Login, booking, reservations, and all database features go live.
 
@@ -65,7 +65,7 @@ Everything is built and working in demo mode. Follow these steps to connect real
 
 3. Set up the **Webhook**:
    - Go to **Developers → Webhooks → Add Endpoint**
-   - URL: `https://bookwithvolt.com/api/payments/webhook`
+   - URL: `https://volt-transportation.com/api/payments/webhook`
    - Events to listen for:
      - `payment_intent.succeeded`
      - `payment_intent.payment_failed`
@@ -127,7 +127,7 @@ supabase login
 supabase link --project-ref YOUR_PROJECT_REF
 
 # Set the secrets (Edge Function environment variables)
-supabase secrets set NEXT_PUBLIC_APP_URL=https://volttransportation.com
+supabase secrets set NEXT_PUBLIC_APP_URL=https://volt-transportation.com
 supabase secrets set INTERNAL_API_SECRET=your-random-secret-string
 
 # Deploy the reminder function
@@ -159,12 +159,12 @@ supabase functions schedule send-reminder --cron "0 18 * * *"
    - Copy every variable from `.env.local` into Hostinger's environment settings
    - Never commit `.env.local` to GitHub
 
-4. Connect your domain `volttransportation.com`:
+4. Connect your domain `volt-transportation.com`:
    - Point DNS to Hostinger nameservers
    - Enable SSL (Hostinger provides free Let's Encrypt SSL)
 
 5. Update Supabase:
-   - **Authentication → URL Configuration → Site URL** → `https://volttransportation.com`
+   - **Authentication → URL Configuration → Site URL** → `https://volt-transportation.com`
 
 6. Switch Stripe to **live keys** when ready:
    - Replace `pk_test_...` with `pk_live_...`

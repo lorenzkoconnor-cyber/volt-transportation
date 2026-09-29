@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     "ATL airport shuttle Columbus Georgia",
     "airport shuttle service Columbus GA",
   ],
-  metadataBase: new URL("https://volttransportation.com"),
+  metadataBase: new URL("https://volt-transportation.com"),
   openGraph: {
     type: "website",
     siteName: "Volt Transportation",

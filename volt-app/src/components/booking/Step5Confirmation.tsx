@@ -81,7 +81,7 @@ export default function Step5Confirmation({
           <tr class="total"><td>Total Paid</td><td style="text-align:right">$${money(total)}</td></tr>
         </table>
       </div>
-      <p class="muted" style="margin-top:24px">Thank you for riding with Volt Transportation. Questions? Visit volttransportation.com</p>
+      <p class="muted" style="margin-top:24px">Thank you for riding with Volt Transportation. Questions? Visit volt-transportation.com</p>
       <script>window.onload=function(){window.print()}</script>
       </body></html>`;
     const w = window.open("", "_blank");

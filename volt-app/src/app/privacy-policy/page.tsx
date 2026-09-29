@@ -5,7 +5,7 @@ import Footer from "@/components/layout/Footer";
 export const metadata: Metadata = {
   title: "Privacy Policy | Volt Transportation",
   description: "Volt Transportation privacy policy — how we collect, use, and protect your personal information.",
-  alternates: { canonical: "https://volttransportation.com/privacy-policy" },
+  alternates: { canonical: "https://volt-transportation.com/privacy-policy" },
 };
 
 const sections = [
@@ -31,11 +31,11 @@ const sections = [
   },
   {
     title: "Data Retention",
-    body: `We retain your booking and account information for as long as necessary to provide our services and comply with legal obligations. You may request deletion of your account and associated data by contacting us at hello@volttransportation.com.`,
+    body: `We retain your booking and account information for as long as necessary to provide our services and comply with legal obligations. You may request deletion of your account and associated data by contacting us at support@contactvolt.com.`,
   },
   {
     title: "Your Rights",
-    body: `You have the right to access, correct, or delete the personal information we hold about you. To exercise these rights, contact us at hello@volttransportation.com. We will respond to your request within 30 days.`,
+    body: `You have the right to access, correct, or delete the personal information we hold about you. To exercise these rights, contact us at support@contactvolt.com. We will respond to your request within 30 days.`,
   },
   {
     title: "Cookies",
@@ -47,7 +47,7 @@ const sections = [
   },
   {
     title: "Contact",
-    body: `If you have questions about this Privacy Policy, please contact us at hello@volttransportation.com or by phone at (706) 530-5896.`,
+    body: `If you have questions about this Privacy Policy, please contact us at support@contactvolt.com or by phone at (706) 530-5896.`,
   },
 ];
 

@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/dashboard/", "/emp-login", "/api/"],
       },
     ],
-    sitemap: "https://volttransportation.com/sitemap.xml",
+    sitemap: "https://volt-transportation.com/sitemap.xml",
   };
 }

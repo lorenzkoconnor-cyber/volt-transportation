@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "About Volt Transportation | Columbus GA Airport Shuttle Company",
   description:
     "Learn about Volt Transportation — our mission, our fleet of Ford Transit Passenger Vans, and why we're Columbus GA's premier airport shuttle service to ATL.",
-  alternates: { canonical: "https://volttransportation.com/about" },
+  alternates: { canonical: "https://volt-transportation.com/about" },
 };
 
 const differentiators = [

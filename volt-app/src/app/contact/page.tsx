@@ -86,8 +86,8 @@ export default function ContactPage() {
                   <Mail className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Email</h3>
-                <a href="mailto:hello@volttransportation.com" className="text-[#A1A1AA] hover:text-white text-sm transition-colors break-all">
-                  hello@volttransportation.com
+                <a href="mailto:support@contactvolt.com" className="text-[#A1A1AA] hover:text-white text-sm transition-colors break-all">
+                  support@contactvolt.com
                 </a>
               </div>
 

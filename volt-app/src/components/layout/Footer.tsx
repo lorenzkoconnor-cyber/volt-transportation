@@ -50,10 +50,10 @@ export default function Footer() {
             </p>
             <p className="text-[#A1A1AA] text-sm">
               <a
-                href="mailto:hello@volttransportation.com"
+                href="mailto:support@contactvolt.com"
                 className="hover:text-white transition-colors"
               >
-                hello@volttransportation.com
+                support@contactvolt.com
               </a>
             </p>
           </div>

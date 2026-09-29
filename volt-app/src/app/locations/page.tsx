@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Locations | Columbus GA & ATL Airport Pickup Points",
   description:
     "Volt Transportation pickup and drop-off locations in Columbus, GA and Hartsfield-Jackson Atlanta International Airport (ATL). Maps, parking info, and terminal instructions.",
-  alternates: { canonical: "https://volttransportation.com/locations" },
+  alternates: { canonical: "https://volt-transportation.com/locations" },
 };
 
 export default function LocationsPage() {

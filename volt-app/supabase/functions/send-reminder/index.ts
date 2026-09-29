@@ -8,7 +8,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const VOLT_APP_URL = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? "https://volttransportation.com";
+const VOLT_APP_URL = Deno.env.get("NEXT_PUBLIC_APP_URL") ?? "https://volt-transportation.com";
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_API_SECRET") ?? "";
 
 Deno.serve(async (_req) => {
