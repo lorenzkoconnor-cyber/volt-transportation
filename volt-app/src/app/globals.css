@@ -218,9 +218,9 @@ label,
 select,
 summary,
 .cursor-pointer {
-  cursor: url("/volt-cursor-32.png") 1 1, auto;
-  cursor: -webkit-image-set(url("/volt-cursor-32.png") 1x, url("/volt-cursor-64.png") 2x) 1 1, auto;
-  cursor: image-set(url("/volt-cursor-32.png") 1x, url("/volt-cursor-64.png") 2x) 1 1, auto;
+  cursor: url("/volt-cursor-24.png") 1 1, auto;
+  cursor: -webkit-image-set(url("/volt-cursor-24.png") 1x, url("/volt-cursor-48.png") 2x) 1 1, auto;
+  cursor: image-set(url("/volt-cursor-24.png") 1x, url("/volt-cursor-48.png") 2x) 1 1, auto;
 }
 :disabled,
 [aria-disabled="true"] {
