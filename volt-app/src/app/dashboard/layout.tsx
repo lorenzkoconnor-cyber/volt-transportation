@@ -74,7 +74,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex items-center gap-2.5">
             <Logo className="h-7 w-auto" />
-            <span className="text-[#FCC300] text-[10px] font-semibold uppercase tracking-[0.2em] border-l border-white/10 pl-2.5">Ops</span>
+            <span className="flex flex-col text-[#FCC300] text-[10px] leading-tight font-semibold uppercase tracking-[0.2em] border-l border-white/10 pl-2.5"><span>Team</span><span>Portal</span></span>
           </div>
         </div>
 
