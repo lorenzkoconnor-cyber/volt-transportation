@@ -75,7 +75,7 @@ const sections = [
   },
   {
     title: "17. Military Discount",
-    body: `Active-duty and retired members of the U.S. Armed Forces are eligible for a 10% discount on their entire booking after verifying eligibility with a valid military ID. Former service members who did not retire and first responders are not eligible. Verification is reviewed by Volt Transportation staff; bookings made while a verification is under review are charged the regular fare, and the 10% is refunded to the original payment method once eligibility is approved. Volt Transportation may deny the discount if eligibility cannot be verified.`,
+    body: `Active-duty and retired members of the U.S. Armed Forces are eligible for a 10% discount on their entire booking after verifying eligibility with a valid military ID. Former service members who did not retire and first responders are not eligible. Verification is reviewed by Volt Transportation staff; for bookings made while a verification is under review, your card is authorized (placed on hold) for the regular fare rather than charged. If eligibility is approved, only 90% of the fare is charged and the remainder of the hold is released. If eligibility is denied or cannot be verified, the regular fare is charged; if eligibility is approved later, the 10% is refunded to the original payment method. Volt Transportation may deny the discount if eligibility cannot be verified.`,
   },
 ];
 

@@ -33,7 +33,9 @@ export function checkEnvironment(): { ready: boolean; services: ServiceStatus[] 
         "1. Create account at stripe.com\n" +
         "2. Get API keys from: Developers → API Keys\n" +
         "3. Add to .env.local: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY\n" +
-        "4. Add webhook: Developers → Webhooks → https://yourdomain.com/api/payments/webhook\n" +
+        "4. Add webhook: Developers → Webhooks → https://volt-transportation.com/api/payments/webhook\n" +
+        "   Events: payment_intent.succeeded, payment_intent.amount_capturable_updated,\n" +
+        "           payment_intent.payment_failed, payment_intent.canceled, charge.refunded\n" +
         "5. Copy webhook signing secret to .env.local: STRIPE_WEBHOOK_SECRET",
     },
     {

@@ -224,7 +224,7 @@ export default function ReportsPage() {
           <div className="bg-[#0F0F0F] p-5">
             <div className="text-[#A1A1AA] text-xs mb-1 flex items-center gap-1"><Clock className="w-3 h-3" />Awaiting verification</div>
             <div className="text-white font-bold text-2xl">{milLoading ? "…" : milSummary.pendingCount}</div>
-            <div className="text-[#A1A1AA] text-xs mt-1">Full-price now; {MILITARY_DISCOUNT_PERCENT}% refunded on approval</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">Card on hold; {100 - MILITARY_DISCOUNT_PERCENT}% charged on approval</div>
           </div>
         </div>
         {milSummary.months.length > 0 && (

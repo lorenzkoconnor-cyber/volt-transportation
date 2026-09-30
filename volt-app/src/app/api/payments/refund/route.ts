@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 import { getStripeServer, isStripeConfigured } from "@/lib/stripe/server";
+import { voidHold } from "@/lib/stripe/holds";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function adminClient(): any {
@@ -54,6 +55,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Payment is already fully refunded" }, { status: 400 });
     }
 
+    // A card that's only on hold (Military Discount under review) was never
+    // charged — "refunding" it means releasing the whole hold.
+    const wasHold = payment.status === "authorized";
+    if (wasHold) {
+      if (amountCents != null && amountCents !== payment.amount_cents) {
+        return NextResponse.json(
+          { error: "This card is only on hold — release the full hold instead of a partial refund." },
+          { status: 400 }
+        );
+      }
+      const released = await voidHold(admin, payment, "Hold released by staff — card was not charged.");
+      if (!released.ok) return NextResponse.json({ error: released.error }, { status: 500 });
+      await admin.from("reservations").update({ military_discount_pending: false }).eq("id", payment.reservation_id);
+    }
+
     const maxRefundable = payment.amount_cents - payment.refund_amount_cents;
     const refundCents = amountCents ?? maxRefundable;
     if (refundCents <= 0 || refundCents > maxRefundable) {
@@ -65,7 +81,8 @@ export async function POST(request: NextRequest) {
 
     // Real Stripe refund when this was a live card charge
     const pi = payment.stripe_payment_intent_id as string | null;
-    const isRealStripeCharge = payment.method === "stripe" && pi && pi.startsWith("pi_") && !pi.startsWith("pi_simulated");
+    const isRealStripeCharge = !wasHold &&
+      payment.method === "stripe" && pi && pi.startsWith("pi_") && !pi.startsWith("pi_simulated");
     if (isRealStripeCharge) {
       if (!isStripeConfigured()) {
         return NextResponse.json(
@@ -82,8 +99,8 @@ export async function POST(request: NextRequest) {
     const { error: updErr } = await admin
       .from("payments")
       .update({
-        status: isFullRefund ? "refunded" : payment.status,
-        refund_amount_cents: totalRefunded,
+        status: wasHold ? "voided" : isFullRefund ? "refunded" : payment.status,
+        refund_amount_cents: wasHold ? payment.refund_amount_cents : totalRefunded,
         refunded_at: new Date().toISOString(),
         refunded_by_employee_id: employee.id,
       })

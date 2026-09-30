@@ -23,7 +23,10 @@ const STATUS_STYLES: Record<string, string> = {
   pending:  "bg-yellow-500/15 text-yellow-400",
   refunded: "bg-orange-500/15 text-orange-400",
   failed:   "bg-red-500/15 text-red-400",
+  authorized: "bg-blue-500/15 text-blue-400",   // card on hold (Military Discount under review)
+  voided:   "bg-[#A1A1AA]/15 text-[#A1A1AA]",   // hold released, never charged
 };
+const STATUS_LABELS: Record<string, string> = { authorized: "on hold" };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -160,7 +163,7 @@ export default function PaymentsPage() {
               const name = p.reservation?.customer
                 ? `${p.reservation.customer.first_name} ${p.reservation.customer.last_name}`
                 : "—";
-              const canRefund = p.status === "paid" && p.amount_cents > p.refund_amount_cents;
+              const canRefund = (p.status === "paid" || p.status === "authorized") && p.amount_cents > p.refund_amount_cents;
               return (
                 <div key={p.id} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center">
                   <div className="col-span-3 text-white text-sm">{name}</div>
@@ -183,12 +186,12 @@ export default function PaymentsPage() {
                     )}
                   </div>
                   <div className="col-span-1 flex justify-center">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[p.status] ?? ""}`}>{p.status}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[p.status] ?? ""}`}>{STATUS_LABELS[p.status] ?? p.status}</span>
                   </div>
                   <div className="col-span-1 flex justify-end">
                     {canRefund && (
                       <button onClick={() => openRefund(p)} className="text-[#A1A1AA] hover:text-orange-400 text-xs transition-colors">
-                        Refund
+                        {p.status === "authorized" ? "Release" : "Refund"}
                       </button>
                     )}
                   </div>
@@ -206,7 +209,7 @@ export default function PaymentsPage() {
           <div className="relative w-full max-w-sm glass rounded-2xl p-7 border border-white/10 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-white font-bold text-lg">Issue Refund</h2>
+                <h2 className="text-white font-bold text-lg">{refundTarget.status === "authorized" ? "Release Card Hold" : "Issue Refund"}</h2>
                 <p className="text-[#A1A1AA] text-xs mt-0.5">
                   {refundTarget.reservation?.confirmation_number} · {formatCents(refundTarget.amount_cents)} {refundTarget.method === "stripe" ? "card" : refundTarget.method} payment
                 </p>
@@ -224,12 +227,19 @@ export default function PaymentsPage() {
                   min="0.01"
                   max={((refundTarget.amount_cents - refundTarget.refund_amount_cents) / 100).toFixed(2)}
                   required
+                  readOnly={refundTarget.status === "authorized"}
                   value={refundAmount}
                   onChange={(e) => setRefundAmount(e.target.value)}
                   className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#FCC300]"
                 />
               </div>
-              {refundTarget.method === "stripe" ? (
+              {refundTarget.status === "authorized" ? (
+                <p className="text-[#A1A1AA] text-xs">
+                  This card is only on hold (Military Discount under review) — it hasn&apos;t been charged. Releasing
+                  the hold frees the full amount; partial releases aren&apos;t possible. To charge the rider instead,
+                  settle it from the Verifications page.
+                </p>
+              ) : refundTarget.method === "stripe" ? (
                 <p className="text-[#A1A1AA] text-xs">
                   The card will be refunded through Stripe. It usually appears on the customer&apos;s statement within 5–10 business days.
                 </p>

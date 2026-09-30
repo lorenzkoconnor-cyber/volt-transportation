@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
+import { voidHold } from "@/lib/stripe/holds";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function adminClient(): any {
@@ -91,6 +92,22 @@ export async function POST(request: NextRequest) {
         await supabase.rpc("decrement_seats_booked", { p_trip_id: reservation.return_trip_id, p_count: seatCount });
       }
 
+      // A card that's only on hold (Military Discount under review) is simply
+      // released — nothing was charged, so there's nothing to refund.
+      const { data: holds } = await supabase
+        .from("payments")
+        .select("id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id")
+        .eq("reservation_id", reservation.id)
+        .eq("status", "authorized");
+      let holdReleased = false;
+      for (const hold of holds ?? []) {
+        const res = await voidHold(supabase, hold, "Hold released — rider cancelled online.");
+        holdReleased = holdReleased || res.ok;
+      }
+      if (holdReleased) {
+        await supabase.from("reservations").update({ military_discount_pending: false }).eq("id", reservation.id);
+      }
+
       await supabase.from("audit_logs").insert({
         actor_id: "guest",
         actor_role: "customer",
@@ -103,7 +120,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         reservation: { ...serialize(reservation), status: "cancelled" },
-        message: "Your reservation is cancelled. If you paid by card, our team will process your refund within 1–2 business days.",
+        message: holdReleased
+          ? "Your reservation is cancelled. The hold on your card has been released — you were not charged."
+          : "Your reservation is cancelled. If you paid by card, our team will process your refund within 1–2 business days.",
       });
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Elements,
   PaymentElement,
@@ -39,7 +39,7 @@ import Link from "next/link";
 
 export interface MilitaryResult {
   applied: boolean;   // discount taken off this booking now (verified account)
-  pending: boolean;   // full price charged; discount refunded once approved
+  pending: boolean;   // card held for the full fare; captured at 90% once approved
 }
 
 interface Props {
@@ -60,12 +60,16 @@ function TripSummary({
   returnSlot,
   primary,
   breakdown,
+  hold,
+  discountedIfApproved,
 }: {
   search: BookingSearch;
   outbound: DepartureSlot;
   returnSlot: DepartureSlot | null;
   primary: Passenger;
   breakdown: PriceBreakdown;
+  hold: boolean;
+  discountedIfApproved: number;
 }) {
   const { lines, discountCents, total } = breakdown;
   return (
@@ -111,9 +115,16 @@ function TripSummary({
           </div>
         )}
         <div className="flex justify-between font-bold border-t border-white/10 pt-2 mt-2">
-          <span className="text-white">Total Due</span>
+          <span className="text-white">{hold ? "Card Hold Today" : "Total Due"}</span>
           <span className="text-[#FCC300] text-xl">${money(total)}</span>
         </div>
+        {hold && (
+          <p className="text-[#A1A1AA] text-xs leading-relaxed">
+            Your card is authorized, not charged. Once your ID is verified we charge only{" "}
+            <span className="text-green-400 font-medium">${money(discountedIfApproved)}</span>{" "}
+            ({MILITARY_DISCOUNT_PERCENT}% off). If it can&apos;t be verified, the full ${money(total)} is charged.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -164,8 +175,9 @@ function MilitaryDiscountSection({
         <div>
           <p className="text-yellow-400 text-sm font-medium">Verification under review</p>
           <p className="text-[#A1A1AA] text-xs mt-0.5">
-            We&apos;re reviewing your ID. Once approved, your {MILITARY_DISCOUNT_PERCENT}% discount applies automatically to
-            future bookings — and we&apos;ll refund the {MILITARY_DISCOUNT_PERCENT}% on any booking you make in the meantime.
+            We&apos;re reviewing your ID. For this booking we&apos;ll place a hold on your card for the full fare —
+            once you&apos;re approved we charge only {100 - MILITARY_DISCOUNT_PERCENT}% of it, and future bookings get{" "}
+            {MILITARY_DISCOUNT_PERCENT}% off automatically.
           </p>
         </div>
       </div>
@@ -188,8 +200,9 @@ function MilitaryDiscountSection({
             I&apos;m active-duty or retired military
           </span>
           <span className="block text-[#A1A1AA] text-xs mt-0.5">
-            Get {MILITARY_DISCOUNT_PERCENT}% off. Upload your military ID for a quick review — this booking is charged full price
-            today, and we refund the {MILITARY_DISCOUNT_PERCENT}% once you&apos;re verified. You&apos;ll stay verified for future trips.{" "}
+            Get {MILITARY_DISCOUNT_PERCENT}% off. Upload your military ID for a quick review — today we only place a hold on
+            your card for the full fare. Once you&apos;re verified we charge {100 - MILITARY_DISCOUNT_PERCENT}% of it; if we
+            can&apos;t verify, the full fare is charged. You&apos;ll stay verified for future trips.{" "}
             <Link href="/military" target="_blank" className="text-[#FCC300] hover:underline">Who qualifies?</Link>
           </span>
         </span>
@@ -280,16 +293,39 @@ function TermsLine({ checked, onChange }: { checked: boolean; onChange: (v: bool
   );
 }
 
+// ── Checkout plumbing shared by both payment forms ─────────────────────────────
+// The PaymentIntent is created only when the rider clicks Pay (Stripe's
+// "deferred intent" flow), so its amount and capture mode always reflect the
+// final state of the Military Discount box.
+interface PreparedIntent {
+  checkoutId: string;
+  clientSecret: string;
+  paymentIntentId: string;
+  amountCents: number;
+  captureMethod: "automatic" | "manual";
+  simulated: boolean;
+}
+type PrepareIntent = () => Promise<PreparedIntent>;
+type FinalizeBooking = (checkoutId: string, paymentIntentId: string) => Promise<void>;
+
+function payLabel(total: number, hold: boolean): string {
+  return hold ? `Authorize $${money(total)} · Confirm Booking` : `Pay $${money(total)} · Confirm Booking`;
+}
+
 // ── Real Stripe payment form (uses Payment Element) ────────────────────────────
 function StripePaymentForm({
   total,
-  onPaid,
+  hold,
+  prepareIntent,
+  finalize,
   submitting,
   paymentError,
   blockedReason,
 }: {
   total: number;
-  onPaid: (paymentIntentId: string) => Promise<void>;
+  hold: boolean;
+  prepareIntent: PrepareIntent;
+  finalize: FinalizeBooking;
   submitting: boolean;
   paymentError: string;
   blockedReason: string | null;
@@ -303,34 +339,39 @@ function StripePaymentForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || processing || submitting) return;
     if (blockedReason) { setError(blockedReason); return; }
 
     setError("");
     setProcessing(true);
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) throw new Error(submitError.message ?? "Please check your card details.");
 
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      setError(submitError.message ?? "Please check your card details.");
-      setProcessing(false);
-      return;
-    }
+      const intent = await prepareIntent();
 
-    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
+      // The server has the final say on amount + capture mode (e.g. an account
+      // approved in the meantime). Re-sync the Payment Element if it differs.
+      if (intent.amountCents !== Math.round(total * 100) || intent.captureMethod !== (hold ? "manual" : "automatic")) {
+        await elements.update({ amount: intent.amountCents, captureMethod: intent.captureMethod });
+        const { error: resubmitError } = await elements.submit();
+        if (resubmitError) throw new Error(resubmitError.message ?? "Please check your card details.");
+      }
 
-    if (confirmError) {
-      setError(confirmError.message ?? "Your payment could not be processed.");
-      setProcessing(false);
-      return;
-    }
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        clientSecret: intent.clientSecret,
+        redirect: "if_required",
+      });
+      if (confirmError) throw new Error(confirmError.message ?? "Your payment could not be processed.");
 
-    if (paymentIntent && (paymentIntent.status === "succeeded" || paymentIntent.status === "processing")) {
-      await onPaid(paymentIntent.id);
-    } else {
-      setError("Payment was not completed. Please try again.");
+      if (paymentIntent && ["succeeded", "requires_capture", "processing"].includes(paymentIntent.status)) {
+        await finalize(intent.checkoutId, paymentIntent.id);
+      } else {
+        throw new Error("Payment was not completed. Please try again.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Your payment could not be processed.");
     }
     setProcessing(false);
   };
@@ -379,7 +420,7 @@ function StripePaymentForm({
 
       <Button
         type="submit"
-        disabled={!stripe || busy || !termsAccepted}
+        disabled={!stripe || !ready || busy || !termsAccepted}
         size="lg"
         className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-14 text-base rounded-xl disabled:opacity-60"
       >
@@ -391,7 +432,7 @@ function StripePaymentForm({
         ) : (
           <>
             <Lock className="mr-2 w-4 h-4" />
-            Pay ${money(total)} · Confirm Booking
+            {payLabel(total, hold)}
           </>
         )}
       </Button>
@@ -402,15 +443,19 @@ function StripePaymentForm({
 // ── Simulated payment form (no Stripe keys) ────────────────────────────────────
 function SimulatedPaymentForm({
   total,
+  hold,
   primary,
-  onPaid,
+  prepareIntent,
+  finalize,
   submitting,
   paymentError,
   blockedReason,
 }: {
   total: number;
+  hold: boolean;
   primary: Passenger;
-  onPaid: (paymentIntentId: string) => Promise<void>;
+  prepareIntent: PrepareIntent;
+  finalize: FinalizeBooking;
   submitting: boolean;
   paymentError: string;
   blockedReason: string | null;
@@ -421,13 +466,24 @@ function SimulatedPaymentForm({
   const [cvv, setCvv] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState("");
+  const [processing, setProcessing] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (processing || submitting) return;
     if (blockedReason) { setError(blockedReason); return; }
     setError("");
-    await onPaid(`pi_simulated_${Date.now()}`);
+    setProcessing(true);
+    try {
+      const intent = await prepareIntent();
+      await finalize(intent.checkoutId, intent.paymentIntentId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Booking failed.");
+    }
+    setProcessing(false);
   };
+
+  const busy = processing || submitting;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -490,11 +546,11 @@ function SimulatedPaymentForm({
 
       <Button
         type="submit"
-        disabled={submitting || !termsAccepted}
+        disabled={busy || !termsAccepted}
         size="lg"
         className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-14 text-base rounded-xl disabled:opacity-60"
       >
-        {submitting ? (
+        {busy ? (
           <span className="flex items-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
             Creating booking…
@@ -502,7 +558,7 @@ function SimulatedPaymentForm({
         ) : (
           <>
             <Lock className="mr-2 w-4 h-4" />
-            Complete Booking — ${money(total)}
+            {hold ? `Complete Booking — hold $${money(total)}` : `Complete Booking — $${money(total)}`}
           </>
         )}
       </Button>
@@ -511,6 +567,8 @@ function SimulatedPaymentForm({
 }
 
 // ── Parent orchestrator ────────────────────────────────────────────────────────
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export default function Step4Checkout({
   search,
   outbound,
@@ -521,7 +579,7 @@ export default function Step4Checkout({
   onNext,
   onBack,
 }: Props) {
-  const { customer, loading: authLoading } = useAuth();
+  const { customer } = useAuth();
 
   const militaryApproved = customer?.militaryStatus === "approved";
   const militaryPending = customer?.militaryStatus === "pending";
@@ -533,10 +591,16 @@ export default function Step4Checkout({
   const [militaryFileError, setMilitaryFileError] = useState("");
 
   // The discount only reduces THIS booking's price for verified accounts.
+  // Riders awaiting verification get a card HOLD for the full fare instead.
   const discountActive = militaryApproved;
+  const hold = !militaryApproved && (militaryPending || militaryChecked);
   const breakdown = useMemo(
     () => calcPrice(search, { militaryDiscount: discountActive }),
     [search, discountActive],
+  );
+  const discountedIfApproved = useMemo(
+    () => calcPrice(search, { militaryDiscount: true }).total,
+    [search],
   );
 
   // Someone ticking the box must pick a category + upload before paying.
@@ -545,13 +609,22 @@ export default function Step4Checkout({
     ? "Add your category and upload your ID to submit for the discount — or untick the box to continue at full price."
     : null;
 
-  const [mode, setMode] = useState<"loading" | "simulated" | "real" | "error">("loading");
-  const [clientSecret, setClientSecret] = useState("");
-  const [initError, setInitError] = useState("");
+  const [mode, setMode] = useState<"loading" | "simulated" | "real">("loading");
   const [submitting, setSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState("");
 
   const stripePromise = useMemo<Promise<Stripe | null>>(() => getStripeClient(), []);
+  useEffect(() => {
+    let cancelled = false;
+    stripePromise.then((s) => { if (!cancelled) setMode(s ? "real" : "simulated"); });
+    return () => { cancelled = true; };
+  }, [stripePromise]);
+
+  // One checkout (and PaymentIntent) per set of booking choices: a declined
+  // card retries on the SAME PaymentIntent, so a rider can never be charged
+  // twice for one booking. The ID is uploaded at most once per file.
+  const intentRef = useRef<{ key: string; intent: PreparedIntent } | null>(null);
+  const uploadedRef = useRef<File | null>(null);
 
   const handleFileChange = (f: File | null) => {
     setMilitaryFileError("");
@@ -561,120 +634,104 @@ export default function Step4Checkout({
     setMilitaryFile(f);
   };
 
-  // Create the PaymentIntent once auth has resolved, so approved riders are
-  // charged the discounted amount from the start. The charged amount does not
-  // change afterward (approval is locked; the opt-in box never discounts now).
-  useEffect(() => {
-    if (authLoading) return;
+  const prepareIntent: PrepareIntent = async () => {
+    setPaymentError("");
 
-    const amountCents = calcPrice(search, { militaryDiscount: militaryApproved }).totalCents;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/payments/create-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amountCents,
-            customerEmail: primary.email,
-            customerName: primary.name,
-            metadata: {
-              tripFrom: LOCATIONS[search.from].label,
-              tripTo: LOCATIONS[search.to].label,
-              tripDate: outbound.date || search.date,
-              tripTime: outbound.time,
-              customerPhone: primary.phone,
-              passengerName: primary.name.split(" ")[0],
-            },
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Payment initialization failed");
-        if (cancelled) return;
-        setClientSecret(data.clientSecret);
-        setMode(data.simulated ? "simulated" : "real");
-      } catch (err) {
-        if (cancelled) return;
-        setInitError(err instanceof Error ? err.message : "Could not start checkout.");
-        setMode("error");
+    // Not-yet-verified rider opting in: submit the ID for review first, so the
+    // server knows to place a hold rather than charge.
+    if (needsUpload && militaryFile && militaryCategory && uploadedRef.current !== militaryFile) {
+      const fd = new FormData();
+      fd.append("file", militaryFile);
+      fd.append("category", militaryCategory);
+      const nameParts = primary.name.trim().split(/\s+/);
+      fd.append("firstName", nameParts[0] ?? "");
+      fd.append("lastName", nameParts.slice(1).join(" "));
+      fd.append("email", primary.email ?? "");
+      fd.append("phone", primary.phone ?? "");
+      const upRes = await fetch("/api/military/upload", { method: "POST", body: fd });
+      const upData = await upRes.json().catch(() => ({}));
+      if (!upRes.ok) {
+        throw new Error(
+          `${upData.error ?? "We couldn't upload your ID."} Try again, or untick the military box to continue at full price.`,
+        );
       }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading]);
+      uploadedRef.current = militaryFile;
+    }
 
-  // Create the reservation after payment succeeds.
-  const finalizeBooking = async (paymentIntentId: string) => {
+    const militaryDiscountRequested = militaryApproved || militaryPending || militaryChecked;
+    const key = JSON.stringify({ militaryDiscountRequested, customer: customer?.id ?? null });
+    if (intentRef.current?.key === key) return intentRef.current.intent;
+
+    const res = await fetch("/api/payments/create-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tripId: outbound.id,
+        returnTripId: returnSlot?.id ?? null,
+        isRoundTrip: search.roundTrip,
+        adults: search.adults,
+        children: search.children,
+        pets: search.pets,
+        extraBags: search.extraBags,
+        primaryPassenger: primary,
+        additionalPassengers,
+        specialNotes,
+        flights: bookingFlights(search, outbound, returnSlot),
+        militaryDiscountRequested,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? "Could not start checkout. Please try again.");
+    if (data.simulated !== (mode === "simulated")) {
+      throw new Error("Payments are temporarily unavailable. Please try again shortly or call us to book.");
+    }
+    intentRef.current = { key, intent: data as PreparedIntent };
+    return data as PreparedIntent;
+  };
+
+  // After Stripe confirms the payment, create the reservation. If the Stripe
+  // webhook is already doing it, poll until it's done.
+  const finalize: FinalizeBooking = async (checkoutId, paymentIntentId) => {
     setSubmitting(true);
     setPaymentError("");
     try {
-      let bookingCustomerId = customer?.id ?? null;
-      let requestDiscount = militaryApproved;   // verified → discount applies now
-      let pendingResult = false;
-
-      // Not-yet-verified rider opting in: submit the ID for review. The booking
-      // is charged full price; the discount is refunded once an owner/manager approves.
-      if (needsUpload && militaryFile && militaryCategory) {
-        try {
-          const fd = new FormData();
-          fd.append("file", militaryFile);
-          fd.append("category", militaryCategory);
-          const nameParts = primary.name.trim().split(/\s+/);
-          fd.append("firstName", nameParts[0] ?? "");
-          fd.append("lastName", nameParts.slice(1).join(" "));
-          fd.append("email", primary.email ?? "");
-          fd.append("phone", primary.phone ?? "");
-          const upRes = await fetch("/api/military/upload", { method: "POST", body: fd });
-          const upData = await upRes.json();
-          if (upRes.ok && upData.customerId) {
-            bookingCustomerId = upData.customerId;
-            requestDiscount = true;
-            pendingResult = true;
-          }
-          // If the upload fails we still complete the booking at full price so
-          // the rider isn't blocked; they can submit their ID later from Profile.
-        } catch {
-          /* non-fatal — proceed without the military flag */
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const res = await fetch("/api/booking/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ checkoutId, paymentIntentId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          intentRef.current = null;
+          onNext(data.confirmationNumber, data.military ?? { applied: discountActive, pending: hold });
+          return;
         }
+        if (res.status === 202 && data.processing) { await sleep(1500); continue; }
+        // Sold out / mismatch: the server already released the payment.
+        if (res.status === 409 || res.status === 400) { intentRef.current = null; throw new Error(data.error); }
+        throw new Error("PAID_NOT_BOOKED");
       }
-
-      const res = await fetch("/api/booking/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tripId: outbound.id,
-          returnTripId: returnSlot?.id ?? null,
-          customerId: bookingCustomerId,
-          adults: search.adults,
-          children: search.children,
-          pets: search.pets,
-          extraBags: search.extraBags,
-          isRoundTrip: search.roundTrip,
-          primaryPassenger: primary,
-          additionalPassengers,
-          specialNotes,
-          flights: bookingFlights(search, outbound, returnSlot),
-          subtotalCents: breakdown.subtotalCents,
-          totalCents: breakdown.totalCents,
-          stripePaymentIntentId: paymentIntentId,
-          militaryDiscountRequested: requestDiscount,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Booking creation failed");
-      onNext(data.confirmationNumber, { applied: discountActive, pending: pendingResult });
+      throw new Error("PAID_NOT_BOOKED");
     } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
       setPaymentError(
-        err instanceof Error
-          ? `${err.message} Your card was not charged for a duplicate — please contact us if you were billed.`
-          : "Booking failed after payment. Please contact us."
+        msg && msg !== "PAID_NOT_BOOKED"
+          ? msg
+          : "Your payment went through, but confirming your booking is taking longer than usual. " +
+            "Please don't pay again — you'll get a text with your confirmation number shortly. " +
+            "If you don't, contact us at support@contactvolt.com.",
       );
       setSubmitting(false);
     }
   };
 
-  const elementsOptions: StripeElementsOptions = {
-    clientSecret,
+  const elementsOptions = useMemo<StripeElementsOptions>(() => ({
+    mode: "payment",
+    amount: breakdown.totalCents,
+    currency: "usd",
+    captureMethod: hold ? "manual" : "automatic",
+    paymentMethodTypes: ["card"],
     appearance: {
       theme: "night",
       variables: {
@@ -685,7 +742,7 @@ export default function Step4Checkout({
         borderRadius: "12px",
       },
     },
-  };
+  }), [breakdown.totalCents, hold]);
 
   return (
     <div className="space-y-6">
@@ -704,7 +761,10 @@ export default function Step4Checkout({
         </button>
       </div>
 
-      <TripSummary search={search} outbound={outbound} returnSlot={returnSlot} primary={primary} breakdown={breakdown} />
+      <TripSummary
+        search={search} outbound={outbound} returnSlot={returnSlot} primary={primary}
+        breakdown={breakdown} hold={hold} discountedIfApproved={discountedIfApproved}
+      />
 
       <MilitaryDiscountSection
         approved={militaryApproved}
@@ -725,32 +785,26 @@ export default function Step4Checkout({
         </div>
       )}
 
-      {mode === "error" && (
-        <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-red-400 text-sm font-medium">Checkout couldn&apos;t start</p>
-            <p className="text-[#A1A1AA] text-xs mt-0.5">{initError}</p>
-          </div>
-        </div>
-      )}
-
       {mode === "simulated" && (
         <SimulatedPaymentForm
           total={breakdown.total}
+          hold={hold}
           primary={primary}
-          onPaid={finalizeBooking}
+          prepareIntent={prepareIntent}
+          finalize={finalize}
           submitting={submitting}
           paymentError={paymentError}
           blockedReason={blockedReason}
         />
       )}
 
-      {mode === "real" && clientSecret && (
+      {mode === "real" && (
         <Elements stripe={stripePromise} options={elementsOptions}>
           <StripePaymentForm
             total={breakdown.total}
-            onPaid={finalizeBooking}
+            hold={hold}
+            prepareIntent={prepareIntent}
+            finalize={finalize}
             submitting={submitting}
             paymentError={paymentError}
             blockedReason={blockedReason}

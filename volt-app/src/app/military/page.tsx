@@ -48,7 +48,7 @@ const steps = [
   {
     icon: Clock,
     title: "We review it",
-    desc: `Our team checks your ID. Your first booking is charged the regular fare, and we refund the ${MILITARY_DISCOUNT_PERCENT}% to your card as soon as you’re approved.`,
+    desc: `Our team checks your ID. Your first booking places a hold on your card for the regular fare — once you’re approved we charge only ${100 - MILITARY_DISCOUNT_PERCENT}% of it. If we can’t verify your eligibility, the regular fare is charged.`,
   },
   {
     icon: BadgeCheck,

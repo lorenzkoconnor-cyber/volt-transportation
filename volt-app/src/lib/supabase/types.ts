@@ -12,7 +12,7 @@ export type Json =
 export type EmployeeRole = "owner" | "manager" | "office_staff" | "driver";
 export type ReservationStatus = "pending" | "confirmed" | "cancelled" | "no_show" | "completed";
 export type PaymentMethod = "stripe" | "cash" | "comp";
-export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
+export type PaymentStatus = "pending" | "authorized" | "paid" | "refunded" | "failed" | "voided";
 export type VehicleStatus = "active" | "maintenance" | "retired";
 export type NotificationType = "sms" | "email";
 export type TripStatus = "scheduled" | "boarding" | "in_progress" | "completed" | "cancelled";
@@ -168,7 +168,7 @@ export interface Database {
           special_notes: string | null;
           discount_id: string | null;
           is_military: boolean;                 // part of the Military Discount program
-          military_discount_pending: boolean;   // full price charged; discount owed on approval
+          military_discount_pending: boolean;   // verification pending — card held for full fare (or charged in full; 10% refunded on approval)
           subtotal_cents: number;          // stored in cents to avoid float issues
           discount_cents: number;
           total_cents: number;
@@ -210,6 +210,9 @@ export interface Database {
           refunded_at: string | null;
           refunded_by_employee_id: string | null;
           notes: string | null;
+          authorization_expires_at?: string | null;  // card holds (status 'authorized')
+          captured_at?: string | null;
+          captured_by_employee_id?: string | null;
           created_at: string;
           updated_at: string;
         };

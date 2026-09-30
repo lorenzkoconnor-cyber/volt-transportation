@@ -78,7 +78,7 @@ export default function Step5Confirmation({
       <div class="box">
         <table>
           ${rows}
-          <tr class="total"><td>Total Paid</td><td style="text-align:right">$${money(total)}</td></tr>
+          <tr class="total"><td>${military.pending ? "Card Hold (not yet charged)" : "Total Paid"}</td><td style="text-align:right">$${money(total)}</td></tr>
         </table>
       </div>
       <p class="muted" style="margin-top:24px">Thank you for riding with Volt Transportation. Questions? Visit volt-transportation.com</p>
@@ -163,7 +163,7 @@ export default function Step5Confirmation({
           </div>
         )}
         <div className="border-t border-white/10 pt-4 flex items-center justify-between">
-          <span className="text-[#A1A1AA] text-sm">Total Paid</span>
+          <span className="text-[#A1A1AA] text-sm">{military.pending ? "Card Hold (not yet charged)" : "Total Paid"}</span>
           <span className="text-white font-bold text-lg">${money(total)}</span>
         </div>
       </div>
@@ -172,9 +172,9 @@ export default function Step5Confirmation({
         <div className="glass rounded-2xl p-5 text-left border border-yellow-500/25">
           <h3 className="text-yellow-400 font-semibold mb-1 text-sm">Military discount — under review</h3>
           <p className="text-[#A1A1AA] text-sm">
-            Thanks for submitting your ID. We charged the full fare today; once we verify your
-            eligibility, we&apos;ll refund the {MILITARY_DISCOUNT_PERCENT}% to your card and apply the discount automatically to
-            future bookings.
+            Thanks for submitting your ID. Your card has a hold for the full fare — nothing is charged yet.
+            Once we verify your eligibility we charge only {100 - MILITARY_DISCOUNT_PERCENT}% of it (${money(total * (1 - MILITARY_DISCOUNT_PERCENT / 100))}),
+            and the discount applies automatically to future bookings. If we can&apos;t verify it, the full fare is charged.
           </p>
         </div>
       )}

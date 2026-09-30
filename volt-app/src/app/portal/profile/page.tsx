@@ -303,8 +303,9 @@ export default function EditProfilePage() {
                 <div>
                   <p className="text-yellow-400 text-sm font-medium">Under review</p>
                   <p className="text-[#A1A1AA] text-xs mt-0.5">
-                    We&apos;re verifying your ID. Once approved, the discount applies automatically — and
-                    we&apos;ll refund the {MILITARY_DISCOUNT_PERCENT}% on any booking you make in the meantime.
+                    We&apos;re verifying your ID. Bookings you make in the meantime place a hold on your card for
+                    the full fare — once approved we charge only {100 - MILITARY_DISCOUNT_PERCENT}% of it, and the
+                    discount applies automatically after that.
                   </p>
                 </div>
               </div>

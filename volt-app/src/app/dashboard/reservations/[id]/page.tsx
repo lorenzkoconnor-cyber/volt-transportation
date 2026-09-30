@@ -364,8 +364,10 @@ export default function ReservationDetailPage() {
                       p.status === "paid" ? "bg-green-500/15 text-green-400"
                       : p.status === "pending" ? "bg-yellow-500/15 text-yellow-400"
                       : p.status === "refunded" ? "bg-orange-500/15 text-orange-400"
+                      : p.status === "authorized" ? "bg-blue-500/15 text-blue-400"
+                      : p.status === "voided" ? "bg-[#A1A1AA]/15 text-[#A1A1AA]"
                       : "bg-red-500/15 text-red-400"
-                    }`}>{p.status}</span>
+                    }`}>{p.status === "authorized" ? "on hold" : p.status}</span>
                     {p.status === "pending" && (
                       <Button size="sm" variant="outline" disabled={busy}
                         onClick={() => markPaymentPaid(p.id)}
