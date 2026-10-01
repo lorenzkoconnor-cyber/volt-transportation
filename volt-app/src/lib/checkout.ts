@@ -23,6 +23,10 @@ import { getStripeServer } from "@/lib/stripe/server";
 import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
 import { formatTime12h, formatDateLong } from "@/lib/format";
 import { MILITARY_DISCOUNT_RATE, PRICING } from "@/lib/booking";
+import {
+  CODE_ERRORS, codeDiscountCents, codeLabel, codeState, formatCode, normalizeCode,
+  type DiscountCodeTerms,
+} from "@/lib/discount-codes";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
@@ -121,7 +125,9 @@ export interface CheckoutPrice {
 }
 
 // Price is computed HERE from the passenger counts (same PRICING table the
-// site shows) and the customer's verification status:
+// site shows) and either a discount code or the customer's verification status:
+//   • discount code                → code's discount, charged immediately (it
+//                                    replaces the Military Discount; may be free)
 //   • approved account            → 10% off now, charged immediately
 //   • verification pending         → full fare AUTHORIZED only; captured at 90%
 //                                    on approval or 100% on denial
@@ -130,6 +136,7 @@ export function priceCheckout(
   payload: CheckoutPayload,
   militaryRequested: boolean,
   militaryStatus: string | null,
+  code: DiscountCodeTerms | null = null,
 ): CheckoutPrice | { error: string } {
   const oneWayDollars =
     payload.adults * PRICING.adult + payload.children * PRICING.child +
@@ -140,6 +147,10 @@ export function priceCheckout(
     captureMethod: "automatic", isMilitary: false, militaryDiscountPending: false,
   };
 
+  if (code) {
+    const discountCents = codeDiscountCents(subtotalCents, code);
+    return { ...full, discountCents, totalCents: subtotalCents - discountCents };
+  }
   if (!militaryRequested) return full;
   if (militaryStatus === "approved") {
     const discountCents = Math.round(subtotalCents * MILITARY_DISCOUNT_RATE);
@@ -151,6 +162,60 @@ export function priceCheckout(
   return { error: "Please upload your military ID to request the discount, or untick the box to continue at full price." };
 }
 
+// ── Discount codes ────────────────────────────────────────────────────────────
+export interface DiscountCodeRow {
+  id: string;
+  code: string;
+  discount_type: "percent" | "fixed";
+  value: number;
+  expires_at: string;
+  used_at: string | null;
+  revoked_at: string | null;
+  reserved_checkout_id: string | null;
+  reserved_until: string | null;
+}
+
+export function codeTerms(row: DiscountCodeRow): DiscountCodeTerms {
+  return { type: row.discount_type, value: row.value };
+}
+
+// Find a code a rider typed and check it can still be spent.
+export async function lookupDiscountCode(
+  sb: Db,
+  input: string,
+): Promise<{ ok: true; row: DiscountCodeRow } | { ok: false; error: string }> {
+  const code = normalizeCode(input);
+  if (!code) return { ok: false, error: CODE_ERRORS.invalid };
+  const { data: row } = await sb.from("discount_codes").select("*").eq("code", code).maybeSingle();
+  if (!row) return { ok: false, error: CODE_ERRORS.invalid };
+  const state = codeState(row);
+  if (state !== "active") return { ok: false, error: CODE_ERRORS[state] };
+  return { ok: true, row };
+}
+
+// Hold the code for this checkout while the rider pays (30 min), so it can't
+// be spent twice at once. Returns false if another live checkout holds it.
+export async function reserveDiscountCode(sb: Db, codeId: string, checkoutId: string): Promise<boolean> {
+  const now = new Date().toISOString();
+  const { data } = await sb
+    .from("discount_codes")
+    .update({ reserved_checkout_id: checkoutId, reserved_until: new Date(Date.now() + 30 * 60_000).toISOString() })
+    .eq("id", codeId)
+    .is("used_at", null)
+    .is("revoked_at", null)
+    .gt("expires_at", now)
+    .or(`reserved_until.is.null,reserved_until.lt.${now}`)
+    .select("id");
+  return !!data && data.length > 0;
+}
+
+export function describeCode(row: Pick<DiscountCodeRow, "code" | "discount_type" | "value">): string {
+  return `${formatCode(row.code)} (${codeLabel({ type: row.discount_type, value: row.value })})`;
+}
+
+// Sentinel "payment id" for bookings a discount code made free.
+export const FREE_PAYMENT_ID = "free";
+
 // ── Payment verification ──────────────────────────────────────────────────────
 type Verified =
   | { ok: true; pi: Stripe.PaymentIntent | null; chargeId: string | null; captureBefore: string | null }
@@ -158,6 +223,13 @@ type Verified =
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function verifyPayment(stripe: Stripe | null, checkout: any, paymentIntentId: string): Promise<Verified> {
+  // Free booking (discount code covered the whole fare) — nothing to verify,
+  // but ONLY when the server itself priced this checkout at $0.
+  if (checkout.total_cents === 0 || paymentIntentId === FREE_PAYMENT_ID) {
+    return checkout.total_cents === 0 && paymentIntentId === FREE_PAYMENT_ID
+      ? { ok: true, pi: null, chargeId: null, captureBefore: null }
+      : { ok: false, status: 400, error: "Invalid payment reference." };
+  }
   if (!stripe) {
     // Simulated mode (no Stripe keys) — only simulated ids are accepted.
     return isSimulatedPaymentId(paymentIntentId)
@@ -231,7 +303,7 @@ function completedResult(c: any): FinalizeResult {
     ok: true,
     confirmationNumber: c.confirmation_number,
     reservationId: c.reservation_id,
-    military: { applied: c.discount_cents > 0, pending: !!c.military_discount_pending },
+    military: { applied: c.discount_cents > 0 && !c.discount_code_id, pending: !!c.military_discount_pending },
   };
 }
 
@@ -278,6 +350,31 @@ export async function finalizeCheckout(
 
   const payload = checkout.payload as CheckoutPayload;
   const seats = payload.adults + payload.children;
+  const free = checkout.total_cents === 0;
+
+  // Spend the discount code (once, ever). A retry of this same checkout may
+  // re-claim it. If someone else spent it first, a free booking is refused;
+  // a paid one is honoured (the rider already paid the quoted price) and logged.
+  let codeRow: DiscountCodeRow | null = null;
+  if (checkout.discount_code_id) {
+    const { data: spent } = await sb
+      .from("discount_codes")
+      .update({ used_at: new Date().toISOString(), used_checkout_id: checkoutId })
+      .eq("id", checkout.discount_code_id)
+      .or(`used_at.is.null,used_checkout_id.eq.${checkoutId}`)
+      .select("*");
+    codeRow = spent?.[0] ?? null;
+    if (!codeRow) {
+      if (free) {
+        const error = CODE_ERRORS.used;
+        await sb.from("booking_checkouts").update({ status: "failed", error }).eq("id", checkoutId);
+        return { ok: false, status: 409, error };
+      }
+      console.error(`[checkout] discount code on checkout ${checkoutId} was already spent elsewhere — honouring paid booking`);
+      const { data: row } = await sb.from("discount_codes").select("*").eq("id", checkout.discount_code_id).maybeSingle();
+      codeRow = row ?? null;
+    }
+  }
   let outboundHeld = false;
   let returnHeld = false;
   let reservationId: string | null = null;
@@ -311,14 +408,14 @@ export async function finalizeCheckout(
 
     // 2. Seats — atomically fails if the trip filled up since checkout began.
     const { error: seatError } = await sb.rpc("increment_seats_booked", { p_trip_id: payload.tripId, p_count: seats });
-    if (seatError) return await failSoldOut(sb, checkoutId, paymentIntentId, "Sorry — that departure just sold out. Your payment has been released. Please pick another time.");
+    if (seatError) return await failSoldOut(sb, checkoutId, paymentIntentId, checkout.discount_code_id, "Sorry — that departure just sold out. Your payment has been released. Please pick another time.");
     outboundHeld = true;
     if (payload.isRoundTrip && payload.returnTripId) {
       const { error: returnSeatError } = await sb.rpc("increment_seats_booked", { p_trip_id: payload.returnTripId, p_count: seats });
       if (returnSeatError) {
         await sb.rpc("decrement_seats_booked", { p_trip_id: payload.tripId, p_count: seats });
         outboundHeld = false;
-        return await failSoldOut(sb, checkoutId, paymentIntentId, "Sorry — that return departure just sold out. Your payment has been released. Please pick another time.");
+        return await failSoldOut(sb, checkoutId, paymentIntentId, checkout.discount_code_id, "Sorry — that return departure just sold out. Your payment has been released. Please pick another time.");
       }
       returnHeld = true;
     }
@@ -347,6 +444,7 @@ export async function finalizeCheckout(
         total_cents: checkout.total_cents,
         is_military: checkout.is_military,
         military_discount_pending: checkout.military_discount_pending,
+        discount_code_id: checkout.discount_code_id ?? null,
       })
       .select()
       .single();
@@ -355,17 +453,20 @@ export async function finalizeCheckout(
 
     // 4. Payment record — linked to the reservation AND the PaymentIntent.
     const authorized = verified.pi?.status === "requires_capture";
+    const codeNote = codeRow ? `Discount code ${describeCode(codeRow)}.` : null;
     const { error: payError } = await sb.from("payments").insert({
       reservation_id: reservation.id,
-      method: "stripe",
+      method: free ? "comp" : "stripe",
       status: authorized ? "authorized" : "paid",
       amount_cents: checkout.total_cents,
-      stripe_payment_intent_id: paymentIntentId,
+      stripe_payment_intent_id: free ? null : paymentIntentId,
       stripe_charge_id: verified.chargeId,
       refund_amount_cents: 0,
       authorization_expires_at: verified.captureBefore,
       captured_at: authorized ? null : new Date().toISOString(),
-      notes: authorized ? "Card authorized for the full fare — Military Discount verification pending." : null,
+      notes: authorized
+        ? "Card authorized for the full fare — Military Discount verification pending."
+        : free ? `Free booking — ${codeNote}` : codeNote,
     });
     if (payError) throw payError;
 
@@ -412,6 +513,9 @@ export async function finalizeCheckout(
       error: null,
     };
     await sb.from("booking_checkouts").update(done).eq("id", checkoutId);
+    if (codeRow) {
+      await sb.from("discount_codes").update({ used_reservation_id: reservation.id }).eq("id", codeRow.id);
+    }
 
     // ── Everything below is best-effort: the booking is already confirmed. ──
 
@@ -439,6 +543,7 @@ export async function finalizeCheckout(
         payment: authorized ? "authorized" : "paid",
         is_military: checkout.is_military,
         military_discount_pending: checkout.military_discount_pending,
+        discount_code: codeRow ? formatCode(codeRow.code) : null,
         confirmed_by: source,
       },
     });
@@ -458,8 +563,18 @@ export async function finalizeCheckout(
   }
 }
 
-async function failSoldOut(sb: Db, checkoutId: string, paymentIntentId: string, error: string): Promise<FinalizeResult> {
+async function failSoldOut(
+  sb: Db, checkoutId: string, paymentIntentId: string, discountCodeId: string | null, error: string,
+): Promise<FinalizeResult> {
   await releasePayment(paymentIntentId, "sold_out");
+  // No booking was made, so the rider keeps their (unexpired) code.
+  if (discountCodeId) {
+    await sb.from("discount_codes")
+      .update({ used_at: null, used_checkout_id: null })
+      .eq("id", discountCodeId)
+      .eq("used_checkout_id", checkoutId)
+      .is("used_reservation_id", null);
+  }
   await sb.from("booking_checkouts").update({ status: "failed", error }).eq("id", checkoutId);
   return { ok: false, status: 409, error };
 }

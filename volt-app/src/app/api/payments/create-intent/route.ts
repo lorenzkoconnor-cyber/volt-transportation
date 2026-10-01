@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getStripeServer } from "@/lib/stripe/server";
-import { createAdminDb, findCustomer, normalizePayload, priceCheckout } from "@/lib/checkout";
+import {
+  codeTerms, createAdminDb, findCustomer, lookupDiscountCode, normalizePayload, priceCheckout,
+  reserveDiscountCode, FREE_PAYMENT_ID, type DiscountCodeRow,
+} from "@/lib/checkout";
+import { CODE_ERRORS } from "@/lib/discount-codes";
 
 // POST /api/payments/create-intent
 // Called when the rider clicks Pay. Body: the booking details from Step 4
-// (trips, passenger counts, passengers, flights) + militaryDiscountRequested.
+// (trips, passenger counts, passengers, flights) + militaryDiscountRequested
+// + optional discountCode (replaces the Military Discount when present).
 //
 // The amount is computed HERE from the booking details — anything price-like
 // sent by the browser is ignored. Creates a booking_checkouts row and exactly
 // one PaymentIntent for it (idempotency key = checkout id), then returns the
 // clientSecret for the Payment Element.
 //
-// Returns: { checkoutId, clientSecret, paymentIntentId, amountCents, captureMethod, simulated }
+// Returns: { checkoutId, clientSecret, paymentIntentId, amountCents, captureMethod, simulated, free }
+// A code that covers the whole fare returns free: true and no PaymentIntent.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -47,11 +53,23 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await authed.auth.getUser();
     const customer = await findCustomer(sb, user?.id ?? null, payload);
 
-    const price = priceCheckout(payload, !!body.militaryDiscountRequested, customer?.military_status ?? null);
+    let code: DiscountCodeRow | null = null;
+    if (body.discountCode) {
+      const found = await lookupDiscountCode(sb, String(body.discountCode));
+      if (!found.ok) return NextResponse.json({ error: found.error, codeError: true }, { status: 400 });
+      code = found.row;
+    }
+
+    const price = priceCheckout(
+      payload,
+      !code && !!body.militaryDiscountRequested,
+      customer?.military_status ?? null,
+      code ? codeTerms(code) : null,
+    );
     if ("error" in price) {
       return NextResponse.json({ error: price.error }, { status: 400 });
     }
-    if (price.totalCents < 50) {
+    if (price.totalCents !== 0 && price.totalCents < 50) {
       return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
     }
 
@@ -66,10 +84,16 @@ export async function POST(request: NextRequest) {
         capture_method: price.captureMethod,
         is_military: price.isMilitary,
         military_discount_pending: price.militaryDiscountPending,
+        discount_code_id: code?.id ?? null,
       })
       .select("id")
       .single();
     if (checkoutError || !checkout) throw checkoutError ?? new Error("Could not start checkout");
+
+    if (code && !(await reserveDiscountCode(sb, code.id, checkout.id))) {
+      await sb.from("booking_checkouts").update({ status: "failed", error: CODE_ERRORS.busy }).eq("id", checkout.id);
+      return NextResponse.json({ error: CODE_ERRORS.busy, codeError: true }, { status: 409 });
+    }
 
     const response = {
       checkoutId: checkout.id,
@@ -77,12 +101,19 @@ export async function POST(request: NextRequest) {
       captureMethod: price.captureMethod,
     };
 
+    // ── Free booking: the code covers the whole fare — no card needed ───────
+    if (price.totalCents === 0) {
+      return NextResponse.json({
+        ...response, clientSecret: "", paymentIntentId: FREE_PAYMENT_ID, simulated: false, free: true,
+      });
+    }
+
     // ── Simulated mode (no Stripe keys) ──────────────────────────────────────
     const stripe = getStripeServer();
     if (!stripe) {
       const fakeId = `pi_simulated_${Date.now()}`;
       await sb.from("booking_checkouts").update({ stripe_payment_intent_id: fakeId }).eq("id", checkout.id);
-      return NextResponse.json({ ...response, clientSecret: `${fakeId}_secret_simulated`, paymentIntentId: fakeId, simulated: true });
+      return NextResponse.json({ ...response, clientSecret: `${fakeId}_secret_simulated`, paymentIntentId: fakeId, simulated: true, free: false });
     }
 
     // ── Real Stripe ──────────────────────────────────────────────────────────
@@ -110,7 +141,8 @@ export async function POST(request: NextRequest) {
           customer_phone: payload.primaryPassenger.phone,
           trip_date: outbound?.departure_date ?? "",
           trip_time: outbound?.departure_time ?? "",
-          military_discount: price.militaryDiscountPending ? "pending_verification" : price.discountCents > 0 ? "applied" : "none",
+          military_discount: price.militaryDiscountPending ? "pending_verification" : price.isMilitary ? "applied" : "none",
+          discount_code: code?.code ?? "",
         },
       },
       { idempotencyKey: `volt-checkout-${checkout.id}` },
@@ -126,6 +158,7 @@ export async function POST(request: NextRequest) {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       simulated: false,
+      free: false,
     });
   } catch (err) {
     console.error("[create-intent]", err);

@@ -16,6 +16,7 @@ import {
   slotTimes,
 } from "@/lib/booking";
 import type { MilitaryResult } from "@/components/booking/Step4Checkout";
+import { codeLabel } from "@/lib/discount-codes";
 
 interface Props {
   confirmationNumber: string;
@@ -34,7 +35,13 @@ export default function Step5Confirmation({
   primary,
   military = { applied: false, pending: false },
 }: Props) {
-  const { lines, discountCents, total } = calcPrice(search, { militaryDiscount: military.applied });
+  const priced = calcPrice(search, { militaryDiscount: military.applied && !military.code });
+  const { lines } = priced;
+  const discountCents = military.code ? military.code.discountCents ?? 0 : priced.discountCents;
+  const total = (priced.subtotalCents - discountCents) / 100;
+  const discountLabel = military.code
+    ? `Discount Code ${military.code.code} (${codeLabel(military.code)})`
+    : `Military Discount (−${MILITARY_DISCOUNT_PERCENT}%)`;
   const outboundFlight = search.hasFlight ? flightSummary(search.outboundFlight, flightDirection(search.from)) : "";
   const returnFlight = search.hasFlight && returnSlot ? flightSummary(search.returnFlight, flightDirection(search.to)) : "";
   const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -44,7 +51,7 @@ export default function Step5Confirmation({
       .map((l) => `<tr><td>${l.label}</td><td style="text-align:right">$${l.amount}</td></tr>`)
       .join("") +
       (discountCents > 0
-        ? `<tr><td style="color:#059669">Military Discount (−${MILITARY_DISCOUNT_PERCENT}%)</td><td style="text-align:right;color:#059669">−$${money(discountCents / 100)}</td></tr>`
+        ? `<tr><td style="color:#059669">${esc(discountLabel)}</td><td style="text-align:right;color:#059669">−$${money(discountCents / 100)}</td></tr>`
         : "");
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Volt Receipt ${confirmationNumber}</title>
       <style>
@@ -158,7 +165,7 @@ export default function Step5Confirmation({
         </div>
         {discountCents > 0 && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-green-400">Military Discount (−{MILITARY_DISCOUNT_PERCENT}%)</span>
+            <span className="text-green-400">{discountLabel}</span>
             <span className="text-green-400">−${money(discountCents / 100)}</span>
           </div>
         )}

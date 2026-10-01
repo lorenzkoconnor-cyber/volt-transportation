@@ -11,7 +11,7 @@ import type { Stripe, StripeElementsOptions } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Lock, CreditCard, Shield, AlertCircle, Loader2, BadgeCheck, Clock, Upload, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Lock, CreditCard, Shield, AlertCircle, Loader2, BadgeCheck, Clock, Upload, ShieldCheck, Ticket, X } from "lucide-react";
 import {
   type BookingSearch,
   type Passenger,
@@ -34,12 +34,19 @@ import {
   type MilitaryCategory,
 } from "@/lib/military";
 import { getStripeClient } from "@/lib/stripe/client";
+import { codeDiscountCents, codeLabel, type DiscountCodeTerms } from "@/lib/discount-codes";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 
 export interface MilitaryResult {
   applied: boolean;   // discount taken off this booking now (verified account)
   pending: boolean;   // card held for the full fare; captured at 90% once approved
+  code?: AppliedCode | null;   // a one-time discount code was used instead
+}
+
+export interface AppliedCode extends DiscountCodeTerms {
+  code: string;            // normalized, e.g. "K7MPQ2XR"
+  discountCents?: number;  // filled in once applied to this booking
 }
 
 interface Props {
@@ -62,6 +69,7 @@ function TripSummary({
   breakdown,
   hold,
   discountedIfApproved,
+  discountLabel,
 }: {
   search: BookingSearch;
   outbound: DepartureSlot;
@@ -70,6 +78,7 @@ function TripSummary({
   breakdown: PriceBreakdown;
   hold: boolean;
   discountedIfApproved: number;
+  discountLabel: string;
 }) {
   const { lines, discountCents, total } = breakdown;
   return (
@@ -110,7 +119,7 @@ function TripSummary({
         ))}
         {discountCents > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-green-400">Military Discount (−{MILITARY_DISCOUNT_PERCENT}%)</span>
+            <span className="text-green-400">{discountLabel}</span>
             <span className="text-green-400">−${money(discountCents / 100)}</span>
           </div>
         )}
@@ -257,6 +266,180 @@ function MilitaryDiscountSection({
   );
 }
 
+// ── One-time discount code ─────────────────────────────────────────────────────
+function DiscountCodeSection({
+  applied,
+  onApplied,
+  onRemove,
+  externalError,
+  disabled,
+  smallerThanMilitary,
+}: {
+  applied: AppliedCode | null;
+  onApplied: (c: AppliedCode) => void;
+  onRemove: () => void;
+  externalError: string;
+  disabled: boolean;
+  smallerThanMilitary: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState("");
+
+  const apply = async () => {
+    if (!input.trim()) return;
+    setChecking(true);
+    setError("");
+    try {
+      const res = await fetch("/api/discount-codes/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: input }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "That code isn't valid.");
+      onApplied({ code: data.code, type: data.type, value: data.value });
+      setInput("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "That code isn't valid.");
+    }
+    setChecking(false);
+  };
+
+  if (applied) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start gap-3 bg-green-500/10 border border-green-500/25 rounded-xl p-4">
+          <Ticket className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-green-400 text-sm font-medium">
+              Code <span className="font-mono">{applied.code}</span> applied — {codeLabel(applied)}
+            </p>
+            <p className="text-[#A1A1AA] text-xs mt-0.5">
+              One-time code. It&apos;s used up once this booking is confirmed. Codes can&apos;t be combined with the
+              Military Discount.
+            </p>
+          </div>
+          <button type="button" onClick={onRemove} disabled={disabled}
+            className="text-[#A1A1AA] hover:text-white transition-colors disabled:opacity-50" aria-label="Remove code">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {smallerThanMilitary && (
+          <p className="text-yellow-400 text-xs px-1">
+            Your {MILITARY_DISCOUNT_PERCENT}% military discount saves more than this code — remove the code to keep it.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const shownError = error || externalError;
+  return (
+    <div className="glass rounded-2xl p-5">
+      {!open && !shownError ? (
+        <button type="button" onClick={() => setOpen(true)}
+          className="flex items-center gap-2 text-sm text-[#A1A1AA] hover:text-white transition-colors">
+          <Ticket className="w-4 h-4 text-[#FCC300]" />
+          Have a discount code from Volt?
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-white text-sm font-medium">
+            <Ticket className="w-4 h-4 text-[#FCC300]" /> Discount code
+          </label>
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); apply(); } }}
+              placeholder="Enter code"
+              maxLength={30}
+              autoComplete="off"
+              className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl font-mono tracking-wider focus:border-[#FCC300]"
+            />
+            <Button type="button" onClick={apply} disabled={checking || !input.trim() || disabled}
+              className="bg-white/10 hover:bg-white/15 text-white h-11 rounded-xl px-5">
+              {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+            </Button>
+          </div>
+          {shownError && <p className="text-red-400 text-xs">{shownError}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Free booking (a discount code covers the whole fare) ───────────────────────
+function FreeBookingForm({
+  prepareIntent,
+  finalize,
+  submitting,
+  paymentError,
+}: {
+  prepareIntent: PrepareIntent;
+  finalize: FinalizeBooking;
+  submitting: boolean;
+  paymentError: string;
+}) {
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [error, setError] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (processing || submitting) return;
+    setError("");
+    setProcessing(true);
+    try {
+      const intent = await prepareIntent();
+      if (!intent.free) throw new Error("This booking now needs a payment. Please refresh and try again.");
+      await finalize(intent.checkoutId, intent.paymentIntentId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Booking failed.");
+    }
+    setProcessing(false);
+  };
+
+  const busy = processing || submitting;
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex items-start gap-3 bg-green-500/10 border border-green-500/25 rounded-xl p-4">
+        <BadgeCheck className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-green-400 text-sm font-medium">No payment needed</p>
+          <p className="text-[#A1A1AA] text-xs mt-0.5">Your discount code covers the whole fare — no card required.</p>
+        </div>
+      </div>
+
+      {(error || paymentError) && (
+        <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-red-400 text-sm">{error || paymentError}</p>
+        </div>
+      )}
+
+      <div className="glass rounded-xl p-4">
+        <TermsLine checked={termsAccepted} onChange={setTermsAccepted} />
+      </div>
+
+      <Button
+        type="submit"
+        disabled={busy || !termsAccepted}
+        size="lg"
+        className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-14 text-base rounded-xl disabled:opacity-60"
+      >
+        {busy ? (
+          <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Confirming booking…</span>
+        ) : (
+          <>Confirm Free Booking</>
+        )}
+      </Button>
+    </form>
+  );
+}
+
 function TrustBadges() {
   return (
     <div className="flex items-center justify-center gap-6">
@@ -304,6 +487,7 @@ interface PreparedIntent {
   amountCents: number;
   captureMethod: "automatic" | "manual";
   simulated: boolean;
+  free: boolean;   // discount code covers the whole fare — no card
 }
 type PrepareIntent = () => Promise<PreparedIntent>;
 type FinalizeBooking = (checkoutId: string, paymentIntentId: string) => Promise<void>;
@@ -590,21 +774,34 @@ export default function Step4Checkout({
   const [militaryFile, setMilitaryFile] = useState<File | null>(null);
   const [militaryFileError, setMilitaryFileError] = useState("");
 
-  // The discount only reduces THIS booking's price for verified accounts.
-  // Riders awaiting verification get a card HOLD for the full fare instead.
-  const discountActive = militaryApproved;
-  const hold = !militaryApproved && (militaryPending || militaryChecked);
-  const breakdown = useMemo(
-    () => calcPrice(search, { militaryDiscount: discountActive }),
-    [search, discountActive],
-  );
+  // One-time discount code — replaces the Military Discount when applied.
+  const [appliedCode, setAppliedCode] = useState<AppliedCode | null>(null);
+  const [codeError, setCodeError] = useState("");
+
+  // The military discount only reduces THIS booking's price for verified
+  // accounts. Riders awaiting verification get a card HOLD for the full fare.
+  const discountActive = militaryApproved && !appliedCode;
+  const hold = !appliedCode && !militaryApproved && (militaryPending || militaryChecked);
+  const breakdown = useMemo(() => {
+    if (!appliedCode) return calcPrice(search, { militaryDiscount: discountActive });
+    const base = calcPrice(search);
+    const discountCents = codeDiscountCents(base.subtotalCents, appliedCode);
+    const totalCents = base.subtotalCents - discountCents;
+    return { ...base, discountCents, discount: discountCents / 100, totalCents, total: totalCents / 100 };
+  }, [search, discountActive, appliedCode]);
+  const free = !!appliedCode && breakdown.totalCents === 0;
+  const discountLabel = appliedCode
+    ? `Discount Code ${appliedCode.code} (${codeLabel(appliedCode)})`
+    : `Military Discount (−${MILITARY_DISCOUNT_PERCENT}%)`;
+  const codeSmallerThanMilitary = !!appliedCode && militaryApproved &&
+    breakdown.discountCents < calcPrice(search, { militaryDiscount: true }).discountCents;
   const discountedIfApproved = useMemo(
     () => calcPrice(search, { militaryDiscount: true }).total,
     [search],
   );
 
   // Someone ticking the box must pick a category + upload before paying.
-  const needsUpload = !militaryApproved && !militaryPending && militaryChecked;
+  const needsUpload = !appliedCode && !militaryApproved && !militaryPending && militaryChecked;
   const blockedReason = needsUpload && (!militaryCategory || !militaryFile)
     ? "Add your category and upload your ID to submit for the discount — or untick the box to continue at full price."
     : null;
@@ -658,8 +855,9 @@ export default function Step4Checkout({
       uploadedRef.current = militaryFile;
     }
 
-    const militaryDiscountRequested = militaryApproved || militaryPending || militaryChecked;
-    const key = JSON.stringify({ militaryDiscountRequested, customer: customer?.id ?? null });
+    const militaryDiscountRequested = !appliedCode && (militaryApproved || militaryPending || militaryChecked);
+    const discountCode = appliedCode?.code ?? null;
+    const key = JSON.stringify({ militaryDiscountRequested, discountCode, customer: customer?.id ?? null });
     if (intentRef.current?.key === key) return intentRef.current.intent;
 
     const res = await fetch("/api/payments/create-intent", {
@@ -678,11 +876,15 @@ export default function Step4Checkout({
         specialNotes,
         flights: bookingFlights(search, outbound, returnSlot),
         militaryDiscountRequested,
+        discountCode,
       }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error ?? "Could not start checkout. Please try again.");
-    if (data.simulated !== (mode === "simulated")) {
+    if (!res.ok) {
+      if (data.codeError) { setAppliedCode(null); setCodeError(data.error); }
+      throw new Error(data.error ?? "Could not start checkout. Please try again.");
+    }
+    if (!data.free && data.simulated !== (mode === "simulated")) {
       throw new Error("Payments are temporarily unavailable. Please try again shortly or call us to book.");
     }
     intentRef.current = { key, intent: data as PreparedIntent };
@@ -704,7 +906,10 @@ export default function Step4Checkout({
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           intentRef.current = null;
-          onNext(data.confirmationNumber, data.military ?? { applied: discountActive, pending: hold });
+          onNext(data.confirmationNumber, {
+            ...(data.military ?? { applied: discountActive, pending: hold }),
+            code: appliedCode ? { ...appliedCode, discountCents: breakdown.discountCents } : null,
+          });
           return;
         }
         if (res.status === 202 && data.processing) { await sleep(1500); continue; }
@@ -764,9 +969,10 @@ export default function Step4Checkout({
       <TripSummary
         search={search} outbound={outbound} returnSlot={returnSlot} primary={primary}
         breakdown={breakdown} hold={hold} discountedIfApproved={discountedIfApproved}
+        discountLabel={discountLabel}
       />
 
-      <MilitaryDiscountSection
+      {!appliedCode && <MilitaryDiscountSection
         approved={militaryApproved}
         pending={militaryPending}
         checked={militaryChecked}
@@ -776,16 +982,34 @@ export default function Step4Checkout({
         fileName={militaryFile?.name ?? ""}
         fileError={militaryFileError}
         onFileChange={handleFileChange}
+      />}
+
+      <DiscountCodeSection
+        applied={appliedCode}
+        onApplied={(c) => { setAppliedCode(c); setCodeError(""); intentRef.current = null; }}
+        onRemove={() => { setAppliedCode(null); intentRef.current = null; }}
+        externalError={codeError}
+        disabled={submitting}
+        smallerThanMilitary={codeSmallerThanMilitary}
       />
 
-      {mode === "loading" && (
+      {free && (
+        <FreeBookingForm
+          prepareIntent={prepareIntent}
+          finalize={finalize}
+          submitting={submitting}
+          paymentError={paymentError}
+        />
+      )}
+
+      {!free && mode === "loading" && (
         <div className="glass rounded-2xl p-10 flex flex-col items-center gap-3">
           <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
           <p className="text-[#A1A1AA] text-sm">Preparing secure checkout…</p>
         </div>
       )}
 
-      {mode === "simulated" && (
+      {!free && mode === "simulated" && (
         <SimulatedPaymentForm
           total={breakdown.total}
           hold={hold}
@@ -798,7 +1022,7 @@ export default function Step4Checkout({
         />
       )}
 
-      {mode === "real" && (
+      {!free && mode === "real" && (
         <Elements stripe={stripePromise} options={elementsOptions}>
           <StripePaymentForm
             total={breakdown.total}
