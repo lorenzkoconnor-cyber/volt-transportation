@@ -62,7 +62,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         mobileOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <main className="flex-1 min-h-screen lg:ml-64">
+      <main className="flex-1 min-w-0 min-h-screen lg:ml-64">
         {/* Mobile top bar with hamburger toggle */}
         <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 bg-[#0F0F0F]/95 backdrop-blur-xl border-b border-white/6">
           <button
@@ -74,7 +74,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex items-center gap-2.5">
             <Logo className="h-7 w-auto" />
-            <span className="flex flex-col text-[#FCC300] text-[10px] leading-tight font-semibold uppercase tracking-[0.2em] border-l border-white/10 pl-2.5"><span>Team</span><span>Portal</span></span>
+            <span className="flex flex-col text-[#FCC300] text-xs leading-tight font-semibold uppercase tracking-[0.2em] border-l border-white/10 pl-2.5"><span>Team</span><span>Portal</span></span>
           </div>
         </div>
 

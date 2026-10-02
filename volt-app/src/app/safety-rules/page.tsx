@@ -61,7 +61,7 @@ const sections = [
   {
     title: "Check-In Requirements",
     items: [
-      "Passengers must arrive at the pickup location at least 10 minutes before the scheduled departure.",
+      "Passengers must arrive at the pickup location at least 20 minutes before the scheduled departure.",
       "The shuttle will depart on schedule. Volt cannot hold the vehicle for late arrivals.",
       "If you are running late, contact us immediately — we will do our best to accommodate you.",
       "Have your confirmation number ready at pickup.",

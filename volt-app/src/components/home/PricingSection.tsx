@@ -11,7 +11,6 @@ const pricing = [
 
 const included = [
   "Complimentary bottled water",
-  "USB charging at every seat",
   "Luggage assistance",
   "Professional chauffeur",
   "Real-time trip updates",

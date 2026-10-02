@@ -29,7 +29,7 @@ const steps = [
     number: "03",
     icon: MapPin,
     title: "Arrive at Your Pickup Location",
-    desc: "Head to our Columbus pickup location at 3885 Miller Road, Suite C at least 10 minutes before your scheduled departure time.",
+    desc: "Head to our Columbus pickup location at 3885 Miller Road, Suite C at least 20 minutes before your scheduled departure time.",
   },
   {
     number: "04",
@@ -41,7 +41,7 @@ const steps = [
     number: "05",
     icon: Coffee,
     title: "Relax and Enjoy the Ride",
-    desc: "Sit back in your spacious Ford Transit Passenger Van. Enjoy complimentary water, USB charging, and a smooth, comfortable ride.",
+    desc: "Sit back in your spacious Ford Transit Passenger Van. Enjoy complimentary water and a smooth, comfortable ride.",
   },
   {
     number: "06",
@@ -113,7 +113,7 @@ export default function HowItWorksPage() {
             <h2 className="text-2xl font-bold text-white mb-8 text-center">Helpful Tips</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { tip: "Arrive 10 minutes early", detail: "The shuttle departs on time. Don't miss it by being late to the pickup point." },
+                { tip: "Arrive 20 minutes early", detail: "The shuttle departs on time. Don't miss it by being late to the pickup point." },
                 { tip: "Pack light when possible", detail: "Each passenger can bring one bag free. Extra bags are $10 each." },
                 { tip: "Save your confirmation number", detail: "You'll need it if you need to manage or modify your reservation." },
                 { tip: "Bring your boarding pass", detail: "Have your flight info handy — your driver may ask about your terminal for drop-off." },

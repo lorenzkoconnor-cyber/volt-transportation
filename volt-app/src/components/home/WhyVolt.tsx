@@ -24,7 +24,7 @@ const features = [
     icon: Star,
     title: "Premium Amenities",
     description:
-      "Complimentary bottled water, USB charging at every seat, and full luggage assistance included.",
+      "Complimentary bottled water and full luggage assistance included.",
   },
 ];
 

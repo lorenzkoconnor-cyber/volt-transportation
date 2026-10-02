@@ -206,100 +206,105 @@ function EmployeesContent() {
 
       {/* Employee table */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
-          <div className="col-span-3">Name</div>
-          <div className="col-span-3">Contact</div>
-          <div className="col-span-2">Role</div>
-          <div className="col-span-2 text-center">Status</div>
-          <div className="col-span-2 text-right">Actions</div>
-        </div>
+        {/* Scrolls sideways on phones instead of squeezing the columns */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[760px]">
+            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
+              <div className="col-span-3">Name</div>
+              <div className="col-span-3">Contact</div>
+              <div className="col-span-2">Role</div>
+              <div className="col-span-2 text-center">Status</div>
+              <div className="col-span-2 text-right">Actions</div>
+            </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
-          </div>
-        ) : employees.length === 0 ? (
-          <div className="flex flex-col items-center py-16 gap-3">
-            <Shield className="w-8 h-8 text-[#A1A1AA]" />
-            <p className="text-[#A1A1AA] text-sm">No employees yet — invite your first team member above.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {employees.map((emp) => {
-              const roleInfo = ROLE_STYLES[emp.role] ?? ROLE_STYLES.driver;
-              const RoleIcon = roleInfo.icon;
-              return (
-                <div key={emp.id} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center">
-                  <div className="col-span-3 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                      {emp.first_name[0]}{emp.last_name[0]}
-                    </div>
-                    <span className="text-white font-medium text-sm truncate">
-                      {emp.first_name} {emp.last_name}
-                    </span>
-                  </div>
-                  <div className="col-span-3 min-w-0">
-                    <div className="flex items-center gap-1 text-[#A1A1AA] text-xs mb-0.5 truncate">
-                      <Mail className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">{emp.email}</span>
-                    </div>
-                    {emp.phone && (
-                      <div className="flex items-center gap-1 text-[#A1A1AA] text-xs">
-                        <Phone className="w-3 h-3" />{emp.phone}
+            {loading ? (
+              <div className="flex items-center justify-center py-16 sticky left-0 max-w-[calc(100vw-2rem)] lg:max-w-none">
+                <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
+              </div>
+            ) : employees.length === 0 ? (
+              <div className="flex flex-col items-center py-16 gap-3 sticky left-0 max-w-[calc(100vw-2rem)] lg:max-w-none">
+                <Shield className="w-8 h-8 text-[#A1A1AA]" />
+                <p className="text-[#A1A1AA] text-sm">No employees yet — invite your first team member above.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {employees.map((emp) => {
+                  const roleInfo = ROLE_STYLES[emp.role] ?? ROLE_STYLES.driver;
+                  const RoleIcon = roleInfo.icon;
+                  return (
+                    <div key={emp.id} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center">
+                      <div className="col-span-3 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                          {emp.first_name[0]}{emp.last_name[0]}
+                        </div>
+                        <span className="text-white font-medium text-sm truncate">
+                          {emp.first_name} {emp.last_name}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                  <div className="col-span-2">
-                    {emp.role === "owner" ? (
-                      <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium w-fit ${roleInfo.class}`}>
-                        <RoleIcon className="w-3 h-3" />{roleInfo.label}
-                      </span>
-                    ) : (
-                      <select
-                        value={emp.role}
-                        onChange={(e) => changeRole(emp, e.target.value)}
-                        className="bg-[#171717] border border-white/10 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#FCC300]"
-                      >
-                        <option value="manager">Manager</option>
-                        <option value="office_staff">Office Staff</option>
-                        <option value="driver">Driver</option>
-                      </select>
-                    )}
-                  </div>
-                  <div className="col-span-2 flex justify-center">
-                    <span className={`flex items-center gap-1 text-xs font-medium ${emp.is_active ? "text-green-400" : "text-red-400"}`}>
-                      {emp.is_active
-                        ? <><CheckCircle2 className="w-3.5 h-3.5" />Active</>
-                        : <><XCircle className="w-3.5 h-3.5" />Inactive</>
-                      }
-                    </span>
-                  </div>
-                  <div className="col-span-2 flex justify-end gap-3">
-                    <button
-                      onClick={() => { setResetTarget(emp); setResetPassword(""); setResetError(""); setResetSuccess(""); }}
-                      className="text-xs text-[#A1A1AA] hover:text-[#FCC300] transition-colors"
-                      title="Reset password"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                    </button>
-                    {emp.role !== "owner" && (
-                      <button
-                        onClick={() => toggleActive(emp)}
-                        className={`text-xs transition-colors ${
-                          emp.is_active
-                            ? "text-[#A1A1AA] hover:text-red-400"
-                            : "text-[#A1A1AA] hover:text-green-400"
-                        }`}
-                      >
-                        {emp.is_active ? "Deactivate" : "Reactivate"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                      <div className="col-span-3 min-w-0">
+                        <div className="flex items-center gap-1 text-[#A1A1AA] text-xs mb-0.5 truncate">
+                          <Mail className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{emp.email}</span>
+                        </div>
+                        {emp.phone && (
+                          <div className="flex items-center gap-1 text-[#A1A1AA] text-xs">
+                            <Phone className="w-3 h-3" />{emp.phone}
+                          </div>
+                        )}
+                      </div>
+                      <div className="col-span-2">
+                        {emp.role === "owner" ? (
+                          <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium w-fit ${roleInfo.class}`}>
+                            <RoleIcon className="w-3 h-3" />{roleInfo.label}
+                          </span>
+                        ) : (
+                          <select
+                            value={emp.role}
+                            onChange={(e) => changeRole(emp, e.target.value)}
+                            className="bg-[#171717] border border-white/10 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#FCC300]"
+                          >
+                            <option value="manager">Manager</option>
+                            <option value="office_staff">Office Staff</option>
+                            <option value="driver">Driver</option>
+                          </select>
+                        )}
+                      </div>
+                      <div className="col-span-2 flex justify-center">
+                        <span className={`flex items-center gap-1 text-xs font-medium ${emp.is_active ? "text-green-400" : "text-red-400"}`}>
+                          {emp.is_active
+                            ? <><CheckCircle2 className="w-3.5 h-3.5" />Active</>
+                            : <><XCircle className="w-3.5 h-3.5" />Inactive</>
+                          }
+                        </span>
+                      </div>
+                      <div className="col-span-2 flex justify-end gap-3">
+                        <button
+                          onClick={() => { setResetTarget(emp); setResetPassword(""); setResetError(""); setResetSuccess(""); }}
+                          className="text-xs text-[#A1A1AA] hover:text-[#FCC300] transition-colors"
+                          title="Reset password"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                        </button>
+                        {emp.role !== "owner" && (
+                          <button
+                            onClick={() => toggleActive(emp)}
+                            className={`text-xs transition-colors ${
+                              emp.is_active
+                                ? "text-[#A1A1AA] hover:text-red-400"
+                                : "text-[#A1A1AA] hover:text-green-400"
+                            }`}
+                          >
+                            {emp.is_active ? "Deactivate" : "Reactivate"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* How it works note */}

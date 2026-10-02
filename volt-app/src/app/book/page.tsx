@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import StepIndicator from "@/components/booking/StepIndicator";
@@ -16,12 +16,57 @@ import {
   type Passenger,
   EMPTY_FLIGHT,
 } from "@/lib/booking";
+import { localDateString } from "@/lib/format";
+
+// In-progress booking, kept for this browser tab so a refresh doesn't lose it.
+// Tied to the URL it started from: arriving with a new search starts fresh.
+const STORAGE_KEY = "volt-booking-progress-v1";
+
+interface SavedProgress {
+  query: string;
+  step: number;
+  search: BookingSearch;
+  outbound: DepartureSlot | null;
+  returnSlot: DepartureSlot | null;
+  primary: Passenger;
+  additionalPassengers: string[];
+  specialNotes: string;
+}
+
+function loadProgress(query: string): SavedProgress | null {
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as SavedProgress;
+    return saved.query === query && saved.search ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearProgress() {
+  try { window.sessionStorage.removeItem(STORAGE_KEY); } catch { /* storage unavailable */ }
+}
+
+function slotHasLeft(slot: DepartureSlot): boolean {
+  const now = new Date();
+  const nowKey = `${localDateString(now)}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  return !!slot.date && `${slot.date}T${slot.time}` <= nowKey;
+}
 
 function BookingFlow() {
   const params = useSearchParams();
 
-  const [step, setStep] = useState(1);
-  const [search, setSearch] = useState<BookingSearch>({
+  const query = params.toString();
+  // Progress saved before a refresh. A departure that has since left can't be
+  // booked, so the rider picks again from Step 2.
+  const [saved] = useState(() => loadProgress(query));
+  const savedSlotsValid = !!saved?.outbound && !slotHasLeft(saved.outbound) &&
+    (!saved.search.roundTrip || (!!saved.returnSlot && !slotHasLeft(saved.returnSlot)));
+
+  const [step, setStep] = useState(() =>
+    saved ? Math.min(Math.max(saved.step, 1), savedSlotsValid ? 4 : 2) : 1);
+  const [search, setSearch] = useState<BookingSearch>(() => saved?.search ?? {
     from: (params.get("from") as "columbus" | "atl") || "columbus",
     to: (params.get("to") as "columbus" | "atl") || "atl",
     date: params.get("date") || "",
@@ -37,13 +82,37 @@ function BookingFlow() {
     outboundFlight: { ...EMPTY_FLIGHT, date: params.get("date") || "" },
     returnFlight: { ...EMPTY_FLIGHT, date: params.get("returnDate") || "" },
   });
-  const [outbound, setOutbound] = useState<DepartureSlot | null>(null);
-  const [returnSlot, setReturnSlot] = useState<DepartureSlot | null>(null);
-  const [primary, setPrimary] = useState<Passenger>({ name: "", phone: "", email: "" });
-  const [additionalPassengers, setAdditionalPassengers] = useState<string[]>([]);
-  const [specialNotes, setSpecialNotes] = useState("");
+  const [outbound, setOutbound] = useState<DepartureSlot | null>(savedSlotsValid ? saved!.outbound : null);
+  const [returnSlot, setReturnSlot] = useState<DepartureSlot | null>(savedSlotsValid ? saved!.returnSlot : null);
+  const [primary, setPrimary] = useState<Passenger>(saved?.primary ?? { name: "", phone: "", email: "" });
+  const [additionalPassengers, setAdditionalPassengers] = useState<string[]>(saved?.additionalPassengers ?? []);
+  const [specialNotes, setSpecialNotes] = useState(saved?.specialNotes ?? "");
   const [confirmationNumber, setConfirmationNumber] = useState("");
   const [military, setMilitary] = useState<MilitaryResult>({ applied: false, pending: false });
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+
+  useEffect(() => {
+    if (step >= 5) { clearProgress(); return; }
+    const progress: SavedProgress = {
+      query, step, search, outbound, returnSlot, primary, additionalPassengers, specialNotes,
+    };
+    try { window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch { /* storage unavailable */ }
+  }, [query, step, search, outbound, returnSlot, primary, additionalPassengers, specialNotes]);
+
+  const handleDeparturesChange = useCallback((ob: DepartureSlot | null, ret: DepartureSlot | null) => {
+    setOutbound(ob);
+    setReturnSlot(ret);
+  }, []);
+  const handlePassengersChange = useCallback((p: Passenger, additional: string[], notes: string) => {
+    setPrimary(p);
+    setAdditionalPassengers(additional);
+    setSpecialNotes(notes);
+  }, []);
+
+  // Completed steps (behind the current one) can be reopened; data is kept.
+  const goToStep = (n: number) => {
+    if (n < step && step < 5 && !checkoutBusy) setStep(n);
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] grid-bg">
@@ -66,7 +135,7 @@ function BookingFlow() {
 
         {step < 5 && (
           <div className="relative">
-            <StepIndicator currentStep={step} />
+            <StepIndicator currentStep={step} onStepClick={checkoutBusy ? undefined : goToStep} />
           </div>
         )}
 
@@ -74,6 +143,7 @@ function BookingFlow() {
           {step === 1 && (
             <Step1Search
               initial={search}
+              onChange={setSearch}
               onNext={(s) => {
                 setSearch(s);
                 setStep(2);
@@ -84,6 +154,9 @@ function BookingFlow() {
           {step === 2 && (
             <Step2Departures
               search={search}
+              initialOutbound={outbound}
+              initialReturn={returnSlot}
+              onChange={handleDeparturesChange}
               onNext={(ob, ret) => {
                 setOutbound(ob);
                 setReturnSlot(ret);
@@ -97,6 +170,10 @@ function BookingFlow() {
             <Step3Passengers
               search={search}
               outbound={outbound}
+              initialPrimary={primary}
+              initialAdditional={additionalPassengers}
+              initialNotes={specialNotes}
+              onChange={handlePassengersChange}
               onNext={(p, additional, notes) => {
                 setPrimary(p);
                 setAdditionalPassengers(additional);
@@ -121,6 +198,7 @@ function BookingFlow() {
                 setStep(5);
               }}
               onBack={() => setStep(3)}
+              onBusyChange={setCheckoutBusy}
             />
           )}
 
@@ -140,14 +218,26 @@ function BookingFlow() {
   );
 }
 
+function BookingLoading() {
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-[#FCC300]/30 border-t-[#FCC300] animate-spin" />
+    </div>
+  );
+}
+
+// Saved progress lives in browser storage, so the flow only renders in the
+// browser — never pre-rendered with blank fields that then jump.
+const noSubscribe = () => () => {};
+function ClientOnlyBookingFlow() {
+  const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
+  return inBrowser ? <BookingFlow /> : <BookingLoading />;
+}
+
 export default function BookPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#FCC300]/30 border-t-[#FCC300] animate-spin" />
-      </div>
-    }>
-      <BookingFlow />
+    <Suspense fallback={<BookingLoading />}>
+      <ClientOnlyBookingFlow />
     </Suspense>
   );
 }

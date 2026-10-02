@@ -65,7 +65,7 @@ export default function LocationsPage() {
                       <Clock className="w-4 h-4 text-[#A1A1AA] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-white font-medium text-sm">Arrivals</div>
-                        <div className="text-[#A1A1AA] text-sm mt-0.5">Please arrive 10 minutes before your scheduled departure</div>
+                        <div className="text-[#A1A1AA] text-sm mt-0.5">Please arrive 20 minutes before your scheduled departure</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">

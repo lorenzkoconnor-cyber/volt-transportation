@@ -13,7 +13,6 @@ import {
   Medal,
   ShieldCheck,
   Upload,
-  X,
 } from "lucide-react";
 import { MILITARY_DISCOUNT_PERCENT, PRICING } from "@/lib/booking";
 import { DONATION_PARTNER, DONATION_PERCENT_OF_PROFITS } from "@/lib/military";
@@ -27,11 +26,6 @@ export const metadata: Metadata = {
 const eligible = [
   { title: "Active-duty military", desc: "Currently serving on active duty in the U.S. Armed Forces." },
   { title: "Retired military", desc: "Retired from the U.S. Armed Forces." },
-];
-
-const notEligible = [
-  { title: "Former service members who did not retire", desc: "Veterans who separated from the military without retiring." },
-  { title: "First responders", desc: "Police, firefighters, EMTs/paramedics, and dispatchers." },
 ];
 
 const steps = [
@@ -114,11 +108,10 @@ export default function MilitaryPage() {
 
         {/* At a glance */}
         <section className="pb-16 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
               { big: `${MILITARY_DISCOUNT_PERCENT}%`, label: "off every booking", sub: "Active-duty & retired military" },
               { big: `${DONATION_PERCENT_OF_PROFITS}%`, label: "of Volt’s profits donated", sub: "To support local veterans" },
-              { big: "1", label: "local partner", sub: `${DONATION_PARTNER.name}, ${DONATION_PARTNER.location}` },
             ].map((s) => (
               <div key={s.label} className="glass rounded-2xl p-6 text-center">
                 <div className="text-[#FCC300] text-4xl font-bold mb-1">{s.big}</div>
@@ -139,7 +132,7 @@ export default function MilitaryPage() {
                 retirees, verified with a military ID.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="max-w-xl mx-auto">
               <div className="glass rounded-2xl p-6">
                 <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                   <Check className="w-5 h-5 text-green-400" /> Eligible
@@ -149,24 +142,6 @@ export default function MilitaryPage() {
                     <li key={e.title} className="flex gap-3">
                       <div className="w-5 h-5 rounded-full bg-green-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Check className="w-3 h-3 text-green-400" />
-                      </div>
-                      <div>
-                        <div className="text-white text-sm font-medium">{e.title}</div>
-                        <div className="text-[#A1A1AA] text-sm">{e.desc}</div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="glass rounded-2xl p-6">
-                <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                  <X className="w-5 h-5 text-[#A1A1AA]" /> Not eligible
-                </h3>
-                <ul className="space-y-4">
-                  {notEligible.map((e) => (
-                    <li key={e.title} className="flex gap-3">
-                      <div className="w-5 h-5 rounded-full bg-white/8 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <X className="w-3 h-3 text-[#A1A1AA]" />
                       </div>
                       <div>
                         <div className="text-white text-sm font-medium">{e.title}</div>

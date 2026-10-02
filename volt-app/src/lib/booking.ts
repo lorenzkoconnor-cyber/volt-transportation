@@ -20,8 +20,8 @@ export function money(n: number): string {
 }
 
 export const LOCATIONS = {
-  columbus: { label: "Columbus, GA", short: "Columbus" },
-  atl: { label: "ATL Airport", short: "ATL" },
+  columbus: { label: "Volt Columbus", short: "Columbus" },
+  atl: { label: "Hartsfield-Jackson Airport", short: "ATL" },
 } as const;
 
 export type LocationKey = keyof typeof LOCATIONS;
@@ -68,23 +68,26 @@ export const ATL_TERMINALS = [
 
 // Airlines serving ATL, with the terminal they normally use (pre-fills the
 // terminal field; the rider can still change it, e.g. for international flights).
+// Kept in alphabetical order — the airline picker lists them as-is.
 export const ATL_AIRLINES: { name: string; terminal: (typeof ATL_TERMINALS)[number] }[] = [
-  { name: "Delta", terminal: "Domestic – South" },
-  { name: "Southwest", terminal: "Domestic – North" },
-  { name: "American", terminal: "Domestic – North" },
-  { name: "United", terminal: "Domestic – North" },
-  { name: "Spirit", terminal: "Domestic – North" },
-  { name: "Frontier", terminal: "Domestic – North" },
-  { name: "JetBlue", terminal: "Domestic – North" },
-  { name: "Alaska", terminal: "Domestic – North" },
+  { name: "Aeroméxico", terminal: "International (Concourse F)" },
   { name: "Air Canada", terminal: "International (Concourse F)" },
   { name: "Air France", terminal: "International (Concourse F)" },
+  { name: "Alaska", terminal: "Domestic – North" },
+  { name: "American", terminal: "Domestic – North" },
   { name: "British Airways", terminal: "International (Concourse F)" },
+  { name: "Copa Airlines", terminal: "International (Concourse F)" },
+  { name: "Delta", terminal: "Domestic – South" },
+  { name: "Frontier", terminal: "Domestic – North" },
+  { name: "JetBlue", terminal: "Domestic – North" },
   { name: "KLM", terminal: "International (Concourse F)" },
   { name: "Korean Air", terminal: "International (Concourse F)" },
   { name: "Lufthansa", terminal: "International (Concourse F)" },
   { name: "Qatar Airways", terminal: "International (Concourse F)" },
+  { name: "Southwest", terminal: "Domestic – North" },
+  { name: "Spirit", terminal: "Domestic – North" },
   { name: "Turkish Airlines", terminal: "International (Concourse F)" },
+  { name: "United", terminal: "Domestic – North" },
   { name: "Virgin Atlantic", terminal: "International (Concourse F)" },
 ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
@@ -10,18 +10,21 @@ import { localDateString } from "@/lib/format";
 import FlightFields from "./FlightFields";
 
 const LOCATION_LABELS: Record<string, string> = {
-  columbus: "Columbus, GA",
-  atl: "ATL Airport",
+  columbus: "Volt Columbus",
+  atl: "Hartsfield-Jackson Airport",
 };
 
 interface Props {
   initial: BookingSearch;
+  onChange?: (search: BookingSearch) => void;   // every edit, so a reload can restore it
   onNext: (search: BookingSearch) => void;
 }
 
-export default function Step1Search({ initial, onNext }: Props) {
+export default function Step1Search({ initial, onChange, onNext }: Props) {
   const [search, setSearch] = useState<BookingSearch>(initial);
   const [error, setError] = useState("");
+
+  useEffect(() => { onChange?.(search); }, [search, onChange]);
 
   const set = (key: keyof BookingSearch, value: string | number | boolean) =>
     setSearch((prev) => ({ ...prev, [key]: value }));

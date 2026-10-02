@@ -14,8 +14,8 @@ import {
 import { ArrowLeftRight, ArrowRight, Calendar, Users } from "lucide-react";
 
 const LOCATIONS = [
-  { value: "columbus", label: "Columbus, GA" },
-  { value: "atl",     label: "ATL Airport" },
+  { value: "columbus", label: "Volt Columbus" },
+  { value: "atl",     label: "Hartsfield-Jackson Airport" },
 ];
 
 export default function BookingWidget() {

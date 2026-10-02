@@ -58,6 +58,8 @@ interface Props {
   specialNotes: string;
   onNext: (confirmationNumber: string, military: MilitaryResult) => void;
   onBack: () => void;
+  // Payment or booking in flight — the page locks step navigation meanwhile.
+  onBusyChange?: (busy: boolean) => void;
 }
 
 // ── Shared trip summary card ───────────────────────────────────────────────────
@@ -377,15 +379,18 @@ function FreeBookingForm({
   finalize,
   submitting,
   paymentError,
+  onProcessingChange,
 }: {
   prepareIntent: PrepareIntent;
   finalize: FinalizeBooking;
   submitting: boolean;
   paymentError: string;
+  onProcessingChange: (processing: boolean) => void;
 }) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
+  useEffect(() => onProcessingChange(processing), [processing, onProcessingChange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,6 +510,7 @@ function StripePaymentForm({
   submitting,
   paymentError,
   blockedReason,
+  onProcessingChange,
 }: {
   total: number;
   hold: boolean;
@@ -512,12 +518,14 @@ function StripePaymentForm({
   finalize: FinalizeBooking;
   submitting: boolean;
   paymentError: string;
+  onProcessingChange: (processing: boolean) => void;
   blockedReason: string | null;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
+  useEffect(() => onProcessingChange(processing), [processing, onProcessingChange]);
   const [ready, setReady] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
@@ -634,6 +642,7 @@ function SimulatedPaymentForm({
   submitting,
   paymentError,
   blockedReason,
+  onProcessingChange,
 }: {
   total: number;
   hold: boolean;
@@ -642,6 +651,7 @@ function SimulatedPaymentForm({
   finalize: FinalizeBooking;
   submitting: boolean;
   paymentError: string;
+  onProcessingChange: (processing: boolean) => void;
   blockedReason: string | null;
 }) {
   const [cardName, setCardName] = useState(primary.name);
@@ -651,6 +661,7 @@ function SimulatedPaymentForm({
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
+  useEffect(() => onProcessingChange(processing), [processing, onProcessingChange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -762,6 +773,7 @@ export default function Step4Checkout({
   specialNotes,
   onNext,
   onBack,
+  onBusyChange,
 }: Props) {
   const { customer } = useAuth();
 
@@ -809,6 +821,9 @@ export default function Step4Checkout({
   const [mode, setMode] = useState<"loading" | "simulated" | "real">("loading");
   const [submitting, setSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [paying, setPaying] = useState(false);
+  const busy = submitting || paying;
+  useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
 
   const stripePromise = useMemo<Promise<Stripe | null>>(() => getStripeClient(), []);
   useEffect(() => {
@@ -959,7 +974,7 @@ export default function Step4Checkout({
         <button
           type="button"
           onClick={onBack}
-          disabled={submitting}
+          disabled={busy}
           className="text-[#A1A1AA] hover:text-white text-sm flex items-center gap-1 transition-colors disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" /> Back
@@ -999,6 +1014,7 @@ export default function Step4Checkout({
           finalize={finalize}
           submitting={submitting}
           paymentError={paymentError}
+          onProcessingChange={setPaying}
         />
       )}
 
@@ -1018,6 +1034,7 @@ export default function Step4Checkout({
           finalize={finalize}
           submitting={submitting}
           paymentError={paymentError}
+          onProcessingChange={setPaying}
           blockedReason={blockedReason}
         />
       )}
@@ -1031,6 +1048,7 @@ export default function Step4Checkout({
             finalize={finalize}
             submitting={submitting}
             paymentError={paymentError}
+            onProcessingChange={setPaying}
             blockedReason={blockedReason}
           />
         </Elements>

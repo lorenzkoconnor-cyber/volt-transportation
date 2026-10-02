@@ -21,7 +21,6 @@ const fares = [
 
 const included = [
   "Complimentary bottled water",
-  "USB charging at every seat",
   "Luggage assistance (loading & unloading)",
   "Professional chauffeur-style driver",
   "SMS booking confirmation",

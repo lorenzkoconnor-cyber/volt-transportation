@@ -27,8 +27,18 @@ import PriceSummary from "./PriceSummary";
 
 interface Props {
   search: BookingSearch;
+  // Picks made on an earlier visit — kept when they're still offered.
+  initialOutbound?: DepartureSlot | null;
+  initialReturn?: DepartureSlot | null;
+  onChange?: (outbound: DepartureSlot | null, returnSlot: DepartureSlot | null) => void;
   onNext: (outbound: DepartureSlot, returnSlot: DepartureSlot | null) => void;
   onBack: () => void;
+}
+
+// The fresh copy of a previously picked slot, if it's still bookable.
+function stillOffered(prev: DepartureSlot | null | undefined, slots: DepartureSlot[]): DepartureSlot | null {
+  if (!prev) return null;
+  return slots.find((s) => s.id === prev.id && s.available) ?? null;
 }
 
 async function fetchDay(
@@ -104,9 +114,11 @@ interface LoadedDepartures {
   routeMinutes?: number;
 }
 
-export default function Step2Departures({ search, onNext, onBack }: Props) {
+export default function Step2Departures({ search, initialOutbound, initialReturn, onChange, onNext, onBack }: Props) {
   const [selectedOutbound, setSelectedOutbound] = useState<DepartureSlot | null>(null);
   const [selectedReturn, setSelectedReturn] = useState<DepartureSlot | null>(null);
+  // Restore earlier picks once, against the first load only.
+  const [initialPicks] = useState({ outbound: initialOutbound, ret: initialReturn });
 
   // Everything loaded for one search. `loading` is derived — a result for an
   // older search just means the new one is still on its way.
@@ -125,8 +137,10 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
     let cancelled = false;
     const finish = (result: Omit<LoadedDepartures, "search">) => {
       if (cancelled) return;
-      setSelectedOutbound(null);
-      setSelectedReturn(null);
+      const outSlots = result.outboundSlots ?? result.outboundLeg?.matches.map((m) => m.slot) ?? [];
+      const retSlots = result.returnSlots ?? result.returnLeg?.matches.map((m) => m.slot) ?? [];
+      setSelectedOutbound(stillOffered(initialPicks.outbound, outSlots));
+      setSelectedReturn(search.roundTrip ? stillOffered(initialPicks.ret, retSlots) : null);
       setLoaded({ search, ...result });
     };
     const fail = () => finish({ error: true });
@@ -157,7 +171,11 @@ export default function Step2Departures({ search, onNext, onBack }: Props) {
     }
 
     return () => { cancelled = true; };
-  }, [search]);
+  }, [search, initialPicks]);
+
+  useEffect(() => {
+    if (!loading) onChange?.(selectedOutbound, selectedReturn);
+  }, [loading, selectedOutbound, selectedReturn, onChange]);
 
   const canProceed =
     selectedOutbound !== null && (!search.roundTrip || selectedReturn !== null);

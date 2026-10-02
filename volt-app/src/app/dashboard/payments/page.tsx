@@ -127,79 +127,84 @@ export default function PaymentsPage() {
       </div>
 
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-5 border-b border-white/8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-b border-white/8">
           <h2 className="text-white font-semibold">Transactions</h2>
-          <div className="relative w-64">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A1A1AA]" />
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…"
               className="pl-8 bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-9 rounded-lg text-sm focus:border-[#FCC300]" />
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/6 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
-          <div className="col-span-3">Passenger</div>
-          <div className="col-span-2">Confirmation</div>
-          <div className="col-span-2">Date</div>
-          <div className="col-span-2 text-center">Method</div>
-          <div className="col-span-1 text-right">Amount</div>
-          <div className="col-span-1 text-center">Status</div>
-          <div className="col-span-1 text-right">Actions</div>
-        </div>
+        {/* Scrolls sideways on phones instead of squeezing the columns */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[820px]">
+            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/6 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
+              <div className="col-span-3">Passenger</div>
+              <div className="col-span-2">Confirmation</div>
+              <div className="col-span-2">Date</div>
+              <div className="col-span-2 text-center">Method</div>
+              <div className="col-span-1 text-right">Amount</div>
+              <div className="col-span-1 text-center">Status</div>
+              <div className="col-span-1 text-right">Actions</div>
+            </div>
 
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
+            {loading ? (
+              <div className="flex justify-center py-16 sticky left-0 max-w-[calc(100vw-2rem)] lg:max-w-none">
+                <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center py-16 gap-2 sticky left-0 max-w-[calc(100vw-2rem)] lg:max-w-none">
+                <Search className="w-8 h-8 text-[#A1A1AA]" />
+                <p className="text-[#A1A1AA] text-sm">
+                  {payments.length === 0 ? "Payments appear here as bookings come in." : "No matching transactions."}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {filtered.map((p) => {
+                  const name = p.reservation?.customer
+                    ? `${p.reservation.customer.first_name} ${p.reservation.customer.last_name}`
+                    : "—";
+                  const canRefund = (p.status === "paid" || p.status === "authorized") && p.amount_cents > p.refund_amount_cents;
+                  return (
+                    <div key={p.id} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center">
+                      <div className="col-span-3 text-white text-sm">{name}</div>
+                      <div className="col-span-2">
+                        <span className="text-[#FCC300] text-xs font-mono">{p.reservation?.confirmation_number ?? "—"}</span>
+                      </div>
+                      <div className="col-span-2 text-[#A1A1AA] text-xs">
+                        {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </div>
+                      <div className="col-span-2 flex justify-center">
+                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${METHOD_STYLES[p.method] ?? ""}`}>
+                          {p.method === "stripe" ? <CreditCard className="w-3 h-3" /> : p.method === "comp" ? <Gift className="w-3 h-3" /> : <Banknote className="w-3 h-3" />}
+                          {p.method === "stripe" ? "card" : p.method}
+                        </span>
+                      </div>
+                      <div className="col-span-1 text-right">
+                        <span className="text-white font-semibold text-sm">{formatCents(p.amount_cents)}</span>
+                        {p.refund_amount_cents > 0 && (
+                          <div className="text-orange-400 text-xs">−{formatCents(p.refund_amount_cents)}</div>
+                        )}
+                      </div>
+                      <div className="col-span-1 flex justify-center">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[p.status] ?? ""}`}>{STATUS_LABELS[p.status] ?? p.status}</span>
+                      </div>
+                      <div className="col-span-1 flex justify-end">
+                        {canRefund && (
+                          <button onClick={() => openRefund(p)} className="text-[#A1A1AA] hover:text-orange-400 text-xs transition-colors">
+                            {p.status === "authorized" ? "Release" : "Refund"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-16 gap-2">
-            <Search className="w-8 h-8 text-[#A1A1AA]" />
-            <p className="text-[#A1A1AA] text-sm">
-              {payments.length === 0 ? "Payments appear here as bookings come in." : "No matching transactions."}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {filtered.map((p) => {
-              const name = p.reservation?.customer
-                ? `${p.reservation.customer.first_name} ${p.reservation.customer.last_name}`
-                : "—";
-              const canRefund = (p.status === "paid" || p.status === "authorized") && p.amount_cents > p.refund_amount_cents;
-              return (
-                <div key={p.id} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center">
-                  <div className="col-span-3 text-white text-sm">{name}</div>
-                  <div className="col-span-2">
-                    <span className="text-[#FCC300] text-xs font-mono">{p.reservation?.confirmation_number ?? "—"}</span>
-                  </div>
-                  <div className="col-span-2 text-[#A1A1AA] text-xs">
-                    {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </div>
-                  <div className="col-span-2 flex justify-center">
-                    <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${METHOD_STYLES[p.method] ?? ""}`}>
-                      {p.method === "stripe" ? <CreditCard className="w-3 h-3" /> : p.method === "comp" ? <Gift className="w-3 h-3" /> : <Banknote className="w-3 h-3" />}
-                      {p.method === "stripe" ? "card" : p.method}
-                    </span>
-                  </div>
-                  <div className="col-span-1 text-right">
-                    <span className="text-white font-semibold text-sm">{formatCents(p.amount_cents)}</span>
-                    {p.refund_amount_cents > 0 && (
-                      <div className="text-orange-400 text-xs">−{formatCents(p.refund_amount_cents)}</div>
-                    )}
-                  </div>
-                  <div className="col-span-1 flex justify-center">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[p.status] ?? ""}`}>{STATUS_LABELS[p.status] ?? p.status}</span>
-                  </div>
-                  <div className="col-span-1 flex justify-end">
-                    {canRefund && (
-                      <button onClick={() => openRefund(p)} className="text-[#A1A1AA] hover:text-orange-400 text-xs transition-colors">
-                        {p.status === "authorized" ? "Release" : "Refund"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Refund modal */}

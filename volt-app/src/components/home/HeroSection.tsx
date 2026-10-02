@@ -16,8 +16,8 @@ import { LOCATIONS } from "@/lib/booking";
 type LocationKey = "columbus" | "atl";
 
 const LOCATION_LABELS: Record<LocationKey, string> = {
-  columbus: "Columbus, GA",
-  atl: "ATL Airport",
+  columbus: "Volt Columbus",
+  atl: "Hartsfield-Jackson Airport",
 };
 
 export default function HeroSection() {

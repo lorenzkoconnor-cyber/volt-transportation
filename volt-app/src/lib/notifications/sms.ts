@@ -85,7 +85,7 @@ export const SMS_TEMPLATES = {
     `Confirmation: ${params.confirmationNumber}\n` +
     `${params.from} → ${params.to}\n` +
     `${params.date} at ${params.time}\n\n` +
-    `Arrive 10 min early. Reply STOP to opt out.`,
+    `Arrive 20 min early. Reply STOP to opt out.`,
 
   tripReminder: (params: {
     confirmationNumber: string;
@@ -95,7 +95,7 @@ export const SMS_TEMPLATES = {
   }) =>
     `Volt Transportation: Reminder — your ride departs TOMORROW at ${params.time} from ${params.from}.\n\n` +
     `Confirmation: ${params.confirmationNumber}\n` +
-    `Please arrive 10 minutes early. See you soon!`,
+    `Please arrive 20 minutes early. See you soon!`,
 
   cancellationConfirmed: (params: {
     confirmationNumber: string;

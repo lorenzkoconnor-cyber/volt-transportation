@@ -12,7 +12,7 @@ const faqs = [
   {
     question: "Where does Volt pick up passengers in Columbus?",
     answer:
-      "All Columbus trips depart from our office at 3885 Miller Road, Suite C, Columbus, GA 31909. Free parking is available on site. Please arrive at least 10 minutes before your scheduled departure.",
+      "All Columbus trips depart from our office at 3885 Miller Road, Suite C, Columbus, GA 31909. Free parking is available on site. Please arrive at least 20 minutes before your scheduled departure.",
   },
   {
     question: "Can I bring luggage?",
@@ -27,7 +27,7 @@ const faqs = [
   {
     question: "How early should I arrive for pickup?",
     answer:
-      "We recommend arriving at the pickup location at least 10 minutes before your scheduled departure. The shuttle departs on schedule, so punctuality is important.",
+      "We recommend arriving at the pickup location at least 20 minutes before your scheduled departure. The shuttle departs on schedule, so punctuality is important.",
   },
   {
     question: "How long does the trip take?",

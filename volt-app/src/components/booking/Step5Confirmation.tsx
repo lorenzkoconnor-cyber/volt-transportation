@@ -192,7 +192,7 @@ export default function Step5Confirmation({
         <ul className="space-y-2">
           {[
             "You'll receive an SMS confirmation shortly with pickup details",
-            "Arrive at your pickup location 10 minutes before departure",
+            "Arrive at your pickup location 20 minutes before departure",
             "Your driver will assist with luggage",
             "A reminder SMS will be sent the day before your trip",
           ].map((item, i) => (

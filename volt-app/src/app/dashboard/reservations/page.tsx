@@ -137,79 +137,84 @@ export default function ReservationsPage() {
 
       {/* Table */}
       <div className="glass rounded-2xl overflow-hidden">
-        {/* Header row */}
-        <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
-          <div className="col-span-3">Passenger</div>
-          <div className="col-span-2">Confirmation</div>
-          <div className={showMoney ? "col-span-3" : "col-span-4"}>Trip</div>
-          <div className="col-span-1 text-center">Pax</div>
-          {showMoney && <div className="col-span-1 text-right">Total</div>}
-          <div className="col-span-1 text-center">Status</div>
-          <div className="col-span-1" />
-        </div>
+        {/* Scrolls sideways on phones instead of squeezing the columns */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[820px]">
+            {/* Header row */}
+            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
+              <div className="col-span-3">Passenger</div>
+              <div className="col-span-2">Confirmation</div>
+              <div className={showMoney ? "col-span-3" : "col-span-4"}>Trip</div>
+              <div className="col-span-1 text-center">Pax</div>
+              {showMoney && <div className="col-span-1 text-right">Total</div>}
+              <div className="col-span-1 text-center">Status</div>
+              <div className="col-span-1" />
+            </div>
 
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
+            {loading ? (
+              <div className="flex justify-center py-16 sticky left-0 max-w-[calc(100vw-2rem)] lg:max-w-none">
+                <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center py-16 text-center sticky left-0 max-w-[calc(100vw-2rem)] lg:max-w-none">
+                <Search className="w-8 h-8 text-[#A1A1AA] mb-3" />
+                <p className="text-white font-medium mb-1">No reservations found</p>
+                <p className="text-[#A1A1AA] text-sm">
+                  {rows.length === 0
+                    ? "New bookings will appear here — or create one manually."
+                    : "Try a different search or filter"}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {filtered.map((r) => (
+                  <Link key={r.id} href={`/dashboard/reservations/${r.id}`} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center group">
+                    <div className="col-span-3">
+                      <div className="text-white font-medium text-sm">{r.name}</div>
+                      <div className="text-[#A1A1AA] text-xs">{r.phone}</div>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-[#FCC300] text-xs font-mono">{r.confirmation}</span>
+                    </div>
+                    <div className={showMoney ? "col-span-3" : "col-span-4"}>
+                      <div className="text-white text-sm">{r.route}</div>
+                      <div className="text-[#A1A1AA] text-xs flex items-center gap-2">
+                        <Calendar className="w-3 h-3" />{r.date}
+                        <Clock className="w-3 h-3 ml-1" />{r.time}
+                      </div>
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      <span className="flex items-center gap-1 text-[#A1A1AA] text-sm">
+                        <Users className="w-3.5 h-3.5" />{r.pax}
+                      </span>
+                    </div>
+                    {showMoney && (
+                      <div className="col-span-1 text-right">
+                        <span className="text-white font-semibold text-sm">{formatCents(r.totalCents)}</span>
+                      </div>
+                    )}
+                    <div className="col-span-1 flex justify-center">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? ""}`}>
+                        {r.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[#A1A1AA] group-hover:text-white group-hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
+                        <ChevronRight className="w-4 h-4" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center">
-            <Search className="w-8 h-8 text-[#A1A1AA] mb-3" />
-            <p className="text-white font-medium mb-1">No reservations found</p>
-            <p className="text-[#A1A1AA] text-sm">
-              {rows.length === 0
-                ? "New bookings will appear here — or create one manually."
-                : "Try a different search or filter"}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {filtered.map((r) => (
-              <Link key={r.id} href={`/dashboard/reservations/${r.id}`} className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-white/3 transition-colors items-center group">
-                <div className="col-span-3">
-                  <div className="text-white font-medium text-sm">{r.name}</div>
-                  <div className="text-[#A1A1AA] text-xs">{r.phone}</div>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-[#FCC300] text-xs font-mono">{r.confirmation}</span>
-                </div>
-                <div className={showMoney ? "col-span-3" : "col-span-4"}>
-                  <div className="text-white text-sm">{r.route}</div>
-                  <div className="text-[#A1A1AA] text-xs flex items-center gap-2">
-                    <Calendar className="w-3 h-3" />{r.date}
-                    <Clock className="w-3 h-3 ml-1" />{r.time}
-                  </div>
-                </div>
-                <div className="col-span-1 flex justify-center">
-                  <span className="flex items-center gap-1 text-[#A1A1AA] text-sm">
-                    <Users className="w-3.5 h-3.5" />{r.pax}
-                  </span>
-                </div>
-                {showMoney && (
-                  <div className="col-span-1 text-right">
-                    <span className="text-white font-semibold text-sm">{formatCents(r.totalCents)}</span>
-                  </div>
-                )}
-                <div className="col-span-1 flex justify-center">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? ""}`}>
-                    {r.status.replace("_", " ")}
-                  </span>
-                </div>
-                <div className="col-span-1 flex justify-end">
-                  <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[#A1A1AA] group-hover:text-white group-hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
-                    <ChevronRight className="w-4 h-4" />
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Summary strip */}
-      <div className="flex items-center justify-between glass rounded-xl px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 glass rounded-xl px-4 sm:px-5 py-3">
         <span className="text-[#A1A1AA] text-sm">Showing {filtered.length} of {rows.length}</span>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           {[
             { icon: CheckCircle2, label: "Confirmed", count: rows.filter(r=>r.status==="confirmed").length, color: "text-green-400" },
             { icon: XCircle,      label: "Cancelled", count: rows.filter(r=>r.status==="cancelled").length, color: "text-red-400" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,18 +13,32 @@ import PriceSummary from "./PriceSummary";
 interface Props {
   search: BookingSearch;
   outbound: DepartureSlot;
+  // What the rider entered on an earlier visit to this step.
+  initialPrimary: Passenger;
+  initialAdditional: string[];
+  initialNotes: string;
+  onChange?: (primary: Passenger, additional: string[], notes: string) => void;
   onNext: (primary: Passenger, additional: string[], notes: string) => void;
   onBack: () => void;
 }
 
-export default function Step3Passengers({ search, outbound, onNext, onBack }: Props) {
-  const [primary, setPrimary] = useState<Passenger>({ name: "", phone: "", email: "" });
-  const [additional, setAdditional] = useState<string[]>(
-    Array(Math.max(0, search.adults + search.children - 1)).fill("")
-  );
-  const [notes, setNotes] = useState("");
-
+export default function Step3Passengers({
+  search, outbound, initialPrimary, initialAdditional, initialNotes, onChange, onNext, onBack,
+}: Props) {
   const totalPassengers = search.adults + search.children;
+
+  const [primary, setPrimary] = useState<Passenger>(initialPrimary);
+  // Saved names are kept, trimmed if the passenger count went down since.
+  const [additional, setAdditional] = useState<string[]>(() =>
+    initialAdditional.length
+      ? initialAdditional.slice(0, Math.max(0, totalPassengers - 1))
+      : Array(Math.max(0, totalPassengers - 1)).fill("")
+  );
+  const [notes, setNotes] = useState(initialNotes);
+
+  useEffect(() => {
+    onChange?.(primary, additional, notes);
+  }, [primary, additional, notes, onChange]);
 
   const setPrimaryField = (field: keyof Passenger, value: string) =>
     setPrimary((prev) => ({ ...prev, [field]: value }));

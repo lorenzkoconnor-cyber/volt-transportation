@@ -17,7 +17,7 @@ const differentiators = [
   { icon: Zap, title: "Ford Transit Fleet", desc: "We operate a fleet of premium Ford Transit Passenger Vans — built for safe, comfortable group transportation." },
   { icon: Users, title: "Maximum 8 Passengers", desc: "We cap every vehicle at 8 passengers. No overcrowding. Every passenger gets room to breathe and relax." },
   { icon: Shield, title: "Professional Drivers", desc: "Every driver is background-checked, professionally trained, and held to a chauffeur-level standard of service." },
-  { icon: Star, title: "Complimentary Water", desc: "Bottled water, USB charging at every seat, and full luggage assistance are included with every trip." },
+  { icon: Star, title: "Complimentary Water", desc: "Bottled water and full luggage assistance are included with every trip." },
   { icon: CheckCircle, title: "Extra Legroom", desc: "Ford Transit vans offer generous seating space — a far more comfortable experience than rideshares or buses." },
   { icon: ArrowRight, title: "Airport-Focused Service", desc: "Everything we do is built around getting you to and from ATL on time, stress-free, every single trip." },
 ];
