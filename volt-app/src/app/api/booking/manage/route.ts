@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 import { voidHold } from "@/lib/stripe/holds";
+import { rateLimit } from "@/lib/rate-limit";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function adminClient(): any {
@@ -51,6 +52,9 @@ function serialize(r: any) {
 
 // POST /api/booking/manage  { action: "lookup" | "cancel", confirmationNumber, phone }
 export async function POST(request: NextRequest) {
+  const limited = rateLimit(request, "booking-manage", 10, 15 * 60_000);
+  if (limited) return limited;
+
   try {
     const { action, confirmationNumber, phone } = await request.json();
     if (!confirmationNumber || !phone) {

@@ -6,6 +6,7 @@ import {
   reserveDiscountCode, FREE_PAYMENT_ID, type DiscountCodeRow,
 } from "@/lib/checkout";
 import { CODE_ERRORS } from "@/lib/discount-codes";
+import { rateLimit, breakerTripped, recordFailure, DISCOUNT_BREAKER, DISCOUNT_PAUSED_ERROR } from "@/lib/rate-limit";
 
 // POST /api/payments/create-intent
 // Called when the rider clicks Pay. Body: the booking details from Step 4
@@ -20,6 +21,9 @@ import { CODE_ERRORS } from "@/lib/discount-codes";
 // Returns: { checkoutId, clientSecret, paymentIntentId, amountCents, captureMethod, simulated, free }
 // A code that covers the whole fare returns free: true and no PaymentIntent.
 export async function POST(request: NextRequest) {
+  const limited = rateLimit(request, "create-intent", 20, 15 * 60_000);
+  if (limited) return limited;
+
   try {
     const body = await request.json();
     const payload = normalizePayload(body);
@@ -55,8 +59,17 @@ export async function POST(request: NextRequest) {
 
     let code: DiscountCodeRow | null = null;
     if (body.discountCode) {
+      // Same site-wide breaker as /api/discount-codes/validate, so checkout
+      // can't be used as a second guessing endpoint.
+      const { name, limit, windowMs } = DISCOUNT_BREAKER;
+      if (breakerTripped(name, limit, windowMs)) {
+        return NextResponse.json({ error: DISCOUNT_PAUSED_ERROR, codeError: true }, { status: 429 });
+      }
       const found = await lookupDiscountCode(sb, String(body.discountCode));
-      if (!found.ok) return NextResponse.json({ error: found.error, codeError: true }, { status: 400 });
+      if (!found.ok) {
+        recordFailure(name, windowMs);
+        return NextResponse.json({ error: found.error, codeError: true }, { status: 400 });
+      }
       code = found.row;
     }
 

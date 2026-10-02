@@ -68,18 +68,18 @@ export default function Step5Confirmation({
       <div class="muted">Booking Receipt</div>
       <div class="box">
         <div class="muted">Confirmation Number</div>
-        <div class="conf">${confirmationNumber}</div>
+        <div class="conf">${esc(confirmationNumber)}</div>
       </div>
       <div class="box">
         <table>
-          <tr><td class="muted">Passenger</td><td style="text-align:right">${primary.name}</td></tr>
+          <tr><td class="muted">Passenger</td><td style="text-align:right">${esc(primary.name)}</td></tr>
           <tr><td class="muted">${returnSlot ? "Outbound" : "Route"}</td><td style="text-align:right">${LOCATIONS[search.from].label} → ${LOCATIONS[search.to].label}</td></tr>
           <tr><td class="muted">${returnSlot ? "Outbound Date" : "Date"}</td><td style="text-align:right">${formatDate(outbound.date || search.date)} · ${slotTimes(outbound, search.to)}</td></tr>
           ${outboundFlight ? `<tr><td class="muted">${returnSlot ? "Outbound Flight" : "Flight"}</td><td style="text-align:right">${esc(outboundFlight)}</td></tr>` : ""}
           ${returnSlot ? `<tr><td class="muted">Return</td><td style="text-align:right">${LOCATIONS[search.to].label} → ${LOCATIONS[search.from].label}</td></tr>
           <tr><td class="muted">Return Date</td><td style="text-align:right">${formatDate(returnSlot.date || search.returnDate)} · ${slotTimes(returnSlot, search.from)}</td></tr>` : ""}
           ${returnFlight ? `<tr><td class="muted">Return Flight</td><td style="text-align:right">${esc(returnFlight)}</td></tr>` : ""}
-          <tr><td class="muted">Contact</td><td style="text-align:right">${primary.phone}</td></tr>
+          <tr><td class="muted">Contact</td><td style="text-align:right">${esc(primary.phone)}</td></tr>
         </table>
       </div>
       <div class="box">

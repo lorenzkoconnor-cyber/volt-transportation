@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { finalizeCheckout } from "@/lib/checkout";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/booking/create  { checkoutId, paymentIntentId }
 // Called by the browser right after Stripe confirms the payment. Verifies the
@@ -11,6 +12,9 @@ import { finalizeCheckout } from "@/lib/checkout";
 // 200 → { success, confirmationNumber, reservationId, military }
 // 202 → { processing: true } — the webhook is finalizing it; poll again.
 export async function POST(request: NextRequest) {
+  const limited = rateLimit(request, "booking-create", 20, 15 * 60_000);
+  if (limited) return limited;
+
   try {
     const { checkoutId, paymentIntentId } = await request.json();
     if (!checkoutId || !paymentIntentId) {

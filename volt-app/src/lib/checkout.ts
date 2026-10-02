@@ -22,7 +22,7 @@ import { getSupabaseUrl } from "@/lib/supabase/url";
 import { getStripeServer } from "@/lib/stripe/server";
 import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
 import { formatTime12h, formatDateLong } from "@/lib/format";
-import { MILITARY_DISCOUNT_RATE, PRICING } from "@/lib/booking";
+import { MILITARY_DISCOUNT_RATE, PRICING, generateConfirmationNumber } from "@/lib/booking";
 import {
   CODE_ERRORS, codeDiscountCents, codeLabel, codeState, formatCode, normalizeCode,
   type DiscountCodeTerms,
@@ -421,9 +421,7 @@ export async function finalizeCheckout(
     }
 
     // 3. Reservation
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let confirmationNumber = "VOLT-";
-    for (let i = 0; i < 6; i++) confirmationNumber += chars.charAt(Math.floor(Math.random() * chars.length));
+    const confirmationNumber = generateConfirmationNumber();
 
     const { data: reservation, error: resError } = await sb
       .from("reservations")

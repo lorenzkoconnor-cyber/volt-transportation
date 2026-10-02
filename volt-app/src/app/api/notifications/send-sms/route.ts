@@ -2,15 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
+import { timingSafeEqual } from "crypto";
+
+function safeEqual(a: string, b: string): boolean {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+}
 
 // POST /api/notifications/send-sms
 // Body: { type, reservationId, ...templateParams }
 // Called internally from booking/create and webhook handlers (not publicly exposed)
 
 export async function POST(request: NextRequest) {
-  // Verify internal secret to prevent abuse
-  const authHeader = request.headers.get("x-internal-secret");
-  if (authHeader !== process.env.INTERNAL_API_SECRET && process.env.NODE_ENV === "production") {
+  // Verify internal secret to prevent abuse (this would otherwise be an open
+  // SMS relay on our Twilio bill). No secret configured → endpoint is off.
+  const secret = process.env.INTERNAL_API_SECRET;
+  const authHeader = request.headers.get("x-internal-secret") ?? "";
+  if (!secret || secret.length < 16 || !safeEqual(authHeader, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

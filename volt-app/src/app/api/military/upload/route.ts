@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
 import { MILITARY_BUCKET, isAllowedIdFile, extForMime, isMilitaryCategory } from "@/lib/military";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/military/upload  (multipart/form-data)
 // Fields: file, category ('active_duty'|'retired')
@@ -13,6 +14,9 @@ import { MILITARY_BUCKET, isAllowedIdFile, extForMime, isMilitaryCategory } from
 // 'pending'. Returns the resolved customerId so the checkout can link the
 // reservation that should later receive the discount refund.
 export async function POST(request: NextRequest) {
+  const limited = rateLimit(request, "military-upload", 5, 60 * 60_000);
+  if (limited) return limited;
+
   try {
     const form = await request.formData();
     const file = form.get("file");

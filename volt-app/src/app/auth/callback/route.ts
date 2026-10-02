@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { getSupabaseUrl, SUPABASE_ANON_KEY } from "@/lib/supabase/url";
+import { safeRedirectPath } from "@/lib/security";
 
 // GET /auth/callback
 // Handles ALL Supabase auth redirects:
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   const code      = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type      = searchParams.get("type");
-  const next      = searchParams.get("next") ?? "";
+  const next      = safeRedirectPath(searchParams.get("next"), "");
 
   const response = NextResponse.redirect(`${origin}/`);
 

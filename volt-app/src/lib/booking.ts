@@ -360,12 +360,13 @@ export function calcPrice(
 }
 
 // Generate a confirmation number
+// Uses the secure random generator (Math.random is predictable). 32 letters
+// divide 256 evenly, so `byte % 32` keeps every character equally likely.
 export function generateConfirmationNumber(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
   let result = "VOLT-";
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+  for (const b of bytes) result += chars[b % chars.length];
   return result;
 }
 

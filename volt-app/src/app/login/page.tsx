@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import Logo from "@/components/ui/Logo";
+import { safeRedirectPath } from "@/lib/security";
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const redirect = params.get("redirect") || "/portal";
+  const redirect = safeRedirectPath(params.get("redirect"), "/portal");
   const { signIn, signUp } = useAuth();
 
   const [mode, setMode] = useState<"login" | "signup">("login");
