@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { canViewFinancials } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
 import { createClient } from "@/lib/supabase/client";
-import { formatTime12h, formatCents, formatDateShort } from "@/lib/format";
+import { formatTime12h, formatCents, formatDateShort, localDateString } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,23 +38,44 @@ interface ReservationRow {
 type FilterStatus = "all" | "confirmed" | "completed" | "cancelled";
 
 export default function ReservationsPage() {
+  // useSearchParams needs a Suspense boundary in the App Router.
+  return (
+    <Suspense fallback={null}>
+      <ReservationsContent />
+    </Suspense>
+  );
+}
+
+function ReservationsContent() {
   const supabase = createClient();
   const showMoney = canViewFinancials(useDashboardRole());
+  const router = useRouter();
+  const pathname = usePathname();
+  // ?day=today — only reservations on today's trips (what the dashboard's
+  // Today's Revenue / Passengers Today cards count).
+  const todayOnly = useSearchParams().get("day") === "today";
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [rows, setRows] = useState<ReservationRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const toggleToday = () => {
+    setLoading(true);
+    router.replace(todayOnly ? pathname : `${pathname}?day=today`, { scroll: false });
+  };
+
   useEffect(() => {
     const load = async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+      let req = (supabase as any)
         .from("reservations")
         .select(
           "id, confirmation_number, status, adults, children, total_cents, created_at, " +
           "customer:customers(first_name, last_name, phone), " +
-          "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, route:routes(name))"
-        )
+          `trip:trips!reservations_trip_id_fkey${todayOnly ? "!inner" : ""}(departure_date, departure_time, route:routes(name))`
+        );
+      if (todayOnly) req = req.eq("trip.departure_date", localDateString());
+      const { data } = await req
         .order("created_at", { ascending: false })
         .limit(500);
 
@@ -74,7 +96,7 @@ export default function ReservationsPage() {
     };
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [todayOnly]);
 
   const filtered = rows.filter((r) => {
     const q = query.toLowerCase();
@@ -96,7 +118,11 @@ export default function ReservationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Reservations</h1>
           <p className="text-[#A1A1AA] text-sm mt-0.5">
-            {loading ? "Loading…" : `${rows.length} total reservations`}
+            {loading
+              ? "Loading…"
+              : todayOnly
+              ? `${rows.length} on today's trips`
+              : `${rows.length} total reservations`}
           </p>
         </div>
         <Link href="/dashboard/reservations/new">
@@ -117,8 +143,20 @@ export default function ReservationsPage() {
             className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-11 rounded-xl focus:border-[#FCC300]"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Filter className="w-4 h-4 text-[#A1A1AA]" />
+          <button
+            onClick={toggleToday}
+            aria-pressed={todayOnly}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              todayOnly
+                ? "bg-[#FCC300] text-[#0A0A0A]"
+                : "glass text-[#A1A1AA] hover:text-white"
+            }`}
+          >
+            <Calendar className="w-3 h-3" /> Today&apos;s trips
+          </button>
+          <span className="w-px h-4 bg-white/10" aria-hidden />
           {(["all", "confirmed", "completed", "cancelled"] as FilterStatus[]).map((s) => (
             <button
               key={s}
@@ -160,7 +198,9 @@ export default function ReservationsPage() {
                 <Search className="w-8 h-8 text-[#A1A1AA] mb-3" />
                 <p className="text-white font-medium mb-1">No reservations found</p>
                 <p className="text-[#A1A1AA] text-sm">
-                  {rows.length === 0
+                  {rows.length === 0 && todayOnly
+                    ? "No bookings on today's trips yet."
+                    : rows.length === 0
                     ? "New bookings will appear here — or create one manually."
                     : "Try a different search or filter"}
                 </p>

@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// Today's Revenue / Passengers cards open the reservations on today's trips.
+const TODAY_RESERVATIONS = "/dashboard/reservations?day=today";
+
 interface DashTrip {
   id: string;
   time: string;
@@ -39,6 +42,8 @@ export default function AdminDashboardPage() {
   const { employee, loading: authLoading } = useAuth();
   const role = useDashboardRole();
   const showMoney = canViewFinancials(role);
+  // Stat cards link to their detail page, but only for roles allowed to open it.
+  const linkIfAllowed = (href: string) => (canAccessRoute(href.split("?")[0], role) ? href : undefined);
   const supabase = createClient();
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
@@ -161,15 +166,15 @@ export default function AdminDashboardPage() {
       {/* Stats — revenue is owner/manager only; other roles lead with trips */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {showMoney ? (
-          <StatCard label="Today's Revenue" value={loading ? "…" : formatCents(stats.revenueToday)} sub={`${stats.passengersToday} passengers`} icon={DollarSign} accent />
+          <StatCard label="Today's Revenue" value={loading ? "…" : formatCents(stats.revenueToday)} sub={`${stats.passengersToday} passengers`} icon={DollarSign} accent href={linkIfAllowed(TODAY_RESERVATIONS)} />
         ) : (
-          <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} accent />
+          <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} accent href={linkIfAllowed("/dashboard/dispatch")} />
         )}
         {showMoney && (
-          <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} />
+          <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} href={linkIfAllowed("/dashboard/dispatch")} />
         )}
-        <StatCard label="Passengers Today" value={loading ? "…" : stats.passengersToday} sub="Across all trips" icon={Users} />
-        <StatCard label="Active Vehicles" value={loading ? "…" : stats.activeVehicles} sub="In the fleet" icon={CalendarDays} />
+        <StatCard label="Passengers Today" value={loading ? "…" : stats.passengersToday} sub="Across all trips" icon={Users} href={linkIfAllowed(TODAY_RESERVATIONS) ?? linkIfAllowed("/dashboard/dispatch")} />
+        <StatCard label="Active Vehicles" value={loading ? "…" : stats.activeVehicles} sub="In the fleet" icon={CalendarDays} href={linkIfAllowed("/dashboard/vehicles")} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
