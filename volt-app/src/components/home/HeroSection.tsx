@@ -87,7 +87,7 @@ export default function HeroSection() {
       animFrame = requestAnimationFrame(() => {
         const scrollY = window.scrollY;
         const progress = Math.min(scrollY / section.offsetHeight, 1);
-        video.style.transform = `translateY(${scrollY * 0.4}px) scale(1.08)`;
+        video.style.transform = `translateY(${scrollY * 0.4}px)`;
         video.style.opacity = String(1 - progress * 1.4);
       });
     };
@@ -100,9 +100,9 @@ export default function HeroSection() {
 
       {/* Video background */}
       <div className="absolute inset-0 overflow-hidden">
-        <video ref={videoRef} src="/images/1099VoltBackVid.mp4" autoPlay muted loop playsInline
-          className="absolute inset-0 w-full h-full object-cover will-change-transform"
-          style={{ transformOrigin: "center center" }} />
+        <video ref={videoRef} src="/images/thevoltvid.mp4" autoPlay muted loop playsInline
+          // Phones/tablets: fill the hero (cropped). Desktop: full video at native aspect ratio, bottom edge faded out
+          className="absolute top-0 left-0 w-full h-full object-cover will-change-transform lg:h-auto lg:[mask-image:linear-gradient(to_bottom,black_70%,transparent)] lg:[-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent)]" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/92 via-[#0A0A0A]/70 to-[#0A0A0A]/35" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/20 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A]/60 via-transparent to-transparent" />
