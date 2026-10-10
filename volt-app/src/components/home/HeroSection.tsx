@@ -100,7 +100,7 @@ export default function HeroSection() {
 
       {/* Video background */}
       <div className="absolute inset-0 overflow-hidden">
-        <video ref={videoRef} src="/images/voltvanvid1.mp4" autoPlay muted loop playsInline
+        <video ref={videoRef} src="/images/1099VoltBackVid.mp4" autoPlay muted loop playsInline
           className="absolute inset-0 w-full h-full object-cover will-change-transform"
           style={{ transformOrigin: "center center" }} />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/92 via-[#0A0A0A]/70 to-[#0A0A0A]/35" />
