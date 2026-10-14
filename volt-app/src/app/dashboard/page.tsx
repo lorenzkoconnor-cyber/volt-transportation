@@ -128,7 +128,9 @@ export default function AdminDashboardPage() {
         date: r.trip ? `${formatDateShort(r.trip.departure_date)} · ${formatTime12h(r.trip.departure_time)}` : "—",
         total: formatCents(r.total_cents),
         status: r.status,
-        paymentStatus: r.payments?.[0]?.status ?? null,
+        // A split booking has several payments — show "pending" until all are in.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        paymentStatus: r.payments?.some((p: any) => p.status === "pending") ? "pending" : r.payments?.[0]?.status ?? null,
       })));
 
       setStats({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { canViewFinancials } from "@/lib/permissions";
@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatCents, formatDateLong } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, XCircle,
   Phone, Mail, Users, Calendar, Clock, MapPin, CreditCard, Banknote, Gift, FileText, Plane,
@@ -40,6 +41,8 @@ export default function ReservationDetailPage() {
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [chargingId, setChargingId] = useState<string | null>(null);   // card payment being taken
+  const cardRef = useRef<StaffCardHandle>(null);
 
   const load = useCallback(async () => {
     const { data, error: err } = await sb
@@ -119,6 +122,21 @@ export default function ReservationDetailPage() {
     const { error: err } = await sb.from("payments").update({ status: "paid" }).eq("id", paymentId);
     if (err) setError(err.message);
     else await load();
+    setBusy(false);
+  };
+
+  const chargeCard = async (paymentId: string) => {
+    const cardErr = cardRef.current?.validate();
+    if (cardErr) { setError(cardErr); return; }
+    setBusy(true);
+    setError("");
+    try {
+      await cardRef.current!.charge(paymentId);
+      setChargingId(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The card was declined.");
+    }
     setBusy(false);
   };
 
@@ -345,7 +363,8 @@ export default function ReservationDetailPage() {
             {payments.map((p: any) => {
               const Icon = PAY_ICONS[p.method as keyof typeof PAY_ICONS] ?? CreditCard;
               return (
-                <div key={p.id} className="flex items-center justify-between bg-white/3 rounded-xl px-4 py-3">
+                <div key={p.id} className="space-y-2">
+                <div className="flex items-center justify-between bg-white/3 rounded-xl px-4 py-3">
                   <div className="flex items-center gap-3">
                     <Icon className="w-4 h-4 text-[#FCC300]" />
                     <div>
@@ -368,6 +387,13 @@ export default function ReservationDetailPage() {
                       : p.status === "voided" ? "bg-[#A1A1AA]/15 text-[#A1A1AA]"
                       : "bg-red-500/15 text-red-400"
                     }`}>{p.status === "authorized" ? "on hold" : p.status}</span>
+                    {p.status === "pending" && p.method === "stripe" && resv.status !== "cancelled" && chargingId !== p.id && (
+                      <Button size="sm" disabled={busy}
+                        onClick={() => { setError(""); setChargingId(p.id); }}
+                        className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-xs font-semibold">
+                        <CreditCard className="w-3.5 h-3.5 mr-1" /> Charge Card
+                      </Button>
+                    )}
                     {p.status === "pending" && (
                       <Button size="sm" variant="outline" disabled={busy}
                         onClick={() => markPaymentPaid(p.id)}
@@ -376,6 +402,22 @@ export default function ReservationDetailPage() {
                       </Button>
                     )}
                   </div>
+                </div>
+                {chargingId === p.id && (
+                  <div className="space-y-2">
+                    <StaffCardPayment ref={cardRef} amountCents={p.amount_cents} />
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" disabled={busy} onClick={() => chargeCard(p.id)}
+                        className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-xs font-semibold">
+                        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `Charge ${formatCents(p.amount_cents)}`}
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => setChargingId(null)}
+                        className="border-white/15 text-white hover:bg-white/5 text-xs">
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 </div>
               );
             })}

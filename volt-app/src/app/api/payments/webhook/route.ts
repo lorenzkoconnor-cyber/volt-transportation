@@ -64,6 +64,19 @@ export async function POST(request: NextRequest) {
             })
             .eq("stripe_payment_intent_id", pi.id)
             .eq("status", "authorized");
+
+          // A card staff took in the dashboard (staff-card route).
+          if (pi.metadata?.staff_payment_id) {
+            await sb
+              .from("payments")
+              .update({
+                status: "paid",
+                captured_at: new Date().toISOString(),
+                stripe_charge_id: typeof pi.latest_charge === "string" ? pi.latest_charge : null,
+              })
+              .eq("id", pi.metadata.staff_payment_id)
+              .eq("status", "pending");
+          }
         }
 
         const checkoutId = pi.metadata?.checkout_id;

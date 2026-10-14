@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { PRICING, generateConfirmationNumber } from "@/lib/booking";
-import { formatTime12h, localDateString } from "@/lib/format";
+import { formatTime12h, formatCents, localDateString } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, Plus, X,
-  User, MapPin, CreditCard, Banknote, Gift,
+  User, MapPin, CreditCard, Banknote, Gift, SplitSquareHorizontal,
 } from "lucide-react";
 
 interface Route {
@@ -28,7 +29,7 @@ interface TripSlot {
   seats_booked: number;
 }
 
-type PayMethod = "cash" | "stripe" | "comp";
+type PayMethod = "cash" | "stripe" | "split" | "comp";
 
 export default function NewReservationPage() {
   const router = useRouter();
@@ -54,9 +55,16 @@ export default function NewReservationPage() {
   const [extraNames, setExtraNames] = useState<string[]>([]);
   const [notes, setNotes]         = useState("");
 
-  const [discount, setDiscount]   = useState(0);
+  const [discount, setDiscount]   = useState(0);   // dollars or percent, per discountType
+  const [discountType, setDiscountType] = useState<"amount" | "percent">("amount");
   const [payMethod, setPayMethod] = useState<PayMethod>("cash");
   const [payNow, setPayNow]       = useState(true);
+  const [splitCash, setSplitCash] = useState("");   // dollars, split payments only
+  const cardRef = useRef<StaffCardHandle>(null);
+
+  // Set once the reservation is saved but its card charge still needs to go
+  // through — the button then only retries the card (no duplicate booking).
+  const [created, setCreated] = useState<{ id: string; confirmation: string; cardPaymentId: string } | null>(null);
 
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
@@ -100,20 +108,68 @@ export default function NewReservationPage() {
     children * PRICING.child +
     pets * PRICING.pet +
     extraBags * PRICING.extraBag;
-  const total = Math.max(0, subtotal - discount);
+  const isComp = payMethod === "comp";
+  const subtotalCents = subtotal * 100;
+  const discountCents = isComp ? subtotalCents : Math.min(
+    subtotalCents,
+    discountType === "percent" ? Math.round((subtotalCents * Math.min(discount, 100)) / 100) : Math.round(discount * 100),
+  );
+  const totalCents = subtotalCents - discountCents;
+  const splitCashCents = Math.round((parseFloat(splitCash) || 0) * 100);
+  const cardCents =
+    payMethod === "split" ? totalCents - splitCashCents
+    : payMethod === "stripe" ? totalCents
+    : 0;
+  // Card taken on this screen: always for split, and for Card unless "collect later".
+  const chargeCardNow = cardCents > 0 && (payMethod === "split" || (payMethod === "stripe" && payNow));
   const seatCount = adults + children;
 
   const selectedSlot = slots.find((s) => s.id === tripId);
   const seatsLeft = selectedSlot ? selectedSlot.total_capacity - selectedSlot.seats_booked : null;
 
+  const chargeCard = async (resv: { id: string; confirmation: string; cardPaymentId: string }) => {
+    try {
+      await cardRef.current!.charge(resv.cardPaymentId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "The card was declined.";
+      setError(
+        `Reservation ${resv.confirmation} is saved, but the card didn't go through: ${msg} ` +
+        `Fix the card details and press Retry Card, or charge it later from the reservation page.`,
+      );
+      setSaving(false);
+      return;
+    }
+    router.push(`/dashboard/reservations/${resv.id}`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Reservation already saved — only the card is left.
+    if (created) {
+      const cardErr = cardRef.current?.validate();
+      if (cardErr) { setError(cardErr); return; }
+      setSaving(true);
+      await chargeCard(created);
+      return;
+    }
 
     if (!tripId) { setError("Select a departure time."); return; }
     if (seatsLeft !== null && seatCount > seatsLeft) {
       setError(`Only ${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left on this departure.`);
       return;
+    }
+    if (payMethod === "split") {
+      if (splitCashCents <= 0 || splitCashCents >= totalCents) {
+        setError("For a split payment, enter a cash amount between $0 and the total.");
+        return;
+      }
+    }
+    if (chargeCardNow) {
+      if (cardCents < 50) { setError("Card charges must be at least $0.50 — take the rest in cash or mark it Comp."); return; }
+      const cardErr = cardRef.current?.validate();
+      if (cardErr) { setError(cardErr); return; }
     }
 
     setSaving(true);
@@ -134,7 +190,6 @@ export default function NewReservationPage() {
 
       // 2. Reservation
       const confirmation = generateConfirmationNumber();
-      const isComp = payMethod === "comp";
       const { data: reservation, error: resErr } = await sb
         .from("reservations")
         .insert({
@@ -148,9 +203,9 @@ export default function NewReservationPage() {
           extra_bags: extraBags,
           is_round_trip: false,
           special_notes: notes.trim() || null,
-          subtotal_cents: subtotal * 100,
-          discount_cents: (isComp ? subtotal : discount) * 100,
-          total_cents: isComp ? 0 : total * 100,
+          subtotal_cents: subtotalCents,
+          discount_cents: discountCents,
+          total_cents: totalCents,
           created_by_employee_id: employee?.id ?? null,
         })
         .select()
@@ -174,16 +229,33 @@ export default function NewReservationPage() {
       });
       if (seatErr) throw new Error("Not enough seats left on this departure.");
 
-      // 5. Payment record
-      const { error: payErr } = await sb.from("payments").insert({
-        reservation_id: reservation.id,
-        method: payMethod,
-        status: isComp || payNow ? "paid" : "pending",
-        amount_cents: isComp ? 0 : total * 100,
-        refund_amount_cents: 0,
-        notes: isComp ? "Complimentary booking" : payNow ? null : "To be collected",
-      });
+      // 5. Payment record(s) — a split is one cash row + one card row.
+      // Card rows start pending and turn paid once Stripe charges the card.
+      const paymentRows =
+        isComp ? [{ method: "comp", status: "paid", amount_cents: 0, notes: "Complimentary booking" }]
+        : payMethod === "split" ? [
+            { method: "cash", status: "paid", amount_cents: splitCashCents, notes: "Split payment — cash part" },
+            { method: "stripe", status: "pending", amount_cents: cardCents, notes: "Split payment — card part" },
+          ]
+        : payMethod === "stripe" ? [
+            { method: "stripe", status: totalCents === 0 ? "paid" : "pending", amount_cents: totalCents, notes: chargeCardNow || totalCents === 0 ? null : "To be collected" },
+          ]
+        : [{ method: "cash", status: payNow ? "paid" : "pending", amount_cents: totalCents, notes: payNow ? null : "To be collected" }];
+
+      const { data: payments, error: payErr } = await sb
+        .from("payments")
+        .insert(paymentRows.map((p) => ({ ...p, reservation_id: reservation.id, refund_amount_cents: 0 })))
+        .select("id, method");
       if (payErr) throw new Error(payErr.message);
+
+      if (chargeCardNow) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cardRow = (payments ?? []).find((p: any) => p.method === "stripe");
+        const saved = { id: reservation.id, confirmation, cardPaymentId: cardRow.id };
+        setCreated(saved);
+        await chargeCard(saved);
+        return;
+      }
 
       router.push(`/dashboard/reservations/${reservation.id}`);
     } catch (err) {
@@ -210,6 +282,7 @@ export default function NewReservationPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <fieldset disabled={!!created} className="space-y-6 disabled:opacity-60">
         {/* Trip */}
         <div className="glass rounded-2xl p-6 space-y-4">
           <div className="flex items-center gap-2">
@@ -376,13 +449,16 @@ export default function NewReservationPage() {
           </div>
         </div>
 
+        </fieldset>
+
         {/* Payment */}
         <div className="glass rounded-2xl p-6 space-y-4">
           <h2 className="text-white font-semibold">Payment</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {([
               { key: "cash", label: "Cash", icon: Banknote },
               { key: "stripe", label: "Card", icon: CreditCard },
+              { key: "split", label: "Split", icon: SplitSquareHorizontal },
               { key: "comp", label: "Comp (Free)", icon: Gift },
             ] as const).map((m) => {
               const Icon = m.icon;
@@ -390,12 +466,13 @@ export default function NewReservationPage() {
                 <button
                   key={m.key}
                   type="button"
+                  disabled={!!created}
                   onClick={() => setPayMethod(m.key)}
                   className={`rounded-xl px-3 py-3 text-sm font-medium transition-all border flex items-center justify-center gap-2 ${
                     payMethod === m.key
                       ? "bg-[#FCC300] text-[#0A0A0A] border-[#FCC300]"
                       : "bg-white/5 text-[#A1A1AA] border-white/10 hover:border-[#FCC300]/50 hover:text-white"
-                  }`}
+                  } disabled:opacity-60 disabled:cursor-not-allowed`}
                 >
                   <Icon className="w-4 h-4" />{m.label}
                 </button>
@@ -403,32 +480,68 @@ export default function NewReservationPage() {
             })}
           </div>
 
-          {payMethod !== "comp" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+          {!isComp && (
+            <fieldset disabled={!!created} className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
               <div>
-                <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Discount ($)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={subtotal}
-                  value={discount}
-                  onChange={(e) => setDiscount(Math.max(0, parseInt(e.target.value || "0", 10)))}
-                  className={inputCls}
-                />
+                <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Discount</Label>
+                <div className="flex gap-2">
+                  <div className="flex rounded-xl border border-white/10 overflow-hidden flex-shrink-0">
+                    {([["amount", "$"], ["percent", "%"]] as const).map(([key, label]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => { setDiscountType(key); setDiscount(0); }}
+                        className={`w-10 h-10 text-sm font-semibold transition-colors ${
+                          discountType === key ? "bg-[#FCC300] text-[#0A0A0A]" : "bg-white/5 text-[#A1A1AA] hover:text-white"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={discountType === "percent" ? 100 : subtotal}
+                    step={discountType === "percent" ? 1 : 0.01}
+                    value={discount || ""}
+                    placeholder="0"
+                    onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className={inputCls}
+                  />
+                </div>
               </div>
-              <label className="flex items-center gap-2.5 h-10 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={payNow}
-                  onChange={(e) => setPayNow(e.target.checked)}
-                  className="w-4 h-4 accent-[#FCC300]"
-                />
-                <span className="text-white text-sm">
-                  Payment collected {payMethod === "stripe" ? "(card charged)" : "(cash received)"}
-                </span>
-              </label>
-            </div>
+              {payMethod === "split" ? (
+                <div>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Cash received ($) — rest goes on the card</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    max={totalCents / 100}
+                    value={splitCash}
+                    onChange={(e) => setSplitCash(e.target.value)}
+                    placeholder="0.00"
+                    className={inputCls}
+                  />
+                </div>
+              ) : (
+                <label className="flex items-center gap-2.5 h-10 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={payNow}
+                    onChange={(e) => setPayNow(e.target.checked)}
+                    className="w-4 h-4 accent-[#FCC300]"
+                  />
+                  <span className="text-white text-sm">
+                    {payMethod === "stripe" ? "Charge card now (uncheck to collect later)" : "Payment collected (cash received)"}
+                  </span>
+                </label>
+              )}
+            </fieldset>
           )}
+
+          {chargeCardNow && <StaffCardPayment ref={cardRef} amountCents={cardCents} />}
 
           {/* Price summary */}
           <div className="bg-white/3 rounded-xl p-4 space-y-1.5">
@@ -436,16 +549,28 @@ export default function NewReservationPage() {
               <span className="text-[#A1A1AA]">Subtotal</span>
               <span className="text-white">${subtotal}</span>
             </div>
-            {payMethod !== "comp" && discount > 0 && (
+            {!isComp && discountCents > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-[#A1A1AA]">Discount</span>
-                <span className="text-green-400">−${discount}</span>
+                <span className="text-[#A1A1AA]">Discount{discountType === "percent" ? ` (${Math.min(discount, 100)}%)` : ""}</span>
+                <span className="text-green-400">−{formatCents(discountCents)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold border-t border-white/10 pt-2 mt-1">
               <span className="text-white">Total</span>
-              <span className="text-[#FCC300] text-lg">${payMethod === "comp" ? 0 : total}</span>
+              <span className="text-[#FCC300] text-lg">{formatCents(totalCents)}</span>
             </div>
+            {payMethod === "split" && (
+              <>
+                <div className="flex justify-between text-sm pt-1">
+                  <span className="text-[#A1A1AA]">Cash</span>
+                  <span className="text-white">${(splitCashCents / 100).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#A1A1AA]">Card</span>
+                  <span className="text-white">${(Math.max(0, cardCents) / 100).toFixed(2)}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -462,9 +587,16 @@ export default function NewReservationPage() {
           className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-12 rounded-xl disabled:opacity-60"
         >
           {saving
-            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating reservation…</>
-            : <><CheckCircle2 className="w-4 h-4 mr-2" />Create Reservation</>}
+            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{created ? "Charging card…" : chargeCardNow ? "Creating reservation & charging card…" : "Creating reservation…"}</>
+            : created
+            ? <><CreditCard className="w-4 h-4 mr-2" />Retry Card · ${(cardCents / 100).toFixed(2)}</>
+            : <><CheckCircle2 className="w-4 h-4 mr-2" />{chargeCardNow ? `Create Reservation & Charge $${(cardCents / 100).toFixed(2)}` : "Create Reservation"}</>}
         </Button>
+        {created && (
+          <Link href={`/dashboard/reservations/${created.id}`} className="block text-center text-[#A1A1AA] hover:text-white text-sm transition-colors">
+            Charge the card later — open reservation {created.confirmation} →
+          </Link>
+        )}
       </form>
     </div>
   );
