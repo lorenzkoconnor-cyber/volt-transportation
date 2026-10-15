@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import MapsLink from "@/components/ui/MapsLink";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,15 +61,14 @@ export default function ContactPage() {
                   <MapPin className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Address</h3>
-                <a
-                  href="https://www.google.com/maps/search/?api=1&query=3885+Miller+Road+Suite+C+Columbus+GA+31909"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <MapsLink
+                  address="3885 Miller Road Suite C, Columbus, GA 31909"
+                  mode="search"
                   className="text-[#A1A1AA] hover:text-white text-sm transition-colors"
                 >
                   3885 Miller Road, Suite C<br />
                   Columbus, GA 31909
-                </a>
+                </MapsLink>
               </div>
 
               <div className="glass rounded-2xl p-6">

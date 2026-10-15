@@ -3,8 +3,9 @@ import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import MapsLink from "@/components/ui/MapsLink";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowRight, Clock, Car, Plane } from "lucide-react";
+import { MapPin, ArrowRight, Clock, Car, Plane, Navigation } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Locations | Columbus GA & ATL Airport Pickup Points",
@@ -51,15 +52,13 @@ export default function LocationsPage() {
                       <MapPin className="w-4 h-4 text-[#A1A1AA] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-white font-medium text-sm">Address</div>
-                        <a
-                          href="https://www.google.com/maps/dir/?api=1&destination=3885+Miller+Road+Suite+C+Columbus+GA+31909"
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <MapsLink
+                          address="3885 Miller Road Suite C, Columbus, GA 31909"
                           className="block text-[#A1A1AA] hover:text-white text-sm mt-0.5 transition-colors"
                         >
                           3885 Miller Road, Suite C<br />
                           Columbus, GA 31909
-                        </a>
+                        </MapsLink>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -94,6 +93,13 @@ export default function LocationsPage() {
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                   />
+                  <MapsLink
+                    address="3885 Miller Road Suite C, Columbus, GA 31909"
+                    className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-lg bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-sm font-semibold px-4 py-2 shadow-lg transition-colors"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    Get Directions
+                  </MapsLink>
                 </div>
               </div>
             </div>
@@ -149,15 +155,13 @@ export default function LocationsPage() {
                       <MapPin className="w-4 h-4 text-[#A1A1AA] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-white font-medium text-sm">Airport Address</div>
-                        <a
-                          href="https://www.google.com/maps/dir/?api=1&destination=6000+North+Terminal+Parkway+Suite+4000+Atlanta+GA+30320"
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <MapsLink
+                          address="6000 North Terminal Parkway Suite 4000, Atlanta, GA 30320"
                           className="block text-[#A1A1AA] hover:text-white text-sm mt-0.5 transition-colors"
                         >
                           6000 North Terminal Parkway, Suite 4000<br />
                           Atlanta, GA 30320
-                        </a>
+                        </MapsLink>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -192,6 +196,13 @@ export default function LocationsPage() {
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                   />
+                  <MapsLink
+                    address="6000 North Terminal Parkway Suite 4000, Atlanta, GA 30320"
+                    className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-lg bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-sm font-semibold px-4 py-2 shadow-lg transition-colors"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    Get Directions
+                  </MapsLink>
                 </div>
               </div>
             </div>
