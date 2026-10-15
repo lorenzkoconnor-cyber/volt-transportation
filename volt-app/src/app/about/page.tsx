@@ -109,8 +109,39 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* What Makes Us Different */}
+        {/* Inside our Columbus terminal */}
         <section className="py-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Inside Our Columbus Terminal</h2>
+              <p className="text-[#A1A1AA] max-w-xl mx-auto">
+                Check in at the front desk, then settle into a comfortable lounge while you wait for your shuttle.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {[
+                { label: "Front Desk", src: "/images/volt-front-desk.webp", alt: "Volt Transportation front desk with the Volt logo on the wall" },
+                { label: "Passenger Lounge", src: "/images/volt-lounge-seating.webp", alt: "Leather sofas and armchairs in the Volt Transportation passenger lounge" },
+                { label: "Open Early & Late", src: "/images/volt-entrance-night.webp", alt: "The lit Volt Transportation lobby seen through the front doors at night" },
+              ].map((item) => (
+                <div key={item.label} className="glass rounded-2xl overflow-hidden relative aspect-[3/4] group">
+                  <Image
+                    src={item.src}
+                    alt={item.alt}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/80 via-transparent to-transparent pointer-events-none" />
+                  <span className="absolute bottom-4 left-5 text-white text-sm font-semibold">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* What Makes Us Different */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A]">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-14">
               <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">What Makes Us Different</h2>
@@ -136,7 +167,7 @@ export default function AboutPage() {
         </section>
 
         {/* Fleet Showcase */}
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A]">
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-white mb-4">The Volt Way</h2>

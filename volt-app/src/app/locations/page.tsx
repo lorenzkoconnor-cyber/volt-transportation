@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -89,11 +90,43 @@ export default function LocationsPage() {
                   <iframe
                     title="Map of Volt Transportation's Columbus pickup location"
                     src="https://www.google.com/maps?q=3885+Miller+Road+Suite+C+Columbus+GA+31909&output=embed"
-                    className="absolute inset-0 w-full h-full border-0"
+                    className="absolute inset-0 w-full h-full border-0 [filter:invert(90%)_hue-rotate(180deg)_brightness(95%)_contrast(90%)]"
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Finding us in Columbus */}
+            <div>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">Finding Us in Columbus</h2>
+                <p className="text-[#A1A1AA] max-w-xl mx-auto">
+                  Look for the Volt Transportation sign, head through the Suite C doors, and relax in our lounge until boarding.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {[
+                  { label: "Look for the Volt sign", src: "/images/volt-storefront.webp", alt: "Volt Transportation storefront sign at 3885 Miller Road in Columbus, Georgia" },
+                  { label: "Enter through Suite C", src: "/images/volt-entrance.webp", alt: "Glass entrance doors to the Volt Transportation lobby in Suite C" },
+                  { label: "Wait in our lounge", src: "/images/volt-lounge.webp", alt: "Volt Transportation passenger lounge with leather seating and a TV" },
+                ].map((item, i) => (
+                  <div key={item.label} className="glass rounded-2xl overflow-hidden relative aspect-[3/4] group">
+                    <Image
+                      src={item.src}
+                      alt={item.alt}
+                      fill
+                      sizes="(max-width: 640px) 100vw, 33vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/85 via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute bottom-4 left-5 flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-[#FCC300] text-[#0A0A0A] text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                      <span className="text-white text-sm font-semibold">{item.label}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -155,7 +188,7 @@ export default function LocationsPage() {
                   <iframe
                     title="Map of Hartsfield-Jackson Atlanta International Airport"
                     src="https://www.google.com/maps?q=6000+North+Terminal+Parkway+Suite+4000+Atlanta+GA+30320&output=embed"
-                    className="absolute inset-0 w-full h-full border-0"
+                    className="absolute inset-0 w-full h-full border-0 [filter:invert(90%)_hue-rotate(180deg)_brightness(95%)_contrast(90%)]"
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                   />
