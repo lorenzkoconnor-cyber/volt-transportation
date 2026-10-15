@@ -51,11 +51,11 @@ export default function AboutPage() {
             {/* Volt headquarters */}
             <div className="relative rounded-2xl overflow-hidden bg-[#171717] aspect-video glass">
               <Image
-                src="/images/volt-business-exterior-building.png"
-                alt="Volt Transportation headquarters building in Columbus, Georgia"
+                src="/images/volt-storefront.webp"
+                alt="Volt Transportation storefront sign at 3885 Miller Road in Columbus, Georgia"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
+                className="object-cover object-[center_33%]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/60 to-transparent pointer-events-none" />
             </div>
@@ -97,8 +97,8 @@ export default function AboutPage() {
             {/* Volt lobby */}
             <div className="relative rounded-2xl overflow-hidden bg-[#171717] aspect-[4/3] glass">
               <Image
-                src="/images/volt-lobby.webp"
-                alt="The Volt Transportation lobby with leather seating and the Volt logo on the wall"
+                src="/images/volt-lounge.webp"
+                alt="The Volt Transportation lobby with leather seating, wall art, and a TV"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"

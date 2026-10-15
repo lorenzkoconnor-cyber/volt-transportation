@@ -46,8 +46,8 @@ export default function ContactPage() {
             <div className="space-y-5">
               <div className="glass rounded-2xl overflow-hidden relative aspect-[4/3]">
                 <Image
-                  src="/images/volt-business-interior-building.png"
-                  alt="Inside the Volt Transportation office in Columbus, Georgia"
+                  src="/images/volt-front-desk.webp"
+                  alt="The Volt Transportation front desk inside the Columbus, Georgia office"
                   fill
                   sizes="(max-width: 1024px) 100vw, 33vw"
                   className="object-cover"
