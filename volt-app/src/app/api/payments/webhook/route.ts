@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripeServer } from "@/lib/stripe/server";
 import { createAdminDb, finalizeCheckout } from "@/lib/checkout";
+import { finishEdit } from "@/lib/staff-booking";
 
 // POST /api/payments/webhook
 // Stripe sends payment events here. Signature-verified with STRIPE_WEBHOOK_SECRET.
@@ -76,6 +77,18 @@ export async function POST(request: NextRequest) {
               })
               .eq("id", pi.metadata.staff_payment_id)
               .eq("status", "pending");
+
+            // The extra charge for a reservation edit — apply the edit if the
+            // dashboard didn't get to it.
+            const { data: staffRow } = await sb
+              .from("payments")
+              .select("reservation_change_id")
+              .eq("id", pi.metadata.staff_payment_id)
+              .maybeSingle();
+            if (staffRow?.reservation_change_id) {
+              const applied = await finishEdit(sb, staffRow.reservation_change_id);
+              if (!applied.ok) console.warn(`[webhook] edit ${staffRow.reservation_change_id} not applied: ${applied.error}`);
+            }
           }
         }
 
@@ -146,6 +159,8 @@ export async function POST(request: NextRequest) {
           .filter((r) => r.status === "succeeded" || r.status === "pending")
           .reduce((sum, r) => sum + r.amount, 0);
         const isFullRefund = refundedCents >= charge.amount_captured;
+        // Refunding the difference after a reservation edit never cancels it.
+        const editRefund = refunds.data.some((r) => r.metadata?.reason === "reservation_edit");
 
         await sb
           .from("payments")
@@ -156,7 +171,7 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", payment.id);
 
-        if (isFullRefund && payment.reservation_id) {
+        if (isFullRefund && !editRefund && payment.reservation_id) {
           const { data: cancelled } = await sb
             .from("reservations")
             .update({ status: "cancelled", cancelled_at: new Date().toISOString() })

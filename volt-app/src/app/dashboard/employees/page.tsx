@@ -4,13 +4,14 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Shield, Plus, Mail, Phone, CheckCircle2, XCircle,
-  Crown, X, Loader2, UserPlus, Eye, EyeOff, KeyRound,
+  Crown, X, Loader2, UserPlus, Eye, EyeOff, KeyRound, Pencil, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboardRole } from "@/lib/useDashboardRole";
 
 const ROLE_STYLES: Record<string, { label: string; class: string; icon: React.ComponentType<{ className?: string }> }> = {
   owner:        { label: "Owner",        class: "bg-[#FCC300]/20 text-[#FCC300] border border-[#FCC300]/30", icon: Crown },
@@ -32,9 +33,18 @@ type Employee = {
 };
 
 function EmployeesContent() {
-  const { isOwner } = useAuth();
+  const { isOwner, employee: me } = useAuth();
   const params = useSearchParams();
   const isPreview = params.get("preview") === "true";
+  const role = useDashboardRole();
+  const isManager = role === "manager";
+  // Owners manage everyone. Managers edit office staff, drivers and themselves,
+  // and can delete inactive office staff / drivers.
+  const canEdit = (emp: Employee) =>
+    isOwner || isPreview || (isManager && (["office_staff", "driver"].includes(emp.role) || emp.id === me?.id));
+  const canDelete = (emp: Employee) =>
+    !emp.is_active && emp.role !== "owner" && emp.id !== me?.id &&
+    (isOwner || isPreview || (isManager && ["office_staff", "driver"].includes(emp.role)));
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -60,14 +70,25 @@ function EmployeesContent() {
   const [resetError, setResetError]           = useState("");
   const [resetSuccess, setResetSuccess]       = useState("");
 
+  // Edit details modal
+  const [editTarget, setEditTarget]   = useState<Employee | null>(null);
+  const [editForm, setEditForm]       = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError]     = useState("");
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget]   = useState<Employee | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError]     = useState("");
+
   const supabase = createClient();
 
   // Load employees from Supabase
   useEffect(() => {
-    if (!isPreview && !isOwner) return;
+    if (!isPreview && !isOwner && !isManager) return;
     fetchEmployees();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOwner, isPreview]);
+  }, [isOwner, isManager, isPreview]);
 
   const fetchEmployees = async () => {
     setLoading(true);
@@ -124,7 +145,7 @@ function EmployeesContent() {
     const res = await fetch("/api/employees/invite", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: resetTarget.user_id, newPassword: resetPassword }),
+      body: JSON.stringify({ employeeId: resetTarget.id, newPassword: resetPassword }),
     });
 
     const data = await res.json();
@@ -135,6 +156,43 @@ function EmployeesContent() {
       setResetPassword("");
     }
     setResetLoading(false);
+  };
+
+  const openEdit = (emp: Employee) => {
+    setEditTarget(emp);
+    setEditForm({ firstName: emp.first_name, lastName: emp.last_name, email: emp.email, phone: emp.phone ?? "" });
+    setEditError("");
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    setEditLoading(true);
+    setEditError("");
+    const res = await fetch("/api/employees/invite", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId: editTarget.id, ...editForm }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) setEditError(data.error ?? "Failed to save changes");
+    else { setEditTarget(null); fetchEmployees(); }
+    setEditLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError("");
+    const res = await fetch("/api/employees/invite", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId: deleteTarget.id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) setDeleteError(data.error ?? "Failed to delete employee");
+    else { setDeleteTarget(null); fetchEmployees(); }
+    setDeleteLoading(false);
   };
 
   const toggleActive = async (emp: Employee) => {
@@ -155,12 +213,12 @@ function EmployeesContent() {
     if (res.ok) fetchEmployees();
   };
 
-  if (!isOwner && !isPreview) {
+  if (!isOwner && !isManager && !isPreview) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <Shield className="w-12 h-12 text-[#A1A1AA]" />
-        <p className="text-white font-semibold">Owner Access Required</p>
-        <p className="text-[#A1A1AA] text-sm">Only the owner can manage employee accounts.</p>
+        <p className="text-white font-semibold">Owner or Manager Access Required</p>
+        <p className="text-[#A1A1AA] text-sm">Only owners and managers can manage employee accounts.</p>
       </div>
     );
   }
@@ -177,12 +235,14 @@ function EmployeesContent() {
             {activeCount} active · {employees.length} total
           </p>
         </div>
-        <Button
-          onClick={() => { setShowModal(true); setInviteSuccess(""); setInviteError(""); }}
-          className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold"
-        >
-          <Plus className="w-4 h-4 mr-1.5" /> Add Employee
-        </Button>
+        {(isOwner || isPreview) && (
+          <Button
+            onClick={() => { setShowModal(true); setInviteSuccess(""); setInviteError(""); }}
+            className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold"
+          >
+            <Plus className="w-4 h-4 mr-1.5" /> Add Employee
+          </Button>
+        )}
       </div>
 
       {/* Role breakdown */}
@@ -253,7 +313,7 @@ function EmployeesContent() {
                         )}
                       </div>
                       <div className="col-span-2">
-                        {emp.role === "owner" ? (
+                        {emp.role === "owner" || !(isOwner || isPreview) ? (
                           <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium w-fit ${roleInfo.class}`}>
                             <RoleIcon className="w-3 h-3" />{roleInfo.label}
                           </span>
@@ -277,15 +337,37 @@ function EmployeesContent() {
                           }
                         </span>
                       </div>
-                      <div className="col-span-2 flex justify-end gap-3">
-                        <button
-                          onClick={() => { setResetTarget(emp); setResetPassword(""); setResetError(""); setResetSuccess(""); }}
-                          className="text-xs text-[#A1A1AA] hover:text-[#FCC300] transition-colors"
-                          title="Reset password"
-                        >
-                          <KeyRound className="w-3.5 h-3.5" />
-                        </button>
-                        {emp.role !== "owner" && (
+                      <div className="col-span-2 flex justify-end items-center gap-3">
+                        {canEdit(emp) && (
+                          <button
+                            onClick={() => openEdit(emp)}
+                            className="text-xs text-[#A1A1AA] hover:text-[#FCC300] transition-colors"
+                            title="Edit name, email, phone"
+                            aria-label={`Edit ${emp.first_name} ${emp.last_name}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {(isOwner || isPreview) && (
+                          <button
+                            onClick={() => { setResetTarget(emp); setResetPassword(""); setResetError(""); setResetSuccess(""); }}
+                            className="text-xs text-[#A1A1AA] hover:text-[#FCC300] transition-colors"
+                            title="Reset password"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canDelete(emp) && (
+                          <button
+                            onClick={() => { setDeleteTarget(emp); setDeleteError(""); }}
+                            className="text-xs text-[#A1A1AA] hover:text-red-400 transition-colors"
+                            title="Delete employee permanently"
+                            aria-label={`Delete ${emp.first_name} ${emp.last_name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {emp.role !== "owner" && (isOwner || isPreview) && (
                           <button
                             onClick={() => toggleActive(emp)}
                             className={`text-xs transition-colors ${
@@ -315,7 +397,10 @@ function EmployeesContent() {
           <p className="text-[#A1A1AA] text-xs mt-0.5">
             You create each employee&apos;s account directly with a starting password — no email required.
             They sign in immediately at <span className="text-[#FCC300]">/emp-login</span> and see only what their role allows.
-            Use the key icon (<KeyRound className="w-3 h-3 inline" />) next to any employee to reset their password at any time.
+            Use the key icon (<KeyRound className="w-3 h-3 inline" />) to reset a password, the pencil (<Pencil className="w-3 h-3 inline" />) to
+            change a name, email or phone, and the trash can (<Trash2 className="w-3 h-3 inline" />) to permanently delete someone
+            you&apos;ve deactivated. Managers can edit and delete office staff and drivers; adding staff, roles, deactivating and
+            passwords are owner-only.
           </p>
         </div>
       </div>
@@ -418,6 +503,74 @@ function EmployeesContent() {
                 </Button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Details Modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setEditTarget(null)} />
+          <div className="relative w-full max-w-md glass rounded-2xl p-7 border border-white/10 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-white font-bold text-lg">Edit Employee</h2>
+                <p className="text-[#A1A1AA] text-xs mt-0.5">The email is also what they sign in with.</p>
+              </div>
+              <button onClick={() => setEditTarget(null)} className="text-[#A1A1AA] hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {([["firstName", "First Name *"], ["lastName", "Last Name *"]] as const).map(([key, label]) => (
+                  <div key={key}>
+                    <Label className="text-[#A1A1AA] text-xs mb-1.5 block">{label}</Label>
+                    <Input required value={editForm[key]} onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value }))}
+                      className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#FCC300]" />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Email *</Label>
+                <Input required type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#FCC300]" />
+              </div>
+              <div>
+                <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Phone</Label>
+                <Input type="tel" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="(706) 555-0000"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]" />
+              </div>
+              {editError && <p className="text-red-400 text-xs bg-red-500/10 rounded-lg px-3 py-2">{editError}</p>}
+              <Button type="submit" disabled={editLoading}
+                className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
+                {editLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
+          <div className="relative w-full max-w-sm glass rounded-2xl p-7 border border-red-500/30 shadow-2xl">
+            <h2 className="text-white font-bold text-lg">Delete {deleteTarget.first_name} {deleteTarget.last_name}?</h2>
+            <p className="text-[#A1A1AA] text-sm mt-2">
+              This permanently removes their employee account and sign-in. It can&apos;t be undone. Bookings and changes
+              they made stay on record with their name.
+            </p>
+            {deleteError && <p className="text-red-400 text-xs bg-red-500/10 rounded-lg px-3 py-2 mt-3">{deleteError}</p>}
+            <div className="flex gap-3 mt-5">
+              <Button onClick={() => setDeleteTarget(null)} variant="outline" className="flex-1 border-white/15 text-white hover:bg-white/5">
+                Keep
+              </Button>
+              <Button onClick={handleDelete} disabled={deleteLoading} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold">
+                {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete Permanently"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

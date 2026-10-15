@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Calendar, MapPin, Users, MessageSquare, Download, Plane } from "lucide-react";
+import { CheckCircle, Calendar, MapPin, Users, MessageSquare, Download, Plane, Loader2 } from "lucide-react";
 import {
   type BookingSearch,
   type Passenger,
@@ -44,6 +45,25 @@ export default function Step5Confirmation({
     : `Military Discount (−${MILITARY_DISCOUNT_PERCENT}%)`;
   const outboundFlight = search.hasFlight ? flightSummary(search.outboundFlight, flightDirection(search.from)) : "";
   const returnFlight = search.hasFlight && returnSlot ? flightSummary(search.returnFlight, flightDirection(search.to)) : "";
+  const [texting, setTexting] = useState<"idle" | "busy" | "sent" | "error">("idle");
+  const [textMsg, setTextMsg] = useState("");
+  const textConfirmation = async () => {
+    setTexting("busy");
+    try {
+      const res = await fetch("/api/booking/text-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmationNumber }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "We couldn't send the text.");
+      setTexting("sent");
+      setTextMsg(`Sent to the phone ending in ${data.phoneEnding}.`);
+    } catch (err) {
+      setTexting("error");
+      setTextMsg(err instanceof Error ? err.message : "We couldn't send the text.");
+    }
+  };
   const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
   const downloadReceipt = () => {
@@ -194,7 +214,7 @@ export default function Step5Confirmation({
             "You'll receive an SMS confirmation shortly with pickup details",
             "Arrive at your pickup location 20 minutes before departure",
             "Your driver will assist with luggage",
-            "A reminder SMS will be sent the day before your trip",
+            "Reminder texts are sent 24 hours and 2 hours before departure",
           ].map((item, i) => (
             <li key={i} className="flex items-start gap-2.5 text-sm text-[#A1A1AA]">
               <span className="w-5 h-5 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-[#FCC300] text-xs flex-shrink-0 mt-0.5">
@@ -207,6 +227,20 @@ export default function Step5Confirmation({
       </div>
 
       {/* Actions */}
+      <div className="space-y-2">
+        <Button
+          variant="outline"
+          onClick={textConfirmation}
+          disabled={texting === "busy"}
+          className="w-full border-[#FCC300]/40 text-white hover:bg-[#FCC300]/10"
+        >
+          {texting === "busy" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MessageSquare className="w-4 h-4 mr-2" />}
+          {texting === "sent" ? "Text me my confirmation again" : "Text me my confirmation"}
+        </Button>
+        {textMsg && (
+          <p className={`text-xs ${texting === "error" ? "text-red-400" : "text-green-400"}`}>{textMsg}</p>
+        )}
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link href="/manage-reservation">
           <Button variant="outline" className="w-full border-white/15 text-white hover:bg-white/5">

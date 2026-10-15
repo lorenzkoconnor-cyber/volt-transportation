@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { canViewFinancials } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
@@ -10,9 +10,11 @@ import { formatTime12h, formatCents, formatDateLong } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
+import { editAccess, reservationBalance } from "@/lib/staff-pricing";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, XCircle,
   Phone, Mail, Users, Calendar, Clock, MapPin, CreditCard, Banknote, Gift, FileText, Plane,
+  Pencil, Printer, MessageSquare, History, Undo2, Lock,
 } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -29,7 +31,9 @@ const PAY_ICONS = { stripe: CreditCard, cash: Banknote, comp: Gift } as const;
 
 export default function ReservationDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const showMoney = canViewFinancials(useDashboardRole());
+  const justUpdated = useSearchParams().get("updated") === "1";
+  const role = useDashboardRole();
+  const showMoney = canViewFinancials(role);
   const supabase = createClient();
   const sb = supabase as any;
 
@@ -43,6 +47,9 @@ export default function ReservationDetailPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [chargingId, setChargingId] = useState<string | null>(null);   // card payment being taken
   const cardRef = useRef<StaffCardHandle>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [notice, setNotice] = useState("");
+  const [confirmRefund, setConfirmRefund] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error: err } = await sb
@@ -53,7 +60,7 @@ export default function ReservationDetailPage() {
         "trip:trips!reservations_trip_id_fkey(id, departure_date, departure_time, status, route:routes(name, origin_label, destination_label)), " +
         "return_trip:trips!reservations_return_trip_id_fkey(id, departure_date, departure_time, route:routes(name)), " +
         "reservation_passengers(id, name, is_primary, is_boarded, is_no_show), " +
-        "payments(id, method, status, amount_cents, refund_amount_cents, notes), " +
+        "payments(id, method, status, amount_cents, refund_amount_cents, notes, reservation_change_id, created_at), " +
         "reservation_flights(id, leg, direction, airline, flight_number, terminal, flight_date, flight_time)"
       )
       .eq("id", id)
@@ -64,6 +71,13 @@ export default function ReservationDetailPage() {
     } else {
       setResv(data);
       setNotes(data.special_notes ?? "");
+      const { data: changes } = await sb
+        .from("reservation_changes")
+        .select("id, action, status, summary, employee_name, created_at, error")
+        .eq("reservation_id", id)
+        .in("status", ["applied", "failed"])
+        .order("created_at", { ascending: false });
+      setHistory(changes ?? []);
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,6 +139,43 @@ export default function ReservationDetailPage() {
     setBusy(false);
   };
 
+  const sendText = async (type: "confirmation" | "receipt") => {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const res = await fetch(`/api/reservations/${id}/notify`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "The text could not be sent.");
+      setNotice(`${type === "confirmation" ? "Confirmation" : "Receipt link"} texted to ${data.phone}${data.simulated ? " (test mode — texting isn't connected yet)" : ""}.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The text could not be sent.");
+    }
+    setBusy(false);
+  };
+
+  const refundDifference = async () => {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const res = await fetch(`/api/reservations/${id}/refund`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "Refund failed.");
+      setNotice(`Refunded: ${data.lines.join(" · ")}.`);
+      setConfirmRefund(false);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Refund failed.");
+    }
+    setBusy(false);
+  };
+
   const chargeCard = async (paymentId: string) => {
     const cardErr = cardRef.current?.validate();
     if (cardErr) { setError(cardErr); return; }
@@ -162,7 +213,16 @@ export default function ReservationDetailPage() {
 
   const trip = resv.trip;
   const passengers = resv.reservation_passengers ?? [];
-  const payments = resv.payments ?? [];
+  // A card row for an edit that was never paid isn't a real payment — hide it.
+  const payments = (resv.payments ?? []).filter((p: any) => !(p.reservation_change_id && p.status === "pending"));
+  const access = editAccess(role, resv.status, trip, resv.is_round_trip ? resv.return_trip : null);
+  const { refundDueCents } = reservationBalance(resv.total_cents, resv.payments ?? []);
+  const receiptHref = `/receipt/${resv.receipt_token}`;
+  const customerEmail = resv.customer?.email && !/@(walkin|guest)\.volt$/.test(resv.customer.email) ? resv.customer.email : "";
+  const emailHref = customerEmail
+    ? `mailto:${customerEmail}?subject=${encodeURIComponent(`Your Volt receipt — ${resv.confirmation_number}`)}` +
+      `&body=${encodeURIComponent(`Hi ${resv.customer.first_name},\n\nThank you for riding with Volt Transportation. Here is your receipt for ${resv.confirmation_number}:\n${typeof window !== "undefined" ? window.location.origin : "https://volt-transportation.com"}${receiptHref}\n\nVolt Transportation\n(706) 530-5896`)}`
+    : "";
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -189,7 +249,18 @@ export default function ReservationDetailPage() {
 
         {/* Status actions */}
         {resv.status !== "cancelled" && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {!access.mode ? (
+              <span title={access.reason ?? ""} className="flex items-center gap-1 text-[#A1A1AA] text-xs px-2 max-w-[260px]">
+                <Lock className="w-3.5 h-3.5 flex-shrink-0" /> {access.reason}
+              </span>
+            ) : (
+              <Link href={`/dashboard/reservations/${id}/edit`}>
+                <Button size="sm" className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-xs font-semibold">
+                  <Pencil className="w-3.5 h-3.5 mr-1" /> {access.mode === "return_only" ? "Edit Return Trip" : "Edit Reservation"}
+                </Button>
+              </Link>
+            )}
             {resv.status !== "completed" && (
               <Button size="sm" variant="outline" disabled={busy}
                 onClick={() => updateStatus("completed")}
@@ -221,6 +292,85 @@ export default function ReservationDetailPage() {
           <p className="text-red-400 text-sm">{error}</p>
         </div>
       )}
+
+      {notice && (
+        <div className="flex items-start gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+          <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+          <p className="text-green-400 text-sm">{notice}</p>
+        </div>
+      )}
+      {justUpdated && !notice && (
+        <div className="flex items-start gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+          <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+          <p className="text-green-400 text-sm">Reservation updated. The customer was texted the new details.</p>
+        </div>
+      )}
+
+      {/* Refund owed after an edit lowered the price */}
+      {refundDueCents > 0 && (
+        <div className="glass rounded-2xl p-5 border border-green-500/30 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="text-white font-semibold flex items-center gap-2">
+              <Undo2 className="w-4 h-4 text-green-400" /> Refund owed: {formatCents(refundDueCents)}
+            </div>
+            <div className="text-[#A1A1AA] text-sm mt-0.5">
+              The customer paid more than the new total. Card payments go back to the card; cash is handed back.
+            </div>
+          </div>
+          {confirmRefund ? (
+            <div className="flex items-center gap-2">
+              <Button size="sm" disabled={busy} onClick={refundDifference}
+                className="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold">
+                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `Yes, refund ${formatCents(refundDueCents)}`}
+              </Button>
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmRefund(false)}
+                className="border-white/15 text-white hover:bg-white/5 text-xs">
+                Not now
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" disabled={busy} onClick={() => setConfirmRefund(true)}
+              className="bg-green-500 hover:bg-green-600 text-white text-xs font-semibold">
+              <Undo2 className="w-3.5 h-3.5 mr-1" /> Refund {formatCents(refundDueCents)}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Receipt + texts */}
+      <div className="glass rounded-2xl p-5">
+        <div className="text-white font-semibold mb-3">Receipt &amp; Confirmation</div>
+        <div className="flex flex-wrap gap-2">
+          <a href={`${receiptHref}?print=1`} target="_blank" rel="noopener">
+            <Button size="sm" variant="outline" className="border-white/15 text-white hover:bg-white/5 text-xs">
+              <Printer className="w-3.5 h-3.5 mr-1" /> Print Receipt
+            </Button>
+          </a>
+          <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone} onClick={() => sendText("receipt")}
+            className="border-white/15 text-white hover:bg-white/5 text-xs">
+            <MessageSquare className="w-3.5 h-3.5 mr-1" /> Text Receipt
+          </Button>
+          {emailHref ? (
+            <a href={emailHref}>
+              <Button size="sm" variant="outline" className="border-white/15 text-white hover:bg-white/5 text-xs">
+                <Mail className="w-3.5 h-3.5 mr-1" /> Email Receipt
+              </Button>
+            </a>
+          ) : (
+            <Button size="sm" variant="outline" disabled title="No email address on file"
+              className="border-white/15 text-white text-xs">
+              <Mail className="w-3.5 h-3.5 mr-1" /> Email Receipt
+            </Button>
+          )}
+          <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone} onClick={() => sendText("confirmation")}
+            className="border-white/15 text-white hover:bg-white/5 text-xs">
+            <MessageSquare className="w-3.5 h-3.5 mr-1" /> Text Confirmation
+          </Button>
+        </div>
+        <p className="text-[#A1A1AA] text-xs mt-2">
+          The receipt lists the trip, passengers, charges and how they paid — use it alongside the Square slip.
+        </p>
+      </div>
 
       {/* Trip card */}
       <div className="glass rounded-2xl p-6">
@@ -454,6 +604,38 @@ export default function ReservationDetailPage() {
           )}
         </div>
       </div>
+
+      {/* History */}
+      {history.length > 0 && (
+        <div className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <History className="w-4 h-4 text-[#FCC300]" />
+            <h2 className="text-white font-semibold">History</h2>
+          </div>
+          <div className="space-y-3">
+            {history.map((h: any) => (
+              <div key={h.id} className="border-l-2 border-white/10 pl-3">
+                <div className="text-sm text-white">
+                  {h.action === "created" ? "Booked" : h.action === "edited" ? "Edited" : h.action === "refund" ? "Refund" : "Text sent"}
+                  {h.employee_name && <span className="text-[#A1A1AA]"> by {h.employee_name}</span>}
+                  {h.status === "failed" && <span className="text-red-400"> — not applied</span>}
+                </div>
+                <div className="text-[#A1A1AA] text-xs">
+                  {new Date(h.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                </div>
+                <ul className="mt-1 space-y-0.5">
+                  {(h.summary ?? [])
+                    .filter((line: string) => showMoney || !/^Price:|\$/.test(line))
+                    .map((line: string, i: number) => (
+                      <li key={i} className="text-[#A1A1AA] text-xs">• {line}</li>
+                    ))}
+                  {h.error && <li className="text-red-400 text-xs">• {h.error}</li>}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Cancel */}
       {resv.status !== "cancelled" && (

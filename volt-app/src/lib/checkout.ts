@@ -20,8 +20,7 @@ import type Stripe from "stripe";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 import { getStripeServer } from "@/lib/stripe/server";
-import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
-import { formatTime12h, formatDateLong } from "@/lib/format";
+import { confirmationText, loadMessageInfo, sendReservationText } from "@/lib/reservation-messages";
 import { MILITARY_DISCOUNT_RATE, PRICING, generateConfirmationNumber } from "@/lib/booking";
 import {
   CODE_ERRORS, codeDiscountCents, codeLabel, codeState, formatCode, normalizeCode,
@@ -85,6 +84,34 @@ export function normalizePayload(body: Record<string, unknown>): CheckoutPayload
   };
   if (!payload.tripId || !payload.primaryPassenger.name || !payload.primaryPassenger.phone) return null;
   return payload;
+}
+
+// reservation_flights rows for a booking's flight details. Each leg must point
+// at the trip it was matched to; malformed rows are dropped rather than failing
+// a paid booking.
+export function buildFlightRows(reservationId: string, payload: CheckoutPayload) {
+  return payload.flights
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((f: any) => {
+      const tripForLeg = f?.leg === "outbound" ? payload.tripId : f?.leg === "return" ? payload.returnTripId : null;
+      const row = {
+        reservation_id: reservationId,
+        trip_id: tripForLeg,
+        leg: f?.leg,
+        direction: f?.direction === "arriving" ? "arriving" : "departing",
+        airline: text(f?.airline, 60),
+        flight_number: text(f?.flightNumber, 10).toUpperCase(),
+        terminal: text(f?.terminal, 60),
+        flight_date: text(f?.date, 10),
+        flight_time: text(f?.time, 5),
+      };
+      const valid =
+        tripForLeg && f?.tripId === tripForLeg &&
+        row.airline && row.flight_number && row.terminal &&
+        /^\d{4}-\d{2}-\d{2}$/.test(row.flight_date) && /^\d{2}:\d{2}$/.test(row.flight_time);
+      return valid ? row : null;
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
 }
 
 // Customer lookup WITHOUT creating anything (checkout may never be paid).
@@ -443,6 +470,9 @@ export async function finalizeCheckout(
         is_military: checkout.is_military,
         military_discount_pending: checkout.military_discount_pending,
         discount_code_id: checkout.discount_code_id ?? null,
+        // Checkout can't be paid without ticking the Terms box.
+        terms_acceptance: "online",
+        terms_accepted_at: checkout.created_at ?? new Date().toISOString(),
       })
       .select()
       .single();
@@ -475,28 +505,7 @@ export async function finalizeCheckout(
       ...payload.additionalPassengers.map((name) => ({ reservation_id: reservation.id, name, is_primary: false })),
     ]);
 
-    const flightRows = payload.flights
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((f: any) => {
-        const tripForLeg = f?.leg === "outbound" ? payload.tripId : f?.leg === "return" ? payload.returnTripId : null;
-        const row = {
-          reservation_id: reservation.id,
-          trip_id: tripForLeg,
-          leg: f?.leg,
-          direction: f?.direction === "arriving" ? "arriving" : "departing",
-          airline: text(f?.airline, 60),
-          flight_number: text(f?.flightNumber, 10).toUpperCase(),
-          terminal: text(f?.terminal, 60),
-          flight_date: text(f?.date, 10),
-          flight_time: text(f?.time, 5),
-        };
-        const valid =
-          tripForLeg && f?.tripId === tripForLeg &&
-          row.airline && row.flight_number && row.terminal &&
-          /^\d{4}-\d{2}-\d{2}$/.test(row.flight_date) && /^\d{2}:\d{2}$/.test(row.flight_time);
-        return valid ? row : null;
-      })
-      .filter(Boolean);
+    const flightRows = buildFlightRows(reservation.id, payload);
     if (flightRows.length > 0) {
       const { error: flightError } = await sb.from("reservation_flights").insert(flightRows);
       if (flightError) console.error("[checkout] flight details not saved", flightError);
@@ -527,7 +536,7 @@ export async function finalizeCheckout(
         .catch((err) => console.error("[checkout] PaymentIntent metadata update failed", err));
     }
 
-    await sendConfirmationSms(sb, reservation.id, payload, confirmationNumber);
+    await sendConfirmationSms(sb, reservation.id);
 
     await sb.from("audit_logs").insert({
       actor_id: customerId,
@@ -577,35 +586,10 @@ async function failSoldOut(
   return { ok: false, status: 409, error };
 }
 
-async function sendConfirmationSms(sb: Db, reservationId: string, payload: CheckoutPayload, confirmationNumber: string) {
+async function sendConfirmationSms(sb: Db, reservationId: string) {
   try {
-    const { data: tripInfo } = await sb
-      .from("trips")
-      .select("departure_date, departure_time, route:routes(origin_label, destination_label)")
-      .eq("id", payload.tripId)
-      .single();
-
-    const message = SMS_TEMPLATES.bookingConfirmation({
-      confirmationNumber,
-      date: tripInfo ? formatDateLong(tripInfo.departure_date) : "",
-      time: tripInfo ? formatTime12h(tripInfo.departure_time) : "",
-      from: tripInfo?.route?.origin_label ?? "",
-      to: tripInfo?.route?.destination_label ?? "",
-      passengerName: payload.primaryPassenger.name.split(" ")[0],
-    });
-
-    let status: "sent" | "failed" = "failed";
-    try {
-      status = (await sendSMS(payload.primaryPassenger.phone, message)).success ? "sent" : "failed";
-    } catch { /* recorded as failed */ }
-
-    await sb.from("notifications").insert({
-      reservation_id: reservationId,
-      type: "sms",
-      recipient: payload.primaryPassenger.phone,
-      message,
-      status,
-    });
+    const info = await loadMessageInfo(sb, reservationId);
+    if (info) await sendReservationText(sb, info, confirmationText(info), "confirmation");
   } catch (err) {
     console.error("[checkout] confirmation SMS step failed", err);
   }

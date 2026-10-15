@@ -22,7 +22,8 @@ const ROUTE_ACCESS: { prefix: string; roles: EmployeeRole[] }[] = [
   { prefix: "/dashboard/discount-codes", roles: ["owner", "manager"] },
   { prefix: "/dashboard/reports",      roles: ["owner", "manager"] },
   { prefix: "/dashboard/settings",     roles: ["owner", "manager"] },
-  { prefix: "/dashboard/employees",    roles: ["owner"] },
+  // Managers: edit details / delete inactive office staff & drivers only (enforced in /api/employees/invite).
+  { prefix: "/dashboard/employees",    roles: ["owner", "manager"] },
   { prefix: "/dashboard",              roles: ["owner", "manager", "office_staff", "driver"] },
 ];
 

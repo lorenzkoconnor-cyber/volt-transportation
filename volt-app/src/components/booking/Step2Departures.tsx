@@ -33,6 +33,17 @@ interface Props {
   onChange?: (outbound: DepartureSlot | null, returnSlot: DepartureSlot | null) => void;
   onNext: (outbound: DepartureSlot, returnSlot: DepartureSlot | null) => void;
   onBack: () => void;
+  // Team Portal edits: seats this reservation already holds (trip id → seats)
+  // count as free, so it can stay on — or grow on — its own departure.
+  heldSeats?: Record<string, number>;
+  nextLabel?: string;
+}
+
+function withHeld(slot: DepartureSlot, held?: Record<string, number>): DepartureSlot {
+  const extra = held?.[slot.id] ?? 0;
+  if (!extra) return slot;
+  const seatsLeft = slot.seatsLeft + extra;
+  return { ...slot, seatsLeft, available: seatsLeft > 0 };
 }
 
 // The fresh copy of a previously picked slot, if it's still bookable.
@@ -114,7 +125,9 @@ interface LoadedDepartures {
   routeMinutes?: number;
 }
 
-export default function Step2Departures({ search, initialOutbound, initialReturn, onChange, onNext, onBack }: Props) {
+export default function Step2Departures({
+  search, initialOutbound, initialReturn, onChange, onNext, onBack, heldSeats, nextLabel,
+}: Props) {
   const [selectedOutbound, setSelectedOutbound] = useState<DepartureSlot | null>(null);
   const [selectedReturn, setSelectedReturn] = useState<DepartureSlot | null>(null);
   // Restore earlier picks once, against the first load only.
@@ -135,8 +148,18 @@ export default function Step2Departures({ search, initialOutbound, initialReturn
 
   useEffect(() => {
     let cancelled = false;
-    const finish = (result: Omit<LoadedDepartures, "search">) => {
+    const finish = (loadedResult: Omit<LoadedDepartures, "search">) => {
       if (cancelled) return;
+      const held = (s: DepartureSlot) => withHeld(s, heldSeats);
+      const leg = (l: FlightLeg | null | undefined) =>
+        l ? { ...l, matches: l.matches.map((m) => ({ ...m, slot: held(m.slot) })) } : l;
+      const result = {
+        ...loadedResult,
+        outboundSlots: loadedResult.outboundSlots?.map(held),
+        returnSlots: loadedResult.returnSlots?.map(held),
+        outboundLeg: leg(loadedResult.outboundLeg),
+        returnLeg: leg(loadedResult.returnLeg),
+      };
       const outSlots = result.outboundSlots ?? result.outboundLeg?.matches.map((m) => m.slot) ?? [];
       const retSlots = result.returnSlots ?? result.returnLeg?.matches.map((m) => m.slot) ?? [];
       setSelectedOutbound(stillOffered(initialPicks.outbound, outSlots));
@@ -171,7 +194,7 @@ export default function Step2Departures({ search, initialOutbound, initialReturn
     }
 
     return () => { cancelled = true; };
-  }, [search, initialPicks]);
+  }, [search, initialPicks, heldSeats]);
 
   useEffect(() => {
     if (!loading) onChange?.(selectedOutbound, selectedReturn);
@@ -274,7 +297,7 @@ export default function Step2Departures({ search, initialOutbound, initialReturn
         size="lg"
         className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-12 rounded-xl disabled:opacity-40 group"
       >
-        Continue to Passenger Info
+        {nextLabel ?? "Continue to Passenger Info"}
         <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
       </Button>
     </div>

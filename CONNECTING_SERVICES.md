@@ -88,56 +88,56 @@ Everything is built and working in demo mode. Follow these steps to connect real
 
 ---
 
-## Step 3 — Twilio (SMS Notifications)
+## Step 3 — RingCentral (Texts: confirmations, receipts, reminders)
 
-**Time: ~10 minutes**
+Volt texts customers from its existing RingCentral office number. Replies go to
+that number's inbox in the RingCentral app — they are never handled by the website.
 
-1. Go to [twilio.com](https://twilio.com) → Create account
-   - Verify your phone number
-   - Complete the account setup wizard
+**Needs someone with RingCentral admin access. ~20 minutes, plus carrier approval time.**
 
-2. Go to **Console → Account Info** and copy:
-   - `Account SID` → `TWILIO_ACCOUNT_SID`
-   - `Auth Token` → `TWILIO_AUTH_TOKEN`
+1. **Register the number for business texting (10DLC / TCR).** US carriers block
+   automated texts from unregistered numbers. In the RingCentral Admin Portal open
+   **Phone System → SMS Registration** (may be called "TCR registration"). If it isn't
+   approved yet, submit the brand + campaign now — approval takes days to weeks.
+   - Campaign type: *Customer care / account notifications*
+   - Sample message: "Volt Transportation: Hi Sam! Your ride is confirmed. Confirmation: VOLT-ABC123 … Reply STOP to opt out."
+   - Opt-in: customers give their phone number when booking online or with staff.
+2. **Shared inbox:** to let several employees answer replies, assign the number that
+   sends texts to a **Call Queue** with "Shared SMS" turned on (Admin Portal → Phone
+   System → Groups → Call Queues). Otherwise replies go to one person's RingCentral app.
+3. **Create the API app** at [developers.ringcentral.com](https://developers.ringcentral.com) → Console → Register App:
+   - Type: **REST API App**, auth: **JWT auth flow**, server-side web app (no UI)
+   - Permissions: **SMS** (add **Read Messages** too)
+   - Once created, copy **Client ID** and **Client Secret**. Production access may
+     need RingCentral's "Apply for production" step.
+4. **Create a JWT credential** (Console → profile menu → Credentials → Create JWT),
+   signed in as the user who owns the sending number. Copy it.
+5. Add to the Hostinger environment variables (and `.env.local` for local testing):
+   - `RINGCENTRAL_CLIENT_ID`, `RINGCENTRAL_CLIENT_SECRET`, `RINGCENTRAL_JWT`
+   - `RINGCENTRAL_FROM_NUMBER` — the Volt number in `+1XXXXXXXXXX` format
+   Then redeploy.
 
-3. Get a phone number:
-   - Go to **Phone Numbers → Buy a Number**
-   - Choose a Georgia area code (706 or 762) or any US number
-   - Make sure it has **SMS capability**
-   - Copy the number → `TWILIO_PHONE_NUMBER` (format: `+17065550100`)
+Until these are set, texts are only logged (simulated) and reminders are skipped —
+nothing breaks. Twilio still works as a fallback if its keys are set instead.
 
-4. Update `.env.local` with all three values.
-
-**Result:** Booking confirmations and day-before reminders send automatically via SMS.
+**Result:** confirmation text right after every booking (online and Team Portal), a
+"Text me my confirmation" button on the confirmation page, Text Confirmation / Text
+Receipt buttons on each reservation, a text after every edit, and reminders 24 hours
+and 2 hours before each departure.
 
 ---
 
-## Step 4 — Supabase Edge Function for Reminders
+## Step 4 — Trip reminders (already scheduled)
 
-**Time: ~5 minutes** (after Twilio is set up)
+Supabase **pg_cron** calls `https://volt-transportation.com/api/cron/reminders`
+every 10 minutes (migration `019_trip_reminder_cron`). It authenticates with a
+secret stored in Supabase Vault as `cron_secret`.
 
-```bash
-# Install Supabase CLI
-npm install -g supabase
+- Add **`CRON_SECRET`** to the Hostinger environment with the same value as in
+  `.env.local` (it's already in Vault), then redeploy.
+- To rotate it: change both the Vault secret `cron_secret` and `CRON_SECRET`.
 
-# Login
-supabase login
-
-# Link to your project (get the ref from your Supabase project URL)
-supabase link --project-ref YOUR_PROJECT_REF
-
-# Set the secrets (Edge Function environment variables)
-supabase secrets set NEXT_PUBLIC_APP_URL=https://volt-transportation.com
-supabase secrets set INTERNAL_API_SECRET=your-random-secret-string
-
-# Deploy the reminder function
-supabase functions deploy send-reminder
-
-# Schedule it to run daily at 6pm
-supabase functions schedule send-reminder --cron "0 18 * * *"
-```
-
-**Result:** Passengers automatically receive a reminder SMS the evening before their trip.
+The old `send-reminder` Edge Function is no longer needed.
 
 ---
 
@@ -185,9 +185,12 @@ Copy `.env.local.example` to `.env.local` and fill in:
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe → Developers → API Keys | Payments |
 | `STRIPE_SECRET_KEY` | Stripe → Developers → API Keys | Payments |
 | `STRIPE_WEBHOOK_SECRET` | Stripe → Webhooks → Signing Secret | Payment confirmations |
-| `TWILIO_ACCOUNT_SID` | Twilio Console → Account Info | SMS |
-| `TWILIO_AUTH_TOKEN` | Twilio Console → Account Info | SMS |
-| `TWILIO_PHONE_NUMBER` | Twilio Console → Phone Numbers | SMS |
+| `RINGCENTRAL_CLIENT_ID` | RingCentral Developer Console → your app | SMS |
+| `RINGCENTRAL_CLIENT_SECRET` | RingCentral Developer Console → your app | SMS |
+| `RINGCENTRAL_JWT` | RingCentral Developer Console → Credentials | SMS |
+| `RINGCENTRAL_FROM_NUMBER` | The Volt office number, `+1XXXXXXXXXX` | SMS |
+| `CRON_SECRET` | Same value as Supabase Vault `cron_secret` | Trip reminders |
+| `TWILIO_*` (optional) | Twilio Console | SMS fallback only |
 | `NEXT_PUBLIC_APP_URL` | Your domain | SMS reminders, callbacks |
 | `INTERNAL_API_SECRET` | Generate a random string | Internal API security |
 
