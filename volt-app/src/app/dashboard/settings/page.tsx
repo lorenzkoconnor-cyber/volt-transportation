@@ -1,254 +1,222 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+// Dashboard → Settings (owners & managers). Everything here is saved through
+// /api/settings, which validates it and records it in the Change History.
+
+import { useCallback, useEffect, useState } from "react";
+import {
+  Settings, Loader2, DollarSign, CalendarClock, Tag, UserCog, Plane, Clock, Building2, BellRing, Bus,
+} from "lucide-react";
+import StaffAlertsCard from "@/components/admin/StaffAlertsCard";
+import { FieldsCard, inputClass } from "@/components/admin/settings/shared";
+import { ScheduleCard, BlackoutsCard } from "@/components/admin/settings/ScheduleCards";
+import { BannerCard } from "@/components/admin/settings/WebsiteCards";
+import { TemplatesCard, HealthCard, HistoryCard } from "@/components/admin/settings/MessageCards";
 import { formatDuration, displayTime12h } from "@/lib/booking";
-import { Settings, Loader2, Save, Plane, Clock, CheckCircle2, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-interface RouteRow {
-  id: string;
-  name: string;
-  origin_key: string;
-  duration_minutes: number;
-}
+const TABS = [
+  { key: "pricing", label: "Prices & Rules" },
+  { key: "schedule", label: "Schedule & Service" },
+  { key: "messages", label: "Messages" },
+  { key: "website", label: "Website & Contact" },
+  { key: "alerts", label: "Staff Alerts" },
+  { key: "history", label: "History" },
+] as const;
+type Tab = (typeof TABS)[number]["key"];
 
-interface Windows {
-  depart_min_buffer_minutes: number;
-  depart_max_buffer_minutes: number;
-  arrive_min_wait_minutes: number;
-  arrive_max_wait_minutes: number;
-}
-
-const inputClass =
-  "w-24 h-10 rounded-lg bg-white/5 border border-white/10 text-white px-3 text-sm text-right focus:outline-none focus:border-[#FCC300] transition-colors";
-
-// "10:30" minus N minutes → "08:45" (negative N adds)
-function minusMinutes(time: string, minutes: number): string {
-  const [h, m] = time.split(":").map(Number);
-  const total = (((h * 60 + m - minutes) % 1440) + 1440) % 1440;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-}
+const hrs = (n: unknown) => (Number.isFinite(Number(n)) ? formatDuration(Number(n) * 60) : "");
 
 export default function SettingsPage() {
-  const supabase = createClient();
-  const sb = supabase as any;
-  const { employee } = useAuth();
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [routes, setRoutes] = useState<RouteRow[]>([]);
-  const [windows, setWindows] = useState<Windows | null>(null);
-  const [toast, setToast] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
+  const [tab, setTab] = useState<Tab>("pricing");
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
+  // Bumped after every save so cards re-read what the server stored.
+  const [version, setVersion] = useState(0);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    const [routeRes, settingsRes] = await Promise.all([
-      sb.from("routes").select("id, name, origin_key, duration_minutes").eq("is_active", true).order("origin_key", { ascending: false }),
-      sb.from("booking_settings").select("*").maybeSingle(),
-    ]);
-    setRoutes(routeRes.data ?? []);
-    setWindows(settingsRes.data ?? null);
-    setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const res = await fetch("/api/settings");
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) setError(d.error ?? "Couldn't load settings.");
+    else { setData(d); setVersion((v) => v + 1); }
   }, []);
-
-  useEffect(() => { load(); }, [load]);
-
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5000);
+    const t = setTimeout(load, 0);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [load]);
 
-  const setRouteMinutes = (id: string, v: number) =>
-    setRoutes((prev) => prev.map((r) => (r.id === id ? { ...r, duration_minutes: v } : r)));
-  const setWindow = (key: keyof Windows, v: number) =>
-    setWindows((prev) => (prev ? { ...prev, [key]: v } : prev));
-
-  const validationError = (): string => {
-    for (const r of routes) {
-      if (!Number.isInteger(r.duration_minutes) || r.duration_minutes < 30 || r.duration_minutes > 300)
-        return "Route time must be a whole number of minutes between 30 and 300.";
-    }
-    if (!windows) return "";
-    const vals = Object.values(windows).filter((v) => typeof v === "number") as number[];
-    if (vals.some((v) => !Number.isInteger(v) || v < 0 || v > 720)) return "Flight windows must be between 0 and 720 minutes.";
-    if (windows.depart_max_buffer_minutes <= windows.depart_min_buffer_minutes)
-      return "For departing flights, the latest arrival must be more than the earliest.";
-    if (windows.arrive_max_wait_minutes <= windows.arrive_min_wait_minutes)
-      return "For arriving flights, the longest wait must be more than the shortest.";
-    return "";
-  };
-
-  const save = async () => {
-    const problem = validationError();
-    if (problem) { setToast({ kind: "err", msg: problem }); return; }
-    setSaving(true);
-    try {
-      // .select() so an RLS-blocked update (0 rows) surfaces as an error.
-      for (const r of routes) {
-        const { data, error } = await sb.from("routes")
-          .update({ duration_minutes: r.duration_minutes }).eq("id", r.id).select("id");
-        if (error || !data?.length) throw new Error("You don't have permission to change route times.");
-      }
-      if (windows) {
-        const { data, error } = await sb.from("booking_settings")
-          .update({
-            depart_min_buffer_minutes: windows.depart_min_buffer_minutes,
-            depart_max_buffer_minutes: windows.depart_max_buffer_minutes,
-            arrive_min_wait_minutes: windows.arrive_min_wait_minutes,
-            arrive_max_wait_minutes: windows.arrive_max_wait_minutes,
-            updated_by: employee?.id ?? null,
-          })
-          .eq("id", true)
-          .select("id");
-        if (error || !data?.length) throw new Error("You don't have permission to change booking settings.");
-      }
-      setToast({ kind: "ok", msg: "Settings saved. New bookings use them right away." });
-    } catch (err) {
-      setToast({ kind: "err", msg: err instanceof Error ? err.message : "Could not save settings." });
-    }
-    setSaving(false);
-  };
-
-  // Live example: a 6:00 AM departure for a 10:30 AM flight.
-  const toAtl = routes.find((r) => r.origin_key !== "atl");
-  const exampleArrival = toAtl ? minusMinutes("06:00", -toAtl.duration_minutes) : null;
+  const s = data?.settings ?? {};
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Settings className="w-6 h-6 text-[#FCC300]" />
-          Settings
+          <Settings className="w-6 h-6 text-[#FCC300]" /> Settings
         </h1>
         <p className="text-[#A1A1AA] text-sm mt-0.5">
-          Timing the booking flow uses to match Volt departures to customers&apos; flights.
+          Prices, schedule, messages and how Volt runs. Changes apply right away and are recorded in History.
         </p>
       </div>
 
-      {toast && (
-        <div className={`flex items-start gap-2 rounded-xl px-4 py-3 border ${
-          toast.kind === "ok" ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-red-500/10 border-red-500/20 text-red-400"
-        }`}>
-          {toast.kind === "ok" ? <CheckCircle2 className="w-4 h-4 mt-0.5" /> : <AlertCircle className="w-4 h-4 mt-0.5" />}
-          <p className="text-sm">{toast.msg}</p>
-        </div>
-      )}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {TABS.map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`px-4 py-2 rounded-xl text-sm border whitespace-nowrap ${
+              tab === t.key ? "bg-[#FCC300]/15 border-[#FCC300]/40 text-[#FCC300]" : "bg-white/5 border-white/10 text-[#A1A1AA] hover:text-white"
+            }`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      {loading ? (
-        <div className="glass rounded-2xl p-12 flex justify-center">
-          <Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" />
-        </div>
+      {error ? (
+        <div className="glass rounded-2xl p-6 text-red-400 text-sm">{error}</div>
+      ) : !data ? (
+        <div className="glass rounded-2xl p-12 flex justify-center"><Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" /></div>
       ) : (
-        <>
-          {/* Route time */}
-          <div className="glass rounded-2xl p-6 space-y-4">
-            <div>
-              <h2 className="text-white font-semibold flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#FCC300]" /> Scheduled Route Time
-              </h2>
-              <p className="text-[#A1A1AA] text-xs mt-1">
-                How long Volt plans for the drive, used to estimate arrival times. Standard is 120 min
-                (2 hours each way). Refine it with real trip data.
-              </p>
-            </div>
-            {routes.map((r) => (
-              <div key={r.id} className="flex items-center justify-between gap-4">
-                <span className="text-white text-sm">{r.name}</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number" min={30} max={300} step={5}
-                    value={r.duration_minutes}
-                    onChange={(e) => setRouteMinutes(r.id, Number(e.target.value))}
-                    className={inputClass}
-                  />
-                  <span className="text-[#A1A1AA] text-xs w-24">min · {formatDuration(r.duration_minutes || 0)}</span>
-                </div>
-              </div>
-            ))}
-            {toAtl && exampleArrival && toAtl.duration_minutes < 270 && (
-              <p className="text-[#FFE08A] text-xs bg-[#FCC300]/10 rounded-lg px-3 py-2">
-                Example: 10:30 AM flight → 6:00 AM Volt departure → {displayTime12h(exampleArrival)} ATL arrival →{" "}
-                {formatDuration(270 - toAtl.duration_minutes)} before the flight
-              </p>
-            )}
-          </div>
-
-          {/* Flight windows */}
-          {windows && (
-            <div className="glass rounded-2xl p-6 space-y-5">
-              <div>
-                <h2 className="text-white font-semibold flex items-center gap-2">
-                  <Plane className="w-4 h-4 text-[#FCC300]" /> Flight Matching Windows
-                </h2>
-                <p className="text-[#A1A1AA] text-xs mt-1">
-                  Which departures customers are offered when they book with a flight.
-                </p>
-              </div>
-
-              <WindowRow
-                title="Flying out of ATL"
-                help="Offer shuttles that reach ATL between these many minutes before the flight."
-                minLabel="At least" maxLabel="At most"
-                min={windows.depart_min_buffer_minutes}
-                max={windows.depart_max_buffer_minutes}
-                onMin={(v) => setWindow("depart_min_buffer_minutes", v)}
-                onMax={(v) => setWindow("depart_max_buffer_minutes", v)}
-                suffix="before flight"
-              />
-              <WindowRow
-                title="Landing at ATL"
-                help="Offer shuttles leaving ATL between these many minutes after the flight lands."
-                minLabel="At least" maxLabel="At most"
-                min={windows.arrive_min_wait_minutes}
-                max={windows.arrive_max_wait_minutes}
-                onMin={(v) => setWindow("arrive_min_wait_minutes", v)}
-                onMax={(v) => setWindow("arrive_max_wait_minutes", v)}
-                suffix="after landing"
-              />
-            </div>
+        <div key={`${tab}-${version}`} className="space-y-6">
+          {tab === "pricing" && (
+            <>
+              <FieldsCard icon={DollarSign} title="Prices" settings={s} onSaved={load}
+                description="One-way prices (round trips are doubled). New bookings use them right away; existing bookings keep the price they were booked at."
+                rows={[
+                  { column: "price_adult_cents", title: "Adult", suffix: "per seat" },
+                  { column: "price_child_cents", title: "Child (ages 2–12)", suffix: "per seat" },
+                  { column: "price_pet_cents", title: "Pet", suffix: "per pet" },
+                  { column: "price_extra_bag_cents", title: "Extra bag", suffix: "per bag" },
+                ]} />
+              <FieldsCard icon={CalendarClock} title="Booking Rules" settings={s} onSaved={load}
+                description="All times are Eastern. Staff can always book and cancel from the Team Portal."
+                rows={[
+                  { column: "online_booking_cutoff_minutes", title: "Online booking closes", step: 15,
+                    help: "How long before a departure the website stops selling seats on it. Riders are asked to call instead.",
+                    suffix: `min before departure · ${formatDuration(Number(s.online_booking_cutoff_minutes) || 0)}` },
+                  { column: "short_notice_hours", title: "Short-notice window",
+                    help: "A booking whose first ride leaves within this many hours alerts staff.", suffix: "hours" },
+                  { column: "cancellation_fee_cents", title: "Cancellation fee", step: 1,
+                    help: "Kept from the refund on every cancelled reservation. Owners and managers can waive it.", suffix: "per reservation" },
+                  { column: "arrive_early_minutes", title: "Arrive early",
+                    help: "Shown on the website, receipts and in texts (\"Please arrive 20 minutes early\").", suffix: "minutes before departure" },
+                ]} />
+              <FieldsCard icon={Tag} title="Discounts" settings={s} onSaved={load}
+                description="Switching the Military Discount off hides it at checkout and on the website; bookings already made keep their discount."
+                rows={[
+                  { column: "military_discount_enabled", title: "Military Discount" },
+                  { column: "military_discount_percent", title: "Military Discount amount", suffix: "% off the whole booking" },
+                  { column: "discount_code_valid_days", title: "New discount codes last", suffix: "days" },
+                ]} />
+              <FieldsCard icon={UserCog} title="Staff Edit Windows" settings={s} onSaved={load}
+                description="When reservations lock for editing. Owners and managers can still change a booking until the outbound departs, then the return trip only."
+                rows={[
+                  { column: "staff_edit_cutoff_hours", title: "Office staff can edit until",
+                    suffix: `hours before departure${hrs(s.staff_edit_cutoff_hours) ? ` · ${hrs(s.staff_edit_cutoff_hours)}` : ""}` },
+                  { column: "return_edit_cutoff_hours", title: "Return trip locks", suffix: "hours before the return departure" },
+                ]} />
+            </>
           )}
 
-          <Button
-            disabled={saving}
-            onClick={save}
-            className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold"
-          >
-            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Save Settings
-          </Button>
-        </>
+          {tab === "schedule" && (
+            <>
+              <ScheduleCard routes={data.routes} onSaved={load} />
+              <BlackoutsCard blackouts={data.blackouts} onSaved={load} />
+              <VanSizeCard settings={s} onSaved={load} />
+              <RouteTimingCard settings={s} routes={data.routes} onSaved={load} />
+            </>
+          )}
+
+          {tab === "messages" && (
+            <>
+              <HealthCard />
+              <FieldsCard icon={BellRing} title="Trip Reminders" settings={s} onSaved={load}
+                description="Texts sent before every departure. A rider who books inside a reminder's window doesn't get that one."
+                rows={[
+                  { column: "reminder_first_enabled", title: "First reminder" },
+                  { column: "reminder_first_hours", title: "Send the first reminder", suffix: "hours before departure" },
+                  { column: "reminder_second_enabled", title: "Second reminder" },
+                  { column: "reminder_second_hours", title: "Send the second reminder", suffix: "hours before departure" },
+                ]} />
+              <TemplatesCard overrides={data.templates} onSaved={load} />
+            </>
+          )}
+
+          {tab === "website" && (
+            <>
+              <FieldsCard icon={Building2} title="Business Info" settings={s} onSaved={load}
+                description="Shown across the website (footer, Contact, Locations, FAQ), on receipts and in customer texts and emails."
+                rows={[
+                  { column: "business_phone", title: "Phone number" },
+                  { column: "business_email", title: "Email address" },
+                  { column: "business_street", title: "Street address" },
+                  { column: "business_city_line", title: "City, state & ZIP", help: "Format: Columbus, GA 31909" },
+                  { column: "business_hours", title: "Business hours", help: "As shown on the Contact page." },
+                ]} />
+              <BannerCard announcements={data.announcements} onSaved={load} />
+            </>
+          )}
+
+          {tab === "alerts" && <StaffAlertsCard />}
+          {tab === "history" && <HistoryCard history={data.history} />}
+        </div>
       )}
     </div>
   );
 }
 
-function WindowRow({
-  title, help, minLabel, maxLabel, min, max, onMin, onMax, suffix,
-}: {
-  title: string; help: string; minLabel: string; maxLabel: string;
-  min: number; max: number; onMin: (v: number) => void; onMax: (v: number) => void; suffix: string;
-}) {
+function VanSizeCard({ settings, onSaved }: { settings: any; onSaved: () => void }) {
+  const [apply, setApply] = useState(true);
   return (
-    <div className="space-y-2">
-      <div>
-        <div className="text-white text-sm font-medium">{title}</div>
-        <div className="text-[#A1A1AA] text-xs">{help}</div>
-      </div>
-      <div className="flex items-center gap-3 flex-wrap text-sm text-[#A1A1AA]">
-        <span>{minLabel}</span>
-        <input type="number" min={0} max={720} step={5} value={min}
-          onChange={(e) => onMin(Number(e.target.value))} className={inputClass} />
-        <span>min, {maxLabel.toLowerCase()}</span>
-        <input type="number" min={0} max={720} step={5} value={max}
-          onChange={(e) => onMax(Number(e.target.value))} className={inputClass} />
-        <span>min {suffix}</span>
-      </div>
-    </div>
+    <FieldsCard icon={Bus} title="Seats Per Van" settings={settings} onSaved={onSaved}
+      description="How many seats new departures get. Change a single departure in Dispatch."
+      rows={[{ column: "default_van_capacity", title: "Seats on each new departure", suffix: "seats" }]}
+      extraPayload={() => ({ applyCapacityToUpcoming: apply })}>
+      {() => (
+        <label className="flex items-center gap-2 text-sm text-[#A1A1AA] cursor-pointer">
+          <input type="checkbox" checked={apply} onChange={(e) => setApply(e.target.checked)} className="accent-[#FCC300]" />
+          Also update upcoming departures still at the old size (never below the riders already booked)
+        </label>
+      )}
+    </FieldsCard>
+  );
+}
+
+// Drive time per direction + the flight-matching windows.
+function RouteTimingCard({ settings, routes, onSaved }: { settings: any; routes: any[]; onSaved: () => void }) {
+  const [durations, setDurations] = useState<Record<string, number>>(
+    () => Object.fromEntries(routes.map((r) => [r.id, r.duration_minutes])));
+  const toAtl = routes.find((r) => r.origin_key !== "atl");
+  const toAtlMinutes = toAtl ? durations[toAtl.id] : 0;
+  const example = toAtl && toAtlMinutes < 270
+    ? `Example: 10:30 AM flight → 6:00 AM Volt departure → ${displayTime12h(
+        `${String(6 + Math.floor(toAtlMinutes / 60)).padStart(2, "0")}:${String(toAtlMinutes % 60).padStart(2, "0")}`,
+      )} ATL arrival → ${formatDuration(270 - toAtlMinutes)} before the flight`
+    : "";
+  return (
+    <FieldsCard icon={Plane} title="Drive Time & Flight Matching" settings={settings} onSaved={onSaved}
+      description="Drive time sets estimated arrival times. The windows decide which departures customers are offered when they book with a flight."
+      rows={[
+        { column: "depart_min_buffer_minutes", title: "Flying out of ATL — reach ATL at least", suffix: "min before the flight", step: 5 },
+        { column: "depart_max_buffer_minutes", title: "Flying out of ATL — reach ATL at most", suffix: "min before the flight", step: 5 },
+        { column: "arrive_min_wait_minutes", title: "Landing at ATL — leave ATL at least", suffix: "min after landing", step: 5 },
+        { column: "arrive_max_wait_minutes", title: "Landing at ATL — leave ATL at most", suffix: "min after landing", step: 5 },
+      ]}
+      extraPayload={() => ({ routeDurations: Object.entries(durations).map(([id, duration_minutes]) => ({ id, duration_minutes })) })}>
+      {() => (
+        <div className="space-y-3 border-t border-white/8 pt-4">
+          <div className="text-white text-sm font-medium flex items-center gap-2"><Clock className="w-4 h-4 text-[#FCC300]" /> Drive time</div>
+          {routes.map((r) => (
+            <div key={r.id} className="flex items-center justify-between gap-4">
+              <span className="text-white text-sm">{r.name}</span>
+              <div className="flex items-center gap-2">
+                <input type="number" min={30} max={300} step={5} value={durations[r.id]}
+                  onChange={(e) => setDurations((p) => ({ ...p, [r.id]: Number(e.target.value) }))} className={inputClass} />
+                <span className="text-[#A1A1AA] text-xs w-24">min · {formatDuration(durations[r.id] || 0)}</span>
+              </div>
+            </div>
+          ))}
+          {example && <p className="text-[#FFE08A] text-xs bg-[#FCC300]/10 rounded-lg px-3 py-2">{example}</p>}
+        </div>
+      )}
+    </FieldsCard>
   );
 }

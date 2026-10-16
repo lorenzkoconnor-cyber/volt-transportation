@@ -20,9 +20,10 @@ import {
   isAllowedIdFile,
   type MilitaryCategory,
 } from "@/lib/military";
-import { MILITARY_DISCOUNT_PERCENT } from "@/lib/booking";
+import { useAppSettings } from "@/context/SettingsContext";
 
 export default function EditProfilePage() {
+  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
   const router = useRouter();
   const { user, customer, loading, refreshProfile } = useAuth();
   const supabase = createClient();

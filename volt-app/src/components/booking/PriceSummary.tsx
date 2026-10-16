@@ -1,4 +1,7 @@
+"use client";
+
 import { type BookingSearch, calcPrice } from "@/lib/booking";
+import { useAppSettings } from "@/context/SettingsContext";
 
 export default function PriceSummary({
   search,
@@ -7,7 +10,8 @@ export default function PriceSummary({
   search: BookingSearch;
   compact?: boolean;
 }) {
-  const { lines, total } = calcPrice(search);
+  const { pricing } = useAppSettings();
+  const { lines, total } = calcPrice(search, { pricing });
 
   if (compact) {
     return (

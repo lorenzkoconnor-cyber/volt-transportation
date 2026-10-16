@@ -26,12 +26,13 @@ import { generateConfirmationNumber } from "@/lib/booking";
 import { codeDiscountCents, codeState, formatCode, normalizeCode, CODE_ERRORS } from "@/lib/discount-codes";
 import {
   easternInstant, editAccess, reservationBalance, staffDiscountCents, staffDiscountLabel, staffSubtotalCents,
-  type StaffDiscount,
+  type StaffDiscount, type StaffRates,
 } from "@/lib/staff-pricing";
 import { formatCents, formatDateShort, formatTime12h } from "@/lib/format";
-import {
-  confirmationText, loadMessageInfo, sendReservationText, updatedText,
-} from "@/lib/reservation-messages";
+import { loadMessageInfo, notifyConfirmation, notifyUpdated } from "@/lib/reservation-messages";
+import { loadAppSettings } from "@/lib/settings-server";
+import { snapshotFrom, snapshotPricing } from "@/lib/settings";
+import { alertIfShortNotice } from "@/lib/notifications/alerts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Db = any;
@@ -211,7 +212,7 @@ interface ResolvedDiscount {
 }
 
 async function resolveDiscount(
-  sb: Db, d: StaffDiscount, subtotalCents: number, currentCodeId: string | null = null,
+  sb: Db, d: StaffDiscount, subtotalCents: number, currentCodeId: string | null, rates: StaffRates,
 ): Promise<ResolvedDiscount | { error: string }> {
   if (d.kind === "code") {
     const { data: row } = await sb.from("discount_codes").select("*").eq("code", normalizeCode(d.code)).maybeSingle();
@@ -232,10 +233,10 @@ async function resolveDiscount(
     };
   }
   return {
-    discountCents: staffDiscountCents(subtotalCents, d),
+    discountCents: staffDiscountCents(subtotalCents, d, rates),
     codeRow: null,
     isMilitary: d.kind === "military",
-    label: staffDiscountLabel(d),
+    label: staffDiscountLabel(d, rates),
   };
 }
 
@@ -256,12 +257,13 @@ async function logChange(sb: Db, row: Record<string, unknown>): Promise<string |
   return data?.id ?? null;
 }
 
-async function textCustomer(sb: Db, reservationId: string, build: (info: any) => string, kind: string | null) {
+// Text + email the customer about their reservation. Never throws.
+async function messageCustomer(sb: Db, reservationId: string, send: (info: any) => Promise<void>) {
   try {
     const info = await loadMessageInfo(sb, reservationId);
-    if (info) await sendReservationText(sb, info, build(info), kind);
+    if (info) await send(info);
   } catch (err) {
-    console.error("[staff-booking] customer text failed", err);
+    console.error("[staff-booking] customer message failed", err);
   }
 }
 
@@ -281,11 +283,17 @@ export async function createStaffReservation(
   const short = seatShortfall(legs, seatNeeds(legs.out.id, legs.ret?.id ?? null, seats), new Map());
   if (short) return { error: short };
 
+  // New bookings use today's prices (Dashboard → Settings) and keep a copy.
+  const settings = await loadAppSettings();
+  if (input.discount.kind === "military" && !settings.military.enabled) {
+    return { error: "The Military Discount is turned off in Settings." };
+  }
+  const rates: StaffRates = { pricing: settings.pricing, militaryPercent: settings.military.percent };
   const comp = payment.method === "comp";
-  const subtotalCents = staffSubtotalCents(payload);
+  const subtotalCents = staffSubtotalCents(payload, rates);
   const discount = comp
     ? { discountCents: subtotalCents, codeRow: null, isMilitary: false, label: "Complimentary" }
-    : await resolveDiscount(sb, input.discount, subtotalCents);
+    : await resolveDiscount(sb, input.discount, subtotalCents, null, rates);
   if ("error" in discount) return discount;
   const totalCents = subtotalCents - discount.discountCents;
 
@@ -350,6 +358,7 @@ export async function createStaffReservation(
         is_military: discount.isMilitary,
         discount_code_id: discount.codeRow?.id ?? null,
         created_by_employee_id: employee.id,
+        pricing_snapshot: snapshotFrom(settings),
         terms_acceptance: "verbal",
         terms_accepted_at: new Date().toISOString(),
       })
@@ -390,7 +399,8 @@ export async function createStaffReservation(
       applied_at: new Date().toISOString(),
     });
 
-    await textCustomer(sb, reservation.id, confirmationText, "confirmation");
+    await messageCustomer(sb, reservation.id, (info) => notifyConfirmation(sb, info));
+    await alertIfShortNotice(sb, reservation.id);
 
     const cardRow = chargeCardNow ? (payments ?? []).find((p: any) => p.method === "stripe") : null;
     return { id: reservation.id, confirmationNumber, cardPaymentId: cardRow?.id ?? null };
@@ -468,7 +478,8 @@ function flightKey(f: any): string {
 }
 
 export async function planEdit(sb: Db, resv: any, input: StaffInput, role: string): Promise<EditPlan | { error: string }> {
-  const access = editAccess(role, resv.status, resv.trip, resv.is_round_trip ? resv.return_trip : null);
+  const settings = await loadAppSettings();
+  const access = editAccess(role, resv.status, resv.trip, resv.is_round_trip ? resv.return_trip : null, Date.now(), settings);
   if (!access.mode) return { error: access.reason ?? "This reservation can't be changed now." };
 
   const { payload, customer } = input;
@@ -482,8 +493,12 @@ export async function planEdit(sb: Db, resv: any, input: StaffInput, role: strin
   const short = seatShortfall(legs, seatNeeds(legs.out.id, legs.ret?.id ?? null, newSeats), held);
   if (short) return { error: short };
 
-  const subtotalCents = staffSubtotalCents(payload);
-  const discount = await resolveDiscount(sb, input.discount, subtotalCents, resv.discount_code_id ?? null);
+  // An edit keeps the prices the booking was made at (a later price change
+  // never re-prices an existing booking).
+  const snap = snapshotPricing(resv.pricing_snapshot);
+  const rates: StaffRates = { pricing: snap.pricing, militaryPercent: snap.militaryPercent };
+  const subtotalCents = staffSubtotalCents(payload, rates);
+  const discount = await resolveDiscount(sb, input.discount, subtotalCents, resv.discount_code_id ?? null, rates);
   if ("error" in discount) return discount;
   const newTotalCents = subtotalCents - discount.discountCents;
   const priceChangeCents = newTotalCents - resv.total_cents;
@@ -767,7 +782,8 @@ export async function finishEdit(sb: Db, changeId: string, cashRows: Record<stri
       .eq("id", resv.discount_code_id).eq("used_reservation_id", resv.id);
   }
 
-  await textCustomer(sb, resv.id, (info) => updatedText(info, change.summary.filter((l: string) => !l.startsWith("Price:"))), null);
+  await messageCustomer(sb, resv.id, (info) =>
+    notifyUpdated(sb, info, change.summary.filter((l: string) => !l.startsWith("Price:"))));
 
   const after = await loadReservation(sb, resv.id);
   return {

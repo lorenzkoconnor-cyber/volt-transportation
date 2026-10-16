@@ -6,6 +6,9 @@ import {
   reserveDiscountCode, FREE_PAYMENT_ID, type DiscountCodeRow,
 } from "@/lib/checkout";
 import { CODE_ERRORS } from "@/lib/discount-codes";
+import { easternInstant } from "@/lib/staff-pricing";
+import { loadAppSettings } from "@/lib/settings-server";
+import { snapshotFrom } from "@/lib/settings";
 import { rateLimit, breakerTripped, recordFailure, DISCOUNT_BREAKER, DISCOUNT_PAUSED_ERROR } from "@/lib/rate-limit";
 
 // POST /api/payments/create-intent
@@ -41,11 +44,20 @@ export async function POST(request: NextRequest) {
       .select("id, status, total_capacity, seats_booked, departure_date, departure_time, route:routes(origin_label, destination_label)")
       .in("id", tripIds);
     const seats = payload.adults + payload.children;
+    const settings = await loadAppSettings();
+    const cutoffMs = settings.onlineCutoffMinutes * 60_000;
     for (const id of tripIds) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const t = (trips ?? []).find((x: any) => x.id === id);
       if (!t || t.status !== "scheduled") {
         return NextResponse.json({ error: "That departure is no longer available. Please pick another time." }, { status: 409 });
+      }
+      // Online booking closes before departure (Eastern time) — staff book these.
+      if (easternInstant(t.departure_date, t.departure_time.slice(0, 5)) - Date.now() < cutoffMs) {
+        return NextResponse.json(
+          { error: `That departure leaves too soon to book online. Please call us at ${settings.business.phone} and we'll get you a seat.` },
+          { status: 409 },
+        );
       }
       if (t.total_capacity - t.seats_booked < seats) {
         return NextResponse.json({ error: "Sorry — that departure doesn't have enough seats left. Please pick another time." }, { status: 409 });
@@ -78,6 +90,7 @@ export async function POST(request: NextRequest) {
       !code && !!body.militaryDiscountRequested,
       customer?.military_status ?? null,
       code ? codeTerms(code) : null,
+      settings,
     );
     if ("error" in price) {
       return NextResponse.json({ error: price.error }, { status: 400 });
@@ -98,6 +111,7 @@ export async function POST(request: NextRequest) {
         is_military: price.isMilitary,
         military_discount_pending: price.militaryDiscountPending,
         discount_code_id: code?.id ?? null,
+        pricing_snapshot: snapshotFrom(settings),
       })
       .select("id")
       .single();

@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { canViewFinancials } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
+import { useAppSettings } from "@/context/SettingsContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatCents, formatDateLong } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export default function ReservationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const justUpdated = useSearchParams().get("updated") === "1";
   const role = useDashboardRole();
+  const settings = useAppSettings();
   const showMoney = canViewFinancials(role);
   const supabase = createClient();
   const sb = supabase as any;
@@ -45,6 +47,7 @@ export default function ReservationDetailPage() {
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [waiveFee, setWaiveFee] = useState(false);
   const [chargingId, setChargingId] = useState<string | null>(null);   // card payment being taken
   const cardRef = useRef<StaffCardHandle>(null);
   const [history, setHistory] = useState<any[]>([]);
@@ -99,18 +102,15 @@ export default function ReservationDetailPage() {
   const cancelReservation = async () => {
     setBusy(true);
     setError("");
+    setNotice("");
     try {
-      const { error: err } = await sb
-        .from("reservations")
-        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-        .eq("id", id);
-      if (err) throw new Error(err.message);
-
-      // Release the seats back to the trip(s)
-      await sb.rpc("decrement_seats_booked", { p_trip_id: resv.trip_id, p_count: seatCount });
-      if (resv.return_trip_id) {
-        await sb.rpc("decrement_seats_booked", { p_trip_id: resv.return_trip_id, p_count: seatCount });
-      }
+      const res = await fetch(`/api/reservations/${id}/cancel`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ waiveFee }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed to cancel.");
+      setNotice(`Cancelled. ${[...data.lines.slice(1), ...data.problems].join(" · ")}.`);
+      if (data.problems?.length) setError(`Needs attention: ${data.problems.join(" ")}`);
       setConfirmCancel(false);
       await load();
     } catch (err) {
@@ -139,17 +139,17 @@ export default function ReservationDetailPage() {
     setBusy(false);
   };
 
-  const sendText = async (type: "confirmation" | "receipt") => {
+  const sendText = async (type: "confirmation" | "receipt", channel: "sms" | "email" = "sms") => {
     setBusy(true);
     setError("");
     setNotice("");
     try {
       const res = await fetch(`/api/reservations/${id}/notify`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, channel }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "The text could not be sent.");
-      setNotice(`${type === "confirmation" ? "Confirmation" : "Receipt link"} texted to ${data.phone}${data.simulated ? " (test mode — texting isn't connected yet)" : ""}.`);
+      setNotice(`${type === "confirmation" ? "Confirmation" : "Receipt link"} ${channel === "email" ? "emailed" : "texted"} to ${data.to}.`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "The text could not be sent.");
@@ -215,14 +215,10 @@ export default function ReservationDetailPage() {
   const passengers = resv.reservation_passengers ?? [];
   // A card row for an edit that was never paid isn't a real payment — hide it.
   const payments = (resv.payments ?? []).filter((p: any) => !(p.reservation_change_id && p.status === "pending"));
-  const access = editAccess(role, resv.status, trip, resv.is_round_trip ? resv.return_trip : null);
+  const access = editAccess(role, resv.status, trip, resv.is_round_trip ? resv.return_trip : null, undefined, settings);
   const { refundDueCents } = reservationBalance(resv.total_cents, resv.payments ?? []);
   const receiptHref = `/receipt/${resv.receipt_token}`;
   const customerEmail = resv.customer?.email && !/@(walkin|guest)\.volt$/.test(resv.customer.email) ? resv.customer.email : "";
-  const emailHref = customerEmail
-    ? `mailto:${customerEmail}?subject=${encodeURIComponent(`Your Volt receipt — ${resv.confirmation_number}`)}` +
-      `&body=${encodeURIComponent(`Hi ${resv.customer.first_name},\n\nThank you for riding with Volt Transportation. Here is your receipt for ${resv.confirmation_number}:\n${typeof window !== "undefined" ? window.location.origin : "https://volt-transportation.com"}${receiptHref}\n\nVolt Transportation\n(706) 530-5896`)}`
-    : "";
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -350,18 +346,11 @@ export default function ReservationDetailPage() {
             className="border-white/15 text-white hover:bg-white/5 text-xs">
             <MessageSquare className="w-3.5 h-3.5 mr-1" /> Text Receipt
           </Button>
-          {emailHref ? (
-            <a href={emailHref}>
-              <Button size="sm" variant="outline" className="border-white/15 text-white hover:bg-white/5 text-xs">
-                <Mail className="w-3.5 h-3.5 mr-1" /> Email Receipt
-              </Button>
-            </a>
-          ) : (
-            <Button size="sm" variant="outline" disabled title="No email address on file"
-              className="border-white/15 text-white text-xs">
-              <Mail className="w-3.5 h-3.5 mr-1" /> Email Receipt
-            </Button>
-          )}
+          <Button size="sm" variant="outline" disabled={busy || !customerEmail} onClick={() => sendText("receipt", "email")}
+            title={customerEmail ? `Email the receipt to ${customerEmail}` : "No email address on file"}
+            className="border-white/15 text-white hover:bg-white/5 text-xs">
+            <Mail className="w-3.5 h-3.5 mr-1" /> Email Receipt
+          </Button>
           <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone} onClick={() => sendText("confirmation")}
             className="border-white/15 text-white hover:bg-white/5 text-xs">
             <MessageSquare className="w-3.5 h-3.5 mr-1" /> Text Confirmation
@@ -644,8 +633,17 @@ export default function ReservationDetailPage() {
             <div>
               <div className="text-white font-semibold">Cancel Reservation</div>
               <div className="text-[#A1A1AA] text-sm mt-0.5">
-                Releases {seatCount} seat{seatCount !== 1 ? "s" : ""} back to the trip. This can&apos;t be undone.
+                Releases {seatCount} seat{seatCount !== 1 ? "s" : ""} back to the trip and refunds what was paid
+                {waiveFee ? "" : ", minus the cancellation fee"} (card first, then cash to hand back). The customer is texted and
+                emailed. This can&apos;t be undone.
               </div>
+              {(role === "owner" || role === "manager") && (
+                <label className="flex items-center gap-2 mt-2 text-sm text-[#A1A1AA] cursor-pointer">
+                  <input type="checkbox" checked={waiveFee} onChange={(e) => setWaiveFee(e.target.checked)}
+                    className="accent-[#FCC300]" />
+                  Waive the cancellation fee
+                </label>
+              )}
             </div>
             {confirmCancel ? (
               <div className="flex items-center gap-2">

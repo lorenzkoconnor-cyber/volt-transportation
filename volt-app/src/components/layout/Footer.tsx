@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import Logo from "@/components/ui/Logo";
+import { useAppSettings } from "@/context/SettingsContext";
 
 const footerLinks = {
   Company: [
@@ -22,6 +25,7 @@ const footerLinks = {
 };
 
 export default function Footer() {
+  const { business } = useAppSettings();
   return (
     <footer className="bg-[#0A0A0A] border-t border-white/8 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
@@ -36,24 +40,24 @@ export default function Footer() {
               Hartsfield-Jackson Airport.
             </p>
             <p className="text-[#A1A1AA] text-sm mt-4 leading-relaxed">
-              3885 Miller Road, Suite C
+              {business.street}
               <br />
-              Columbus, GA 31909
+              {business.cityLine}
             </p>
             <p className="text-[#A1A1AA] text-sm mt-2">
               <a
-                href="tel:+17065305896"
+                href={business.phoneHref}
                 className="hover:text-white transition-colors"
               >
-                (706) 530-5896
+                {business.phone}
               </a>
             </p>
             <p className="text-[#A1A1AA] text-sm">
               <a
-                href="mailto:support@contactvolt.com"
+                href={`mailto:${business.email}`}
                 className="hover:text-white transition-colors"
               >
-                support@contactvolt.com
+                {business.email}
               </a>
             </p>
           </div>

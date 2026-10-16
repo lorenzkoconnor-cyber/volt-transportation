@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminDb } from "@/lib/checkout";
 import { rateLimit } from "@/lib/rate-limit";
-import { confirmationText, loadMessageInfo, sendReservationText } from "@/lib/reservation-messages";
+import { confirmationMessage, loadMessageInfo, sendReservationText } from "@/lib/reservation-messages";
 
 // POST /api/booking/text-confirmation  { confirmationNumber }
 // The "Text me my confirmation" button on the booking confirmation page.
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     const info = await loadMessageInfo(sb, resv.id);
     if (!info) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
-    const result = await sendReservationText(sb, info, confirmationText(info), "confirmation_resend");
+    const result = await sendReservationText(sb, info, (await confirmationMessage(sb, info)).sms, "confirmation_resend");
     if (!result.sent) return NextResponse.json({ error: "We couldn't send the text. Please try again." }, { status: 502 });
 
     const digits = info.phone.replace(/\D/g, "");

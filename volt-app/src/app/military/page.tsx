@@ -14,21 +14,26 @@ import {
   ShieldCheck,
   Upload,
 } from "lucide-react";
-import { MILITARY_DISCOUNT_PERCENT, PRICING } from "@/lib/booking";
+import { getAppSettings } from "@/lib/settings-server";
+import { dollars } from "@/lib/settings";
 import { DONATION_PARTNER, DONATION_PERCENT_OF_PROFITS } from "@/lib/military";
 
-export const metadata: Metadata = {
-  title: "Military Discount & Giving Back",
-  description: `Active-duty and retired military save ${MILITARY_DISCOUNT_PERCENT}% on every Volt shuttle booking between Columbus, GA and ATL. Volt donates ${DONATION_PERCENT_OF_PROFITS}% of its profits to ${DONATION_PARTNER.name}.`,
-  alternates: { canonical: "https://volt-transportation.com/military" },
-};
+// The discount % (and whether it's on) comes from Dashboard → Settings.
+export async function generateMetadata(): Promise<Metadata> {
+  const { military } = await getAppSettings();
+  return {
+    title: "Military Discount & Giving Back",
+    description: `Active-duty and retired military save ${military.percent}% on every Volt shuttle booking between Columbus, GA and ATL. Volt donates ${DONATION_PERCENT_OF_PROFITS}% of its profits to ${DONATION_PARTNER.name}.`,
+    alternates: { canonical: "https://volt-transportation.com/military" },
+  };
+}
 
 const eligible = [
   { title: "Active-duty military", desc: "Currently serving on active duty in the U.S. Armed Forces." },
   { title: "Retired military", desc: "Retired from the U.S. Armed Forces." },
 ];
 
-const steps = [
+const stepsFor = (MILITARY_DISCOUNT_PERCENT: number) => [
   {
     icon: ShieldCheck,
     title: "Tick the box at checkout",
@@ -77,11 +82,13 @@ const faqs = [
   },
 ];
 
-// Example uses one adult round trip, so the numbers on this page always match live pricing.
-const exampleFare = PRICING.adult * 2;
-const exampleSavings = (exampleFare * MILITARY_DISCOUNT_PERCENT) / 100;
-
-export default function MilitaryPage() {
+export default async function MilitaryPage() {
+  const settings = await getAppSettings();
+  const MILITARY_DISCOUNT_PERCENT = settings.military.percent;
+  const steps = stepsFor(MILITARY_DISCOUNT_PERCENT);
+  // Example uses one adult round trip, so the numbers on this page always match live pricing.
+  const exampleFare = settings.pricing.adult * 2;
+  const exampleSavings = (exampleFare * MILITARY_DISCOUNT_PERCENT) / 100;
   return (
     <>
       <Navbar />
@@ -103,6 +110,11 @@ export default function MilitaryPage() {
               ride, military or not, helps veterans: Volt donates {DONATION_PERCENT_OF_PROFITS}% of its profits
               to {DONATION_PARTNER.name}.
             </p>
+            {!settings.military.enabled && (
+              <p className="mt-6 inline-block rounded-xl border border-[#FCC300]/30 bg-[#FCC300]/10 px-4 py-3 text-sm text-[#FFE08A]">
+                The Military Discount is paused right now — check back soon. Our donations to {DONATION_PARTNER.name} continue.
+              </p>
+            )}
           </div>
         </section>
 
@@ -186,8 +198,8 @@ export default function MilitaryPage() {
               <div className="text-white font-semibold mb-3">Example</div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-[#A1A1AA]">1 adult, round trip (2 × ${PRICING.adult})</span>
-                  <span className="text-white">${exampleFare}</span>
+                  <span className="text-[#A1A1AA]">1 adult, round trip (2 × {dollars(settings.pricing.adult)})</span>
+                  <span className="text-white">{dollars(exampleFare)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-green-400">Military Discount (−{MILITARY_DISCOUNT_PERCENT}%)</span>

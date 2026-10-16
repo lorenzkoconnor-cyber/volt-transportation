@@ -9,7 +9,7 @@ import {
   type Passenger,
   type DepartureSlot,
   calcPrice,
-  money, MILITARY_DISCOUNT_PERCENT,
+  money,
   formatDate,
   LOCATIONS,
   flightDirection,
@@ -18,6 +18,7 @@ import {
 } from "@/lib/booking";
 import type { MilitaryResult } from "@/components/booking/Step4Checkout";
 import { codeLabel } from "@/lib/discount-codes";
+import { useAppSettings } from "@/context/SettingsContext";
 
 interface Props {
   confirmationNumber: string;
@@ -28,6 +29,12 @@ interface Props {
   military?: MilitaryResult;
 }
 
+const hrs = (h: number) => `${h} hour${h === 1 ? "" : "s"}`;
+function reminderLine(r: { firstEnabled: boolean; firstHours: number; secondEnabled: boolean; secondHours: number }): string {
+  const when = [r.firstEnabled && hrs(r.firstHours), r.secondEnabled && hrs(r.secondHours)].filter(Boolean);
+  return when.length ? `Reminder texts are sent ${when.join(" and ")} before departure` : "";
+}
+
 export default function Step5Confirmation({
   confirmationNumber,
   search,
@@ -36,7 +43,12 @@ export default function Step5Confirmation({
   primary,
   military = { applied: false, pending: false },
 }: Props) {
-  const priced = calcPrice(search, { militaryDiscount: military.applied && !military.code });
+  const settings = useAppSettings();
+  const MILITARY_DISCOUNT_PERCENT = settings.military.percent;
+  const priced = calcPrice(search, {
+    pricing: settings.pricing, militaryRate: MILITARY_DISCOUNT_PERCENT / 100,
+    militaryDiscount: military.applied && !military.code,
+  });
   const { lines } = priced;
   const discountCents = military.code ? military.code.discountCents ?? 0 : priced.discountCents;
   const total = (priced.subtotalCents - discountCents) / 100;
@@ -211,11 +223,11 @@ export default function Step5Confirmation({
         <h3 className="text-white font-semibold mb-3">What&apos;s Next</h3>
         <ul className="space-y-2">
           {[
-            "You'll receive an SMS confirmation shortly with pickup details",
-            "Arrive at your pickup location 20 minutes before departure",
+            "You'll receive a text (and an email, if you gave one) confirming your pickup details",
+            `Arrive at your pickup location ${settings.arriveEarlyMinutes} minutes before departure`,
             "Your driver will assist with luggage",
-            "Reminder texts are sent 24 hours and 2 hours before departure",
-          ].map((item, i) => (
+            reminderLine(settings.reminders),
+          ].filter(Boolean).map((item, i) => (
             <li key={i} className="flex items-start gap-2.5 text-sm text-[#A1A1AA]">
               <span className="w-5 h-5 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-[#FCC300] text-xs flex-shrink-0 mt-0.5">
                 {i + 1}

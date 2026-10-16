@@ -2,15 +2,19 @@ import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Shield } from "lucide-react";
+import { getAppSettings } from "@/lib/settings-server";
+import { dollars, type AppSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Safety & Rules | Volt Transportation Passenger Policies",
   description:
-    "Volt Transportation passenger conduct, luggage policy, pet policy, cancellation rules, and safety guidelines for your Columbus GA to ATL airport shuttle.",
+    "Volt Transportation passenger conduct, luggage, accessibility, pet policy, cancellation rules, and safety guidelines for your Columbus GA to ATL airport shuttle.",
   alternates: { canonical: "https://volt-transportation.com/safety-rules" },
 };
 
-const sections = [
+// Prices, fee, cutoff, arrive-early time and contact details come from Settings.
+const cutoffWords = (m: number) => (m % 60 === 0 ? `${m / 60} hour${m === 60 ? "" : "s"}` : `${m} minutes`);
+const sectionsFor = (s: AppSettings): { id?: string; title: string; items: string[] }[] => [
   {
     title: "Passenger Conduct",
     items: [
@@ -24,16 +28,28 @@ const sections = [
     title: "Luggage Policy",
     items: [
       "Each passenger is permitted one standard bag at no additional charge.",
-      "Additional bags are $10 each, added at time of booking or by contacting us.",
+      `Additional bags are ${dollars(s.pricing.extraBag)} each, added at time of booking or by contacting us.`,
       "Oversized items (surfboards, large sporting equipment, etc.) must be disclosed at booking.",
       "Volt is not responsible for lost, stolen, or damaged personal items.",
       "Drivers will assist with loading and unloading luggage.",
     ],
   },
   {
+    id: "accessibility",
+    title: "Accessibility & Mobility Assistance",
+    items: [
+      "Riders who use a folding wheelchair, walker, cane, or other mobility aid are welcome. Mobility aids ride free and don't count toward your luggage.",
+      "Our Ford Transit vans do not have a wheelchair lift or ramp, so riders need to be able to move from their chair into a van seat, with help from a companion or our driver if needed. Wheelchairs must fold to be stowed.",
+      "Check “I need mobility assistance” when you book (or tell us when you call) so your driver knows to help you board and stow your equipment.",
+      "Service animals are always welcome at no charge.",
+      `If you use a wheelchair that doesn't fold or can't transfer to a seat, please call us at ${s.business.phone} before booking and we'll help you find an accessible option.`,
+      `Need this information in another format, or have a question about accessibility? Call ${s.business.phone} or email ${s.business.email}.`,
+    ],
+  },
+  {
     title: "Pet Policy",
     items: [
-      "Pets are welcome aboard Volt vehicles for a $25 fee per pet.",
+      `Pets are welcome aboard Volt vehicles for a ${dollars(s.pricing.pet)} fee per pet.`,
       "All pets must be in an appropriate carrier or crate for the entire duration of the trip.",
       "Service animals are always welcome at no additional charge.",
       "Please disclose pets at time of booking — unannounced pets may be refused.",
@@ -43,7 +59,7 @@ const sections = [
     title: "Child Passenger Policy",
     items: [
       "Children are welcome on all Volt routes.",
-      "Child pricing ($49) applies to passengers ages 2–12.",
+      `Child pricing (${dollars(s.pricing.child)}) applies to passengers ages 2–12.`,
       "Lap infants (under 2) ride free when accompanied by a paying adult.",
       "Parents and guardians are responsible for their children's behavior during the trip.",
       "Volt does not provide car seats. Parents should bring an appropriate child safety seat if needed.",
@@ -52,8 +68,9 @@ const sections = [
   {
     title: "Cancellation Policy",
     items: [
-      "Passengers may cancel or modify their reservation up until 11:59 PM the day before the scheduled trip for a full refund.",
+      `Passengers may cancel their reservation up until 11:59 PM (Eastern) the day before the scheduled trip for a refund of the fare${s.cancellationFeeCents > 0 ? ` minus a ${dollars(s.cancellationFeeCents / 100)} cancellation fee per reservation` : ""}.`,
       "Cancellations made after 11:59 PM the day before departure are non-refundable.",
+      `Online booking closes ${cutoffWords(s.onlineCutoffMinutes)} before each departure; call us at ${s.business.phone} to book a departure leaving sooner.`,
       "To cancel or modify, use the Manage Reservation page or contact us directly.",
       "No-shows forfeit their fare and are not eligible for a refund.",
     ],
@@ -61,7 +78,7 @@ const sections = [
   {
     title: "Check-In Requirements",
     items: [
-      "Passengers must arrive at the pickup location at least 20 minutes before the scheduled departure.",
+      `Passengers must arrive at the pickup location at least ${s.arriveEarlyMinutes} minutes before the scheduled departure.`,
       "The shuttle will depart on schedule. Volt cannot hold the vehicle for late arrivals.",
       "If you are running late, contact us immediately — we will do our best to accommodate you.",
       "Have your confirmation number ready at pickup.",
@@ -97,7 +114,8 @@ const sections = [
   },
 ];
 
-export default function SafetyRulesPage() {
+export default async function SafetyRulesPage() {
+  const sections = sectionsFor(await getAppSettings());
   return (
     <>
       <Navbar />
@@ -121,7 +139,7 @@ export default function SafetyRulesPage() {
         <section className="pb-24 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto space-y-6">
             {sections.map((section) => (
-              <div key={section.title} className="glass rounded-2xl overflow-hidden">
+              <div key={section.title} id={section.id} className="glass rounded-2xl overflow-hidden scroll-mt-24">
                 <div className="flex items-center gap-3 p-6 border-b border-white/8">
                   <div className="w-8 h-8 rounded-lg bg-[#FCC300]/15 flex items-center justify-center flex-shrink-0">
                     <Shield className="w-4 h-4 text-[#FCC300]" />

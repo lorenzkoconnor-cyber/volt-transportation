@@ -39,3 +39,9 @@ export function localDateString(d: Date = new Date()): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+// Today's date in Columbus/Atlanta as "YYYY-MM-DD", whatever the server's or
+// browser's own time zone is. Volt's schedule and deadlines are all Eastern.
+export function easternToday(now: Date = new Date()): string {
+  return now.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+}

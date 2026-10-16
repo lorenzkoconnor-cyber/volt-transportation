@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
-import { voidHold } from "@/lib/stripe/holds";
 import { rateLimit } from "@/lib/rate-limit";
+import { easternToday } from "@/lib/format";
+import { cancelReservation, cancellationFeeCents } from "@/lib/cancellation";
+import { loadAppSettings } from "@/lib/settings-server";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function adminClient(): any {
@@ -74,64 +76,33 @@ export async function POST(request: NextRequest) {
       if (reservation.status === "cancelled") {
         return NextResponse.json({ error: "This reservation is already cancelled." }, { status: 400 });
       }
-      // Free cancellation until 11:59 PM the day before the trip
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-      if (reservation.trip?.departure_date <= todayStr) {
+      if (reservation.status === "completed" || reservation.status === "no_show") {
+        return NextResponse.json({ error: "This trip has already happened." }, { status: 400 });
+      }
+      // Online cancellation closes at 11:59 PM Eastern the day before the trip.
+      if (!reservation.trip?.departure_date || reservation.trip.departure_date <= easternToday()) {
         return NextResponse.json(
-          { error: "Online cancellation closes at 11:59 PM the day before your trip. Please call us to make changes." },
+          { error: `Online cancellation closes at 11:59 PM (Eastern) the day before your trip. Please call us at ${(await loadAppSettings()).business.phone}.` },
           { status: 400 }
         );
       }
 
-      const seatCount = (reservation.adults ?? 0) + (reservation.children ?? 0);
-      const { error: updErr } = await supabase
-        .from("reservations")
-        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-        .eq("id", reservation.id);
-      if (updErr) throw updErr;
-
-      await supabase.rpc("decrement_seats_booked", { p_trip_id: reservation.trip_id, p_count: seatCount });
-      if (reservation.return_trip_id) {
-        await supabase.rpc("decrement_seats_booked", { p_trip_id: reservation.return_trip_id, p_count: seatCount });
-      }
-
-      // A card that's only on hold (Military Discount under review) is simply
-      // released — nothing was charged, so there's nothing to refund.
-      const { data: holds } = await supabase
-        .from("payments")
-        .select("id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id")
-        .eq("reservation_id", reservation.id)
-        .eq("status", "authorized");
-      let holdReleased = false;
-      for (const hold of holds ?? []) {
-        const res = await voidHold(supabase, hold, "Hold released — rider cancelled online.");
-        holdReleased = holdReleased || res.ok;
-      }
-      if (holdReleased) {
-        await supabase.from("reservations").update({ military_discount_pending: false }).eq("id", reservation.id);
-      }
-
-      await supabase.from("audit_logs").insert({
-        actor_id: "guest",
-        actor_role: "customer",
-        action: "reservation.cancelled",
-        table_name: "reservations",
-        record_id: reservation.id,
-        new_data: { via: "manage-reservation" },
-      });
+      const result = await cancelReservation(supabase, reservation.id, { kind: "customer" });
+      if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status ?? 400 });
 
       return NextResponse.json({
         success: true,
         reservation: { ...serialize(reservation), status: "cancelled" },
-        message: holdReleased
-          ? "Your reservation is cancelled. The hold on your card has been released — you were not charged."
-          : "Your reservation is cancelled. If you paid by card, our team will process your refund within 1–2 business days.",
+        message: `Your reservation is cancelled. ${result.customerLine}`,
       });
     }
 
     // Default: lookup
-    return NextResponse.json({ reservation: serialize(reservation) });
+    return NextResponse.json({
+      reservation: serialize(reservation),
+      cancellationFeeCents: await cancellationFeeCents(),
+      canCancelOnline: !!reservation.trip?.departure_date && reservation.trip.departure_date > easternToday(),
+    });
   } catch (err) {
     console.error("[booking/manage]", err);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });

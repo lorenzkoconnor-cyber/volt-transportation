@@ -1,5 +1,6 @@
 "use client";
 
+import { useAppSettings } from "@/context/SettingsContext";
 import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -21,6 +22,7 @@ type Reservation = {
 };
 
 export default function ManageReservationPage() {
+  const { business } = useAppSettings();
   const [confirmNumber, setConfirmNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,6 +30,8 @@ export default function ManageReservationPage() {
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [cancelMessage, setCancelMessage] = useState("");
+  const [feeCents, setFeeCents] = useState(1500);
+  const [canCancelOnline, setCanCancelOnline] = useState(true);
 
   const callManage = async (action: "lookup" | "cancel") => {
     const res = await fetch("/api/booking/manage", {
@@ -51,6 +55,8 @@ export default function ManageReservationPage() {
     try {
       const data = await callManage("lookup");
       setReservation(data.reservation);
+      if (Number.isInteger(data.cancellationFeeCents)) setFeeCents(data.cancellationFeeCents);
+      setCanCancelOnline(data.canCancelOnline !== false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lookup failed.");
     }
@@ -209,11 +215,24 @@ export default function ManageReservationPage() {
                 )}
 
                 {/* Cancel */}
-                {reservation.status !== "cancelled" && reservation.status !== "completed" && (
-                  confirmingCancel ? (
+                {reservation.status !== "cancelled" && reservation.status !== "completed" && reservation.status !== "no_show" && (
+                  !canCancelOnline ? (
+                    <div className="glass rounded-xl p-4">
+                      <div className="text-white font-medium text-sm">Need to cancel?</div>
+                      <div className="text-[#A1A1AA] text-xs mt-0.5">
+                        Online cancellation closed at 11:59 PM (Eastern) the day before your trip. Please call us at{" "}
+                        <a href={business.phoneHref} className="text-[#FCC300]">{business.phone}</a>.
+                      </div>
+                    </div>
+                  ) : confirmingCancel ? (
                     <div className="glass rounded-xl p-4 border-red-500/30">
                       <div className="text-white font-medium text-sm mb-3">
                         Cancel {reservation.confirmationNumber}? This can&apos;t be undone.
+                      </div>
+                      <div className="text-[#A1A1AA] text-xs mb-3 -mt-1">
+                        {feeCents > 0
+                          ? `A ${formatCents(feeCents)} cancellation fee is kept; the rest is refunded to your card automatically.`
+                          : "You'll be refunded automatically."}
                       </div>
                       <div className="flex gap-3">
                         <Button onClick={handleCancel} disabled={loading}
@@ -233,7 +252,8 @@ export default function ManageReservationPage() {
                     >
                       <div className="text-red-400 font-medium text-sm">Cancel Reservation</div>
                       <div className="text-[#A1A1AA] text-xs mt-0.5">
-                        Free cancellation until 11:59 PM the day before your trip
+                        Until 11:59 PM (Eastern) the day before your trip
+                        {feeCents > 0 ? ` · ${formatCents(feeCents)} cancellation fee` : ""}
                       </div>
                     </button>
                   )

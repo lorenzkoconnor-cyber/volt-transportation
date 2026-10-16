@@ -6,6 +6,8 @@ import Footer from "@/components/layout/Footer";
 import MapsLink from "@/components/ui/MapsLink";
 import { Button } from "@/components/ui/button";
 import { MapPin, ArrowRight, Clock, Car, Plane, Navigation } from "lucide-react";
+import { getAppSettings } from "@/lib/settings-server";
+import { displayTime12h } from "@/lib/booking";
 
 export const metadata: Metadata = {
   title: "Locations | Columbus GA & ATL Airport Pickup Points",
@@ -14,7 +16,17 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://volt-transportation.com/locations" },
 };
 
-export default function LocationsPage() {
+export default async function LocationsPage() {
+  // Address, arrive-early time and schedule come from Dashboard → Settings.
+  const settings = await getAppSettings();
+  const b = settings.business;
+  const toAtl = settings.schedule.toAtl;
+  const hoursEvery = toAtl.intervalMinutes % 60 === 0
+    ? `every ${toAtl.intervalMinutes === 60 ? "hour" : `${toAtl.intervalMinutes / 60} hours`}`
+    : `every ${toAtl.intervalMinutes} minutes`;
+  const drive = toAtl.durationMinutes % 60 === 0
+    ? `${toAtl.durationMinutes / 60} hour${toAtl.durationMinutes === 60 ? "" : "s"}`
+    : `${Math.floor(toAtl.durationMinutes / 60)} hr ${toAtl.durationMinutes % 60} min`;
   return (
     <>
       <Navbar />
@@ -53,11 +65,11 @@ export default function LocationsPage() {
                       <div>
                         <div className="text-white font-medium text-sm">Address</div>
                         <MapsLink
-                          address="3885 Miller Road Suite C, Columbus, GA 31909"
+                          address={b.address}
                           className="block text-[#A1A1AA] hover:text-white text-sm mt-0.5 transition-colors"
                         >
-                          3885 Miller Road, Suite C<br />
-                          Columbus, GA 31909
+                          {b.street}<br />
+                          {b.cityLine}
                         </MapsLink>
                       </div>
                     </div>
@@ -65,7 +77,7 @@ export default function LocationsPage() {
                       <Clock className="w-4 h-4 text-[#A1A1AA] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-white font-medium text-sm">Arrivals</div>
-                        <div className="text-[#A1A1AA] text-sm mt-0.5">Please arrive 20 minutes before your scheduled departure</div>
+                        <div className="text-[#A1A1AA] text-sm mt-0.5">Please arrive {settings.arriveEarlyMinutes} minutes before your scheduled departure</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -79,7 +91,7 @@ export default function LocationsPage() {
 
                   <div className="glass rounded-xl p-4 border border-[#FCC300]/20">
                     <p className="text-[#FCC300] text-sm font-medium">
-                      📍 This is our only Columbus departure point. Every Columbus trip leaves from 3885 Miller Road, Suite C.
+                      📍 This is our only Columbus departure point. Every Columbus trip leaves from {b.street}.
                     </p>
                   </div>
                 </div>
@@ -88,13 +100,13 @@ export default function LocationsPage() {
                 <div className="bg-[#0F0F0F] min-h-[280px] relative border-t lg:border-t-0 lg:border-l border-white/8">
                   <iframe
                     title="Map of Volt Transportation's Columbus pickup location"
-                    src="https://www.google.com/maps?q=3885+Miller+Road+Suite+C+Columbus+GA+31909&output=embed"
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(b.address)}&output=embed`}
                     className="absolute inset-0 w-full h-full border-0 [filter:invert(90%)_hue-rotate(180deg)_brightness(95%)_contrast(90%)]"
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                   />
                   <MapsLink
-                    address="3885 Miller Road Suite C, Columbus, GA 31909"
+                    address={b.address}
                     className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-lg bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-sm font-semibold px-4 py-2 shadow-lg transition-colors"
                   >
                     <Navigation className="w-4 h-4" />
@@ -114,7 +126,7 @@ export default function LocationsPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {[
-                  { label: "Look for the Volt sign", src: "/images/volt-storefront.webp", alt: "Volt Transportation storefront sign at 3885 Miller Road in Columbus, Georgia" },
+                  { label: "Look for the Volt sign", src: "/images/volt-storefront.webp", alt: `Volt Transportation storefront sign at ${b.street} in Columbus, Georgia` },
                   { label: "Enter through Suite C", src: "/images/volt-entrance.webp", alt: "Glass entrance doors to the Volt Transportation lobby in Suite C" },
                   { label: "Wait in our lounge", src: "/images/volt-lounge.webp", alt: "Volt Transportation passenger lounge with leather seating and a TV" },
                 ].map((item, i) => (
@@ -213,11 +225,11 @@ export default function LocationsPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A]">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl font-bold text-white mb-4">The Route</h2>
-            <p className="text-[#A1A1AA] mb-8">Columbus, GA → Hartsfield-Jackson ATL International Airport · About 2 hours · Departs Volt every 2 hours, 4:00 AM–8:00 PM daily</p>
+            <p className="text-[#A1A1AA] mb-8">Columbus, GA → Hartsfield-Jackson ATL International Airport · About {drive} · Departs Volt {hoursEvery}, {displayTime12h(toAtl.first)}–{displayTime12h(toAtl.last)} daily</p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <div className="glass rounded-xl px-6 py-4">
                 <div className="text-white font-bold">Columbus, GA</div>
-                <div className="text-[#A1A1AA] text-xs">3885 Miller Road</div>
+                <div className="text-[#A1A1AA] text-xs">{b.street.split(",")[0]}</div>
               </div>
               <ArrowRight className="w-6 h-6 text-[#FCC300]" />
               <div className="glass rounded-xl px-6 py-4 border border-[#FCC300]/30">
@@ -237,7 +249,7 @@ export default function LocationsPage() {
         <section className="py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-white mb-4">Ready to reserve your seat?</h2>
-            <p className="text-[#A1A1AA] mb-8">All Columbus trips depart from 3885 Miller Road, Suite C — book now and we'll handle the rest.</p>
+            <p className="text-[#A1A1AA] mb-8">All Columbus trips depart from {b.street} — book now and we&apos;ll handle the rest.</p>
             <Link href="/book">
               <Button size="lg" className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold px-10 py-6 text-base rounded-xl volt-glow">
                 Book Your Ride <ArrowRight className="ml-2 w-5 h-5" />

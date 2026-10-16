@@ -15,7 +15,7 @@ const sections = [
   },
   {
     title: "2. Refund Policy",
-    body: `Passengers are entitled to a full refund if they cancel their reservation by 11:59 PM the day before the scheduled departure. Cancellations made after this deadline are non-refundable. Refunds are processed to the original payment method within 5–10 business days. In the event that Volt Transportation cancels a departure (due to severe weather, mechanical issues, or other circumstances), passengers will receive a full refund.`,
+    body: `Passengers who cancel their reservation by 11:59 PM Eastern Time the day before the scheduled departure are refunded the amount paid minus a $15 cancellation fee per reservation. Cancellations made after this deadline are non-refundable. Refunds are issued automatically to the original payment method and typically appear within 5–10 business days; cash payments are refunded in cash at our Columbus office. Online booking closes 2 hours before each departure; later bookings may be made by phone. In the event that Volt Transportation cancels a departure (due to severe weather, mechanical issues, or other circumstances), passengers will receive a full refund.`,
   },
   {
     title: "3. No-Show Policy",
@@ -88,7 +88,7 @@ export default function TermsPage() {
           <div className="max-w-3xl mx-auto">
             <div className="mb-10">
               <h1 className="text-4xl font-bold text-white mb-3">Terms & Conditions</h1>
-              <p className="text-[#A1A1AA] text-sm">Effective Date: September 18, 2026</p>
+              <p className="text-[#A1A1AA] text-sm">Effective Date: October 16, 2026</p>
             </div>
 
             <div className="glass rounded-2xl divide-y divide-white/8 overflow-hidden">

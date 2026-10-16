@@ -19,7 +19,6 @@ import {
   type PriceBreakdown,
   calcPrice,
   money,
-  MILITARY_DISCOUNT_PERCENT,
   LOCATIONS,
   formatDate,
   bookingFlights,
@@ -36,6 +35,7 @@ import {
 import { getStripeClient } from "@/lib/stripe/client";
 import { codeDiscountCents, codeLabel, type DiscountCodeTerms } from "@/lib/discount-codes";
 import { useAuth } from "@/context/AuthContext";
+import { useAppSettings } from "@/context/SettingsContext";
 import Link from "next/link";
 
 export interface MilitaryResult {
@@ -82,6 +82,7 @@ function TripSummary({
   discountedIfApproved: number;
   discountLabel: string;
 }) {
+  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
   const { lines, discountCents, total } = breakdown;
   return (
     <div className="glass rounded-2xl p-5 space-y-3">
@@ -163,6 +164,7 @@ function MilitaryDiscountSection({
   fileError: string;
   onFileChange: (f: File | null) => void;
 }) {
+  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
   // Already verified — discount is automatic.
   if (approved) {
     return (
@@ -284,6 +286,7 @@ function DiscountCodeSection({
   disabled: boolean;
   smallerThanMilitary: boolean;
 }) {
+  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [checking, setChecking] = useState(false);
@@ -776,9 +779,15 @@ export default function Step4Checkout({
   onBusyChange,
 }: Props) {
   const { customer } = useAuth();
+  const settings = useAppSettings();
+  const MILITARY_DISCOUNT_PERCENT = settings.military.percent;
+  const militaryOn = settings.military.enabled;
+  const priceOpts = { pricing: settings.pricing, militaryRate: settings.military.percent / 100 };
 
-  const militaryApproved = customer?.militaryStatus === "approved";
-  const militaryPending = customer?.militaryStatus === "pending";
+  // While the program is switched off in Settings nobody gets the discount
+  // (the server prices it the same way).
+  const militaryApproved = militaryOn && customer?.militaryStatus === "approved";
+  const militaryPending = militaryOn && customer?.militaryStatus === "pending";
 
   // Military discount box state (only relevant when not already approved/pending).
   const [militaryChecked, setMilitaryChecked] = useState(false);
@@ -795,21 +804,23 @@ export default function Step4Checkout({
   const discountActive = militaryApproved && !appliedCode;
   const hold = !appliedCode && !militaryApproved && (militaryPending || militaryChecked);
   const breakdown = useMemo(() => {
-    if (!appliedCode) return calcPrice(search, { militaryDiscount: discountActive });
-    const base = calcPrice(search);
+    if (!appliedCode) return calcPrice(search, { ...priceOpts, militaryDiscount: discountActive });
+    const base = calcPrice(search, priceOpts);
     const discountCents = codeDiscountCents(base.subtotalCents, appliedCode);
     const totalCents = base.subtotalCents - discountCents;
     return { ...base, discountCents, discount: discountCents / 100, totalCents, total: totalCents / 100 };
-  }, [search, discountActive, appliedCode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, discountActive, appliedCode, settings]);
   const free = !!appliedCode && breakdown.totalCents === 0;
   const discountLabel = appliedCode
     ? `Discount Code ${appliedCode.code} (${codeLabel(appliedCode)})`
     : `Military Discount (−${MILITARY_DISCOUNT_PERCENT}%)`;
   const codeSmallerThanMilitary = !!appliedCode && militaryApproved &&
-    breakdown.discountCents < calcPrice(search, { militaryDiscount: true }).discountCents;
+    breakdown.discountCents < calcPrice(search, { ...priceOpts, militaryDiscount: true }).discountCents;
   const discountedIfApproved = useMemo(
-    () => calcPrice(search, { militaryDiscount: true }).total,
-    [search],
+    () => calcPrice(search, { ...priceOpts, militaryDiscount: true }).total,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [search, settings],
   );
 
   // Someone ticking the box must pick a category + upload before paying.
@@ -940,7 +951,7 @@ export default function Step4Checkout({
           ? msg
           : "Your payment went through, but confirming your booking is taking longer than usual. " +
             "Please don't pay again — you'll get a text with your confirmation number shortly. " +
-            "If you don't, contact us at support@contactvolt.com.",
+            `If you don't, contact us at ${settings.business.email} or ${settings.business.phone}.`,
       );
       setSubmitting(false);
     }
@@ -987,7 +998,7 @@ export default function Step4Checkout({
         discountLabel={discountLabel}
       />
 
-      {!appliedCode && <MilitaryDiscountSection
+      {!appliedCode && militaryOn && <MilitaryDiscountSection
         approved={militaryApproved}
         pending={militaryPending}
         checked={militaryChecked}

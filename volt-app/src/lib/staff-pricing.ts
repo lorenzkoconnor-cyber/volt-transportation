@@ -1,10 +1,12 @@
 // ─── Staff booking pricing — shared by the Team Portal forms and the server ────
 // New Reservation and Edit Reservation price a booking the same way the
-// customer checkout does (PRICING × 2 for round trips), plus the discounts
+// customer checkout does (prices × 2 for round trips), plus the discounts
 // staff can give at the counter. The server re-prices everything from the same
 // inputs, so the browser's numbers are only a preview.
+// `rates` = the prices + Military Discount % to use: the live settings for a new
+// booking, the booking's own price snapshot for an edit. Defaults: the originals.
 
-import { MILITARY_DISCOUNT_PERCENT, MILITARY_DISCOUNT_RATE, PRICING } from "@/lib/booking";
+import { MILITARY_DISCOUNT_PERCENT, PRICING } from "@/lib/booking";
 import { codeDiscountCents, codeLabel } from "@/lib/discount-codes";
 
 export type StaffDiscount =
@@ -31,15 +33,23 @@ export interface StaffPrice {
   totalCents: number;
 }
 
-export function staffSubtotalCents(c: StaffCounts): number {
-  const oneWay = c.adults * PRICING.adult + c.children * PRICING.child + c.pets * PRICING.pet + c.extraBags * PRICING.extraBag;
-  return oneWay * (c.isRoundTrip ? 2 : 1) * 100;
+export interface StaffRates {
+  pricing: { adult: number; child: number; pet: number; extraBag: number };
+  militaryPercent: number;
 }
 
-export function staffDiscountCents(subtotalCents: number, d: StaffDiscount): number {
+export const DEFAULT_RATES: StaffRates = { pricing: PRICING, militaryPercent: MILITARY_DISCOUNT_PERCENT };
+
+export function staffSubtotalCents(c: StaffCounts, rates: StaffRates = DEFAULT_RATES): number {
+  const P = rates.pricing;
+  const oneWay = c.adults * P.adult + c.children * P.child + c.pets * P.pet + c.extraBags * P.extraBag;
+  return Math.round(oneWay * (c.isRoundTrip ? 2 : 1) * 100);
+}
+
+export function staffDiscountCents(subtotalCents: number, d: StaffDiscount, rates: StaffRates = DEFAULT_RATES): number {
   switch (d.kind) {
     case "military":
-      return Math.round(subtotalCents * MILITARY_DISCOUNT_RATE);
+      return Math.round((subtotalCents * rates.militaryPercent) / 100);
     case "code":
       return codeDiscountCents(subtotalCents, { type: d.type, value: d.value });
     case "manual": {
@@ -53,20 +63,25 @@ export function staffDiscountCents(subtotalCents: number, d: StaffDiscount): num
 }
 
 /** `comp` = the whole booking is free (Comp payment). */
-export function staffPrice(c: StaffCounts, d: StaffDiscount, comp = false): StaffPrice {
-  const subtotalCents = staffSubtotalCents(c);
-  const discountCents = comp ? subtotalCents : staffDiscountCents(subtotalCents, d);
+export function staffPrice(c: StaffCounts, d: StaffDiscount, comp = false, rates: StaffRates = DEFAULT_RATES): StaffPrice {
+  const subtotalCents = staffSubtotalCents(c, rates);
+  const discountCents = comp ? subtotalCents : staffDiscountCents(subtotalCents, d, rates);
   return { subtotalCents, discountCents, totalCents: subtotalCents - discountCents };
 }
 
 // ── Edit windows ──────────────────────────────────────────────────────────────
-//   • More than EDIT_CUTOFF_HOURS before the outbound departure: any staff
-//     (owner, manager, office staff) can change anything.
+//   • More than `editCutoffHours` (Settings; default 24) before the outbound
+//     departure: any staff (owner, manager, office staff) can change anything.
 //   • Inside that window: only owners and managers — everything until the
-//     outbound leaves, then just the return leg until RETURN_CUTOFF_HOURS
-//     before the return departure.
+//     outbound leaves, then just the return leg until `returnEditCutoffHours`
+//     (default 2) before the return departure.
 export const EDIT_CUTOFF_HOURS = 24;
 export const RETURN_CUTOFF_HOURS = 2;
+
+export interface EditWindows {
+  editCutoffHours: number;
+  returnEditCutoffHours: number;
+}
 const LATE_EDIT_ROLES = ["owner", "manager"];
 
 // Departure times are Eastern wall-clock times; this turns one into a real
@@ -101,22 +116,25 @@ export function editAccess(
   outbound: TripTime,
   returnTrip: TripTime,
   now = Date.now(),
+  windows: EditWindows = { editCutoffHours: EDIT_CUTOFF_HOURS, returnEditCutoffHours: RETURN_CUTOFF_HOURS },
 ): { mode: EditMode | null; reason: string | null } {
+  const EDIT_H = windows.editCutoffHours;
+  const RETURN_H = windows.returnEditCutoffHours;
   if (status === "cancelled") return { mode: null, reason: "This reservation is cancelled." };
   if (status === "completed" || status === "no_show") return { mode: null, reason: "This trip is already finished." };
   if (!outbound) return { mode: null, reason: "This reservation has no trip." };
   const at = (t: NonNullable<TripTime>) => easternInstant(t.departure_date, t.departure_time.slice(0, 5));
   const untilOut = at(outbound) - now;
-  if (untilOut >= EDIT_CUTOFF_HOURS * 3_600_000) return { mode: "full", reason: null };
+  if (untilOut >= EDIT_H * 3_600_000) return { mode: "full", reason: null };
   if (!LATE_EDIT_ROLES.includes(role ?? "")) {
-    return { mode: null, reason: `Within ${EDIT_CUTOFF_HOURS} hours of departure, only an owner or manager can make changes.` };
+    return { mode: null, reason: `Within ${EDIT_H} hours of departure, only an owner or manager can make changes.` };
   }
   if (untilOut > 0) return { mode: "full", reason: null };
-  if (returnTrip && at(returnTrip) - now > RETURN_CUTOFF_HOURS * 3_600_000) return { mode: "return_only", reason: null };
+  if (returnTrip && at(returnTrip) - now > RETURN_H * 3_600_000) return { mode: "return_only", reason: null };
   return {
     mode: null,
     reason: returnTrip
-      ? `The return trip can't be changed within ${RETURN_CUTOFF_HOURS} hours of its departure.`
+      ? `The return trip can't be changed within ${RETURN_H} hours of its departure.`
       : "This trip has already departed.",
   };
 }
@@ -152,10 +170,10 @@ export function reservationBalance(totalCents: number, payments: PaymentLike[]) 
   };
 }
 
-export function staffDiscountLabel(d: StaffDiscount): string {
+export function staffDiscountLabel(d: StaffDiscount, rates: StaffRates = DEFAULT_RATES): string {
   switch (d.kind) {
     case "military":
-      return `Military Discount (${MILITARY_DISCOUNT_PERCENT}%)`;
+      return `Military Discount (${rates.militaryPercent}%)`;
     case "code":
       return `Discount Code ${d.code} (${codeLabel({ type: d.type, value: d.value })})`;
     case "manual":

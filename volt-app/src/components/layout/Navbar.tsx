@@ -7,6 +7,7 @@ import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import Logo from "@/components/ui/Logo";
+import AnnouncementBanner from "@/components/layout/AnnouncementBanner";
 
 const navLinks = [
   { href: "/",           label: "Home" },
@@ -42,6 +43,7 @@ export default function Navbar() {
         scrolled ? "bg-[#0A0A0A]/90 backdrop-blur-xl border-b border-white/6" : "bg-transparent"
       }`}
     >
+      <AnnouncementBanner />
       <nav className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="flex items-center justify-between h-16 lg:h-20">
 

@@ -6,6 +6,7 @@ import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import MapsLink from "@/components/ui/MapsLink";
+import { useAppSettings } from "@/context/SettingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,16 +14,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, Clock, CheckCircle, MapPin } from "lucide-react";
 
 export default function ContactPage() {
+  const { business: b } = useAppSettings();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Sends the message to /api/contact, which emails it to Volt support and
+  // keeps a copy in the database.
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: wire up to email API / Supabase function
-    await new Promise((r) => setTimeout(r, 1000));
-    setLoading(false);
-    setSubmitted(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Your message couldn't be sent.");
+      setSubmitted(true);
+    } catch (err) {
+      setError(
+        `${err instanceof Error ? err.message : "Your message couldn't be sent."} ` +
+        `Please try again, or call us at ${b.phone}.`,
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,12 +81,12 @@ export default function ContactPage() {
                 </div>
                 <h3 className="text-white font-semibold mb-1">Address</h3>
                 <MapsLink
-                  address="3885 Miller Road Suite C, Columbus, GA 31909"
+                  address={b.address}
                   mode="search"
                   className="text-[#A1A1AA] hover:text-white text-sm transition-colors"
                 >
-                  3885 Miller Road, Suite C<br />
-                  Columbus, GA 31909
+                  {b.street}<br />
+                  {b.cityLine}
                 </MapsLink>
               </div>
 
@@ -76,8 +95,8 @@ export default function ContactPage() {
                   <Phone className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Phone</h3>
-                <a href="tel:+17065305896" className="text-[#A1A1AA] hover:text-white text-sm transition-colors">
-                  (706) 530-5896
+                <a href={b.phoneHref} className="text-[#A1A1AA] hover:text-white text-sm transition-colors">
+                  {b.phone}
                 </a>
               </div>
 
@@ -86,8 +105,8 @@ export default function ContactPage() {
                   <Mail className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Email</h3>
-                <a href="mailto:support@contactvolt.com" className="text-[#A1A1AA] hover:text-white text-sm transition-colors break-all">
-                  support@contactvolt.com
+                <a href={`mailto:${b.email}`} className="text-[#A1A1AA] hover:text-white text-sm transition-colors break-all">
+                  {b.email}
                 </a>
               </div>
 
@@ -96,7 +115,7 @@ export default function ContactPage() {
                   <Clock className="w-5 h-5 text-[#FCC300]" />
                 </div>
                 <h3 className="text-white font-semibold mb-1">Hours</h3>
-                <p className="text-[#A1A1AA] text-sm">Daily · 4:00 AM – 12:00 AM</p>
+                <p className="text-[#A1A1AA] text-sm">{b.hours}</p>
               </div>
 
               <div className="glass rounded-xl p-5 border border-[#FCC300]/20">
@@ -128,6 +147,7 @@ export default function ContactPage() {
                         <Label htmlFor="name" className="text-[#A1A1AA] text-sm mb-2 block">Full Name</Label>
                         <Input
                           id="name"
+                          name="name"
                           required
                           placeholder="John Smith"
                           className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
@@ -137,6 +157,7 @@ export default function ContactPage() {
                         <Label htmlFor="phone" className="text-[#A1A1AA] text-sm mb-2 block">Phone Number</Label>
                         <Input
                           id="phone"
+                          name="phone"
                           type="tel"
                           placeholder="(706) 555-0000"
                           className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
@@ -147,6 +168,7 @@ export default function ContactPage() {
                       <Label htmlFor="email" className="text-[#A1A1AA] text-sm mb-2 block">Email Address</Label>
                       <Input
                         id="email"
+                        name="email"
                         type="email"
                         required
                         placeholder="you@email.com"
@@ -157,6 +179,7 @@ export default function ContactPage() {
                       <Label htmlFor="subject" className="text-[#A1A1AA] text-sm mb-2 block">Subject</Label>
                       <Input
                         id="subject"
+                        name="subject"
                         required
                         placeholder="How can we help?"
                         className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
@@ -166,12 +189,21 @@ export default function ContactPage() {
                       <Label htmlFor="message" className="text-[#A1A1AA] text-sm mb-2 block">Message</Label>
                       <Textarea
                         id="message"
+                        name="message"
+                        maxLength={5000}
                         required
                         placeholder="Tell us what you need..."
                         rows={5}
                         className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 rounded-xl focus:border-[#FCC300] resize-none"
                       />
                     </div>
+                    {/* Spam trap: hidden from people, filled in by bots. */}
+                    <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
+                    {error && (
+                      <p role="alert" className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                        {error}
+                      </p>
+                    )}
                     <Button
                       type="submit"
                       disabled={loading}

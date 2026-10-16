@@ -6,7 +6,7 @@
 
 import { money } from "@/lib/booking";
 
-export const DISCOUNT_CODE_DAYS = 3;
+export const DISCOUNT_CODE_DAYS = 3; // default; the live value is in Settings (discount_code_valid_days)
 
 export type DiscountCodeType = "percent" | "fixed";
 
@@ -71,7 +71,7 @@ export function codeState(row: { used_at: string | null; revoked_at: string | nu
 export const CODE_ERRORS: Record<Exclude<CodeState, "active"> | "invalid" | "busy", string> = {
   invalid: "That code isn't valid. Check it and try again.",
   used: "That code has already been used. Each code works only once — please ask Volt for a new one.",
-  expired: `That code has expired (codes last ${DISCOUNT_CODE_DAYS} days). Please ask Volt for a new one.`,
+  expired: "That code has expired. Please ask Volt for a new one.",
   revoked: "That code is no longer valid. Please ask Volt for a new one.",
   busy: "That code is being used in another checkout right now. Try again in a few minutes.",
 };

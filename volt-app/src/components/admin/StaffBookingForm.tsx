@@ -21,11 +21,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   type BookingSearch, type DepartureSlot, type FlightInfo,
-  EMPTY_FLIGHT, LOCATIONS, MILITARY_DISCOUNT_PERCENT, PRICING, bookingFlights, flightDirection, flightSummary, formatDate, slotTimes,
+  EMPTY_FLIGHT, LOCATIONS, bookingFlights, flightDirection, flightSummary, formatDate, slotTimes,
 } from "@/lib/booking";
 import { formatCents, localDateString } from "@/lib/format";
 import { codeLabel } from "@/lib/discount-codes";
-import { staffPrice, staffDiscountLabel, type StaffDiscount } from "@/lib/staff-pricing";
+import { staffPrice, staffDiscountLabel, type StaffDiscount, type StaffRates } from "@/lib/staff-pricing";
+import { useAppSettings } from "@/context/SettingsContext";
+import { dollars, snapshotPricing, type PricingSnapshot } from "@/lib/settings";
 import {
   AlertCircle, ArrowLeftRight, Banknote, CheckCircle2, CreditCard, Gift, Loader2, MapPin, Pencil, Plane, Plus,
   ShieldCheck, SplitSquareHorizontal, Ticket, User, X,
@@ -59,6 +61,8 @@ interface Props {
   heldSeats?: Record<string, number>;
   // The outbound has left: only the return leg (and contact details) can change.
   returnOnly?: boolean;
+  // Edit: the prices the booking was made at (reservations.pricing_snapshot).
+  pricingSnapshot?: Partial<PricingSnapshot> | null;
 }
 
 interface Quote {
@@ -78,9 +82,17 @@ async function postJson(url: string, body: unknown) {
   return data;
 }
 
-export default function StaffBookingForm({ mode, initial, reservationId, oldTotalCents = 0, heldSeats, returnOnly = false }: Props) {
+export default function StaffBookingForm({
+  mode, initial, reservationId, oldTotalCents = 0, heldSeats, returnOnly = false, pricingSnapshot = null,
+}: Props) {
   const router = useRouter();
   const isEdit = mode === "edit";
+  // New bookings use today's prices; edits keep the booking's own prices.
+  const settings = useAppSettings();
+  const rates: StaffRates = isEdit
+    ? (() => { const s = snapshotPricing(pricingSnapshot); return { pricing: s.pricing, militaryPercent: s.militaryPercent }; })()
+    : { pricing: settings.pricing, militaryPercent: settings.military.percent };
+  const P = rates.pricing;
 
   const [phase, setPhaseState] = useState<Phase>(initial.outbound ? "details" : "trip");
   const setPhase = (p: Phase) => {
@@ -136,6 +148,7 @@ export default function StaffBookingForm({ mode, initial, reservationId, oldTota
     { adults: search.adults, children: search.children, pets: search.pets, extraBags: search.extraBags, isRoundTrip: search.roundTrip },
     activeDiscount,
     isComp,
+    rates,
   );
   const priceChange = isEdit ? price.totalCents - oldTotalCents : price.totalCents;
   const due = isEdit ? Math.max(0, quote?.priceChangeCents ?? priceChange) : price.totalCents;
@@ -323,6 +336,7 @@ export default function StaffBookingForm({ mode, initial, reservationId, oldTota
     return (
       <div className="glass rounded-2xl p-4 sm:p-6">
         <Step2Departures
+          staff
           search={returnSearch}
           initialOutbound={returnSlot}
           heldSeats={heldSeats}
@@ -360,6 +374,7 @@ export default function StaffBookingForm({ mode, initial, reservationId, oldTota
     return (
       <div className="glass rounded-2xl p-4 sm:p-6">
         <Step2Departures
+          staff
           search={search}
           initialOutbound={outbound}
           initialReturn={returnSlot}
@@ -380,13 +395,13 @@ export default function StaffBookingForm({ mode, initial, reservationId, oldTota
 
   // ── Details ────────────────────────────────────────────────────────────────
   const locked = !!pendingCard;
-  const discountLabel = staffDiscountLabel(activeDiscount);
+  const discountLabel = staffDiscountLabel(activeDiscount, rates);
   const lines: [string, number][] = [];
   const mult = search.roundTrip ? 2 : 1;
-  if (search.adults) lines.push([`${search.adults} Adult${search.adults > 1 ? "s" : ""} × $${PRICING.adult}`, search.adults * PRICING.adult * 100 * mult]);
-  if (search.children) lines.push([`${search.children} Child${search.children > 1 ? "ren" : ""} × $${PRICING.child}`, search.children * PRICING.child * 100 * mult]);
-  if (search.pets) lines.push([`${search.pets} Pet${search.pets > 1 ? "s" : ""} × $${PRICING.pet}`, search.pets * PRICING.pet * 100 * mult]);
-  if (search.extraBags) lines.push([`${search.extraBags} Extra Bag${search.extraBags > 1 ? "s" : ""} × $${PRICING.extraBag}`, search.extraBags * PRICING.extraBag * 100 * mult]);
+  if (search.adults) lines.push([`${search.adults} Adult${search.adults > 1 ? "s" : ""} × ${dollars(P.adult)}`, Math.round(search.adults * P.adult * 100 * mult)]);
+  if (search.children) lines.push([`${search.children} Child${search.children > 1 ? "ren" : ""} × ${dollars(P.child)}`, Math.round(search.children * P.child * 100 * mult)]);
+  if (search.pets) lines.push([`${search.pets} Pet${search.pets > 1 ? "s" : ""} × ${dollars(P.pet)}`, Math.round(search.pets * P.pet * 100 * mult)]);
+  if (search.extraBags) lines.push([`${search.extraBags} Extra Bag${search.extraBags > 1 ? "s" : ""} × ${dollars(P.extraBag)}`, Math.round(search.extraBags * P.extraBag * 100 * mult)]);
 
   return (
     <div className="space-y-6">
@@ -493,7 +508,10 @@ export default function StaffBookingForm({ mode, initial, reservationId, oldTota
                 ["military", "Military", ShieldCheck],
                 ["code", "Discount Code", Ticket],
                 ["manual", "Custom", null],
-              ] as const).map(([key, label, Icon]) => (
+              ] as const)
+                // Hidden for new bookings while the program is off in Settings.
+                .filter(([key]) => key !== "military" || isEdit || settings.military.enabled || discountTab === "military")
+                .map(([key, label, Icon]) => (
                 <button key={key} type="button"
                   onClick={() => { setDiscountTab(key); setCodeError(""); touch(); }}
                   className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-all border flex items-center justify-center gap-1.5 ${
@@ -508,7 +526,7 @@ export default function StaffBookingForm({ mode, initial, reservationId, oldTota
 
             {discountTab === "military" && (
               <p className="text-[#A1A1AA] text-sm">
-                {MILITARY_DISCOUNT_PERCENT}% off the whole booking for active-duty or retired military.
+                {rates.militaryPercent}% off the whole booking for active-duty or retired military.
                 Check their military ID in person — no upload needed.
               </p>
             )}

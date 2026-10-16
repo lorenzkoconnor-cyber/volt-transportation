@@ -4,6 +4,8 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Smartphone, MessageSquare, MapPin, User, Coffee, Plane } from "lucide-react";
+import { getAppSettings } from "@/lib/settings-server";
+import type { AppSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "How It Works | Volt Transportation Shuttle Service",
@@ -12,7 +14,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://volt-transportation.com/how-it-works" },
 };
 
-const steps = [
+const stepsFor = (s: AppSettings) => [
   {
     number: "01",
     icon: Smartphone,
@@ -22,14 +24,14 @@ const steps = [
   {
     number: "02",
     icon: MessageSquare,
-    title: "Receive Confirmation by Text",
-    desc: "You'll receive an SMS confirmation with your booking summary, confirmation number, and pickup details immediately after booking.",
+    title: "Receive Your Confirmation",
+    desc: "You'll receive a text (and an email, if you give one) with your booking summary, confirmation number, and pickup details immediately after booking.",
   },
   {
     number: "03",
     icon: MapPin,
     title: "Arrive at Your Pickup Location",
-    desc: "Head to our Columbus pickup location at 3885 Miller Road, Suite C at least 20 minutes before your scheduled departure time.",
+    desc: `Head to our Columbus pickup location at ${s.business.street} at least ${s.arriveEarlyMinutes} minutes before your scheduled departure time.`,
   },
   {
     number: "04",
@@ -51,7 +53,9 @@ const steps = [
   },
 ];
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage() {
+  const settings = await getAppSettings();
+  const steps = stepsFor(settings);
   return (
     <>
       <Navbar />
@@ -113,7 +117,7 @@ export default function HowItWorksPage() {
             <h2 className="text-2xl font-bold text-white mb-8 text-center">Helpful Tips</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { tip: "Arrive 20 minutes early", detail: "The shuttle departs on time. Don't miss it by being late to the pickup point." },
+                { tip: `Arrive ${settings.arriveEarlyMinutes} minutes early`, detail: "The shuttle departs on time. Don't miss it by being late to the pickup point." },
                 { tip: "Pack light when possible", detail: "Each passenger can bring one bag free. Extra bags are $10 each." },
                 { tip: "Save your confirmation number", detail: "You'll need it if you need to manage or modify your reservation." },
                 { tip: "Bring your boarding pass", detail: "Have your flight info handy — your driver may ask about your terminal for drop-off." },

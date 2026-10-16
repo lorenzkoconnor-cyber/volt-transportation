@@ -20,8 +20,10 @@ import type Stripe from "stripe";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 import { getStripeServer } from "@/lib/stripe/server";
-import { confirmationText, loadMessageInfo, sendReservationText } from "@/lib/reservation-messages";
-import { MILITARY_DISCOUNT_RATE, PRICING, generateConfirmationNumber } from "@/lib/booking";
+import { loadMessageInfo, notifyConfirmation } from "@/lib/reservation-messages";
+import { alertIfShortNotice } from "@/lib/notifications/alerts";
+import { generateConfirmationNumber } from "@/lib/booking";
+import { DEFAULT_SETTINGS, militaryRate, type AppSettings } from "@/lib/settings";
 import {
   CODE_ERRORS, codeDiscountCents, codeLabel, codeState, formatCode, normalizeCode,
   type DiscountCodeTerms,
@@ -151,24 +153,27 @@ export interface CheckoutPrice {
   militaryDiscountPending: boolean;
 }
 
-// Price is computed HERE from the passenger counts (same PRICING table the
-// site shows) and either a discount code or the customer's verification status:
+// Price is computed HERE from the passenger counts (the live prices from
+// Dashboard → Settings) and either a discount code or the customer's
+// verification status:
 //   • discount code                → code's discount, charged immediately (it
 //                                    replaces the Military Discount; may be free)
-//   • approved account            → 10% off now, charged immediately
-//   • verification pending         → full fare AUTHORIZED only; captured at 90%
-//                                    on approval or 100% on denial
-//   • discount not requested       → full fare, charged immediately
+//   • approved account            → Military Discount % off now, charged immediately
+//   • verification pending         → full fare AUTHORIZED only; captured minus the
+//                                    discount on approval or in full on denial
+//   • discount not requested, or the program is switched off → full fare
 export function priceCheckout(
   payload: CheckoutPayload,
   militaryRequested: boolean,
   militaryStatus: string | null,
   code: DiscountCodeTerms | null = null,
+  settings: AppSettings = DEFAULT_SETTINGS,
 ): CheckoutPrice | { error: string } {
+  const P = settings.pricing;
   const oneWayDollars =
-    payload.adults * PRICING.adult + payload.children * PRICING.child +
-    payload.pets * PRICING.pet + payload.extraBags * PRICING.extraBag;
-  const subtotalCents = oneWayDollars * (payload.isRoundTrip ? 2 : 1) * 100;
+    payload.adults * P.adult + payload.children * P.child +
+    payload.pets * P.pet + payload.extraBags * P.extraBag;
+  const subtotalCents = Math.round(oneWayDollars * (payload.isRoundTrip ? 2 : 1) * 100);
   const full: CheckoutPrice = {
     subtotalCents, discountCents: 0, totalCents: subtotalCents,
     captureMethod: "automatic", isMilitary: false, militaryDiscountPending: false,
@@ -178,9 +183,9 @@ export function priceCheckout(
     const discountCents = codeDiscountCents(subtotalCents, code);
     return { ...full, discountCents, totalCents: subtotalCents - discountCents };
   }
-  if (!militaryRequested) return full;
+  if (!militaryRequested || !settings.military.enabled) return full;
   if (militaryStatus === "approved") {
-    const discountCents = Math.round(subtotalCents * MILITARY_DISCOUNT_RATE);
+    const discountCents = Math.round(subtotalCents * militaryRate(settings));
     return { ...full, discountCents, totalCents: subtotalCents - discountCents, isMilitary: true };
   }
   if (militaryStatus === "pending") {
@@ -470,6 +475,7 @@ export async function finalizeCheckout(
         is_military: checkout.is_military,
         military_discount_pending: checkout.military_discount_pending,
         discount_code_id: checkout.discount_code_id ?? null,
+        pricing_snapshot: checkout.pricing_snapshot ?? null,
         // Checkout can't be paid without ticking the Terms box.
         terms_acceptance: "online",
         terms_accepted_at: checkout.created_at ?? new Date().toISOString(),
@@ -536,7 +542,8 @@ export async function finalizeCheckout(
         .catch((err) => console.error("[checkout] PaymentIntent metadata update failed", err));
     }
 
-    await sendConfirmationSms(sb, reservation.id);
+    await sendConfirmation(sb, reservation.id);
+    await alertIfShortNotice(sb, reservation.id);
 
     await sb.from("audit_logs").insert({
       actor_id: customerId,
@@ -586,11 +593,11 @@ async function failSoldOut(
   return { ok: false, status: 409, error };
 }
 
-async function sendConfirmationSms(sb: Db, reservationId: string) {
+async function sendConfirmation(sb: Db, reservationId: string) {
   try {
     const info = await loadMessageInfo(sb, reservationId);
-    if (info) await sendReservationText(sb, info, confirmationText(info), "confirmation");
+    if (info) await notifyConfirmation(sb, info);
   } catch (err) {
-    console.error("[checkout] confirmation SMS step failed", err);
+    console.error("[checkout] confirmation message step failed", err);
   }
 }

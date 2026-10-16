@@ -4,19 +4,27 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, Info } from "lucide-react";
+import { getAppSettings } from "@/lib/settings-server";
+import { dollars, type AppSettings } from "@/lib/settings";
 
-export const metadata: Metadata = {
-  title: "Pricing | Columbus GA to ATL Airport Shuttle Fares",
-  description:
-    "Volt Transportation pricing: Adults $59, Children $49, Pets $25, Extra bags $10. Transparent fares, no hidden fees. 10% off for active-duty and retired military.",
-  alternates: { canonical: "https://volt-transportation.com/pricing" },
-};
+// Prices, the Military Discount and the cancellation fee come from
+// Dashboard → Settings.
+export async function generateMetadata(): Promise<Metadata> {
+  const { pricing: P, military } = await getAppSettings();
+  return {
+    title: "Pricing | Columbus GA to ATL Airport Shuttle Fares",
+    description:
+      `Volt Transportation pricing: Adults ${dollars(P.adult)}, Children ${dollars(P.child)}, Pets ${dollars(P.pet)}, Extra bags ${dollars(P.extraBag)}. Transparent fares, no hidden fees.` +
+      (military.enabled ? ` ${military.percent}% off for active-duty and retired military.` : ""),
+    alternates: { canonical: "https://volt-transportation.com/pricing" },
+  };
+}
 
-const fares = [
-  { label: "Adult Passenger", price: 59, note: "Age 13+", color: "text-white" },
-  { label: "Child Passenger", price: 49, note: "Ages 2–12", color: "text-white" },
-  { label: "Pet", price: 25, note: "Must be in carrier", color: "text-white" },
-  { label: "Extra Bag", price: 10, note: "Per additional bag", color: "text-white" },
+const faresFor = ({ pricing: P }: AppSettings) => [
+  { label: "Adult Passenger", price: P.adult, note: "Age 13+", color: "text-white" },
+  { label: "Child Passenger", price: P.child, note: "Ages 2–12", color: "text-white" },
+  { label: "Pet", price: P.pet, note: "Must be in carrier", color: "text-white" },
+  { label: "Extra Bag", price: P.extraBag, note: "Per additional bag", color: "text-white" },
 ];
 
 const included = [
@@ -27,14 +35,29 @@ const included = [
   "Trip reminder notification",
 ];
 
-const policies = [
+const policiesFor = (s: AppSettings) => [
   { title: "No Hidden Fees", desc: "The price you see at checkout is the price you pay. No surge pricing, no service fees, no surprises." },
-  { title: "Military Discount", desc: "Active-duty and retired military save 10% on the whole booking. Tick the box at checkout and upload your military ID. Once you're verified, it applies automatically every time." },
+  ...(s.military.enabled
+    ? [{ title: "Military Discount", desc: `Active-duty and retired military save ${s.military.percent}% on the whole booking. Tick the box at checkout and upload your military ID. Once you're verified, it applies automatically every time.` }]
+    : []),
   { title: "Round Trip", desc: "Book both legs at once and the total is calculated automatically at checkout. No separate booking needed." },
-  { title: "Cancellation", desc: "Cancel or modify your reservation by 11:59 PM the day before your trip for a full refund." },
+  {
+    title: "Cancellation",
+    desc: `Cancel by 11:59 PM (Eastern) the day before your trip for a refund of your fare${s.cancellationFeeCents > 0 ? ` minus a ${dollars(s.cancellationFeeCents / 100)} cancellation fee` : ""}. Changes by phone are free.`,
+  },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const settings = await getAppSettings();
+  const P = settings.pricing;
+  const fares = faresFor(settings);
+  const policies = policiesFor(settings);
+  const example = [
+    { label: "2 Adults", calc: `2 × ${dollars(P.adult)}`, amount: 2 * P.adult },
+    { label: "2 Children", calc: `2 × ${dollars(P.child)}`, amount: 2 * P.child },
+    { label: "1 Extra Bag", calc: `1 × ${dollars(P.extraBag)}`, amount: P.extraBag },
+  ];
+  const exampleTotal = example.reduce((n, r) => n + r.amount, 0);
   return (
     <>
       <Navbar />
@@ -69,20 +92,22 @@ export default function PricingPage() {
                           <div className="text-[#A1A1AA] text-xs mt-0.5">{fare.note}</div>
                         </div>
                         <div className="text-right">
-                          <span className="text-white text-3xl font-bold">${fare.price}</span>
+                          <span className="text-white text-3xl font-bold">{dollars(fare.price)}</span>
                         </div>
                       </div>
                     ))}
                   </div>
+                  {settings.military.enabled && (
                   <div className="p-5 bg-[#FCC300]/5 border-t border-[#FCC300]/20 flex items-start gap-2">
                     <Info className="w-4 h-4 text-[#FCC300] flex-shrink-0 mt-0.5" />
                     <p className="text-[#FCC300] text-sm">
-                      Active-duty &amp; retired military save 10% on every booking.{" "}
+                      Active-duty &amp; retired military save {settings.military.percent}% on every booking.{" "}
                       <Link href="/military" className="underline underline-offset-2 hover:text-[#FFD54A]">
                         See who qualifies &amp; how we give back
                       </Link>
                     </p>
                   </div>
+                  )}
                 </div>
 
                 <div className="mt-6 glass rounded-2xl p-6">
@@ -140,23 +165,19 @@ export default function PricingPage() {
                 <p className="text-[#A1A1AA] text-sm">Family of 4: 2 adults + 2 children + 1 extra bag · One-way</p>
               </div>
               <div className="divide-y divide-white/8">
-                {[
-                  { label: "2 Adults", calc: "2 × $59", amount: 118 },
-                  { label: "2 Children", calc: "2 × $49", amount: 98 },
-                  { label: "1 Extra Bag", calc: "1 × $10", amount: 10 },
-                ].map((row) => (
+                {example.map((row) => (
                   <div key={row.label} className="flex items-center justify-between px-5 py-3">
                     <div className="text-white text-sm">{row.label}</div>
                     <div className="flex items-center gap-4">
                       <span className="text-[#A1A1AA] text-xs">{row.calc}</span>
-                      <span className="text-white font-medium w-16 text-right">${row.amount}</span>
+                      <span className="text-white font-medium w-16 text-right">{dollars(row.amount)}</span>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="flex items-center justify-between px-5 py-4 bg-[#FCC300]/8 border-t border-[#FCC300]/20">
                 <span className="text-white font-bold">Total</span>
-                <span className="text-white text-2xl font-bold">$226</span>
+                <span className="text-white text-2xl font-bold">{dollars(exampleTotal)}</span>
               </div>
             </div>
           </div>

@@ -8,11 +8,16 @@ import ReviewsSection from "@/components/home/ReviewsSection";
 import FAQSection from "@/components/home/FAQSection";
 import CTASection from "@/components/home/CTASection";
 import MobileBookCTA from "@/components/ui/MobileBookCTA";
+import { getAppSettings } from "@/lib/settings-server";
+import { dollars, type AppSettings } from "@/lib/settings";
+import { faqItems } from "@/lib/site-copy";
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  const { pricing } = await getAppSettings();
+  return {
   title: "Columbus GA to Atlanta Airport Shuttle Service | Volt Transportation",
   description:
-    "Book your Columbus GA to Atlanta Airport shuttle today. Premium Ford Transit Passenger Van service — only 8 passengers, professional drivers, $59/adult. Reliable. Comfortable.",
+    `Book your Columbus GA to Atlanta Airport shuttle today. Premium Ford Transit Passenger Van service — only 8 passengers, professional drivers, ${dollars(pricing.adult)}/adult. Reliable. Comfortable.`,
   openGraph: {
     title: "Columbus GA to Atlanta Airport Shuttle | Volt Transportation",
     description:
@@ -22,9 +27,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://volt-transportation.com",
   },
-};
+  };
+}
 
-const jsonLd = {
+// Search-engine data — business details, prices and FAQ from Settings.
+const jsonLdFor = (s: AppSettings) => ({
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -34,14 +41,12 @@ const jsonLd = {
       description:
         "Premium airport shuttle service between Columbus, GA and Atlanta Hartsfield-Jackson Airport.",
       url: "https://volt-transportation.com",
-      telephone: "+17065305896",
-      email: "support@contactvolt.com",
+      telephone: s.business.phoneHref.replace("tel:", ""),
+      email: s.business.email,
       address: {
         "@type": "PostalAddress",
-        streetAddress: "3885 Miller Road, Suite C",
-        addressLocality: "Columbus",
-        addressRegion: "GA",
-        postalCode: "31909",
+        streetAddress: s.business.street,
+        ...cityLineParts(s.business.cityLine),
         addressCountry: "US",
       },
       priceRange: "$$",
@@ -73,44 +78,30 @@ const jsonLd = {
       ],
       offers: {
         "@type": "Offer",
-        price: "59",
+        price: String(s.pricing.adult),
         priceCurrency: "USD",
         description: "Adult one-way shuttle ticket",
       },
     },
     {
       "@type": "FAQPage",
-      mainEntity: [
-        {
-          "@type": "Question",
-          name: "How much does transportation from Columbus GA to Atlanta Airport cost?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "Adult seats are $59 each. Children (under 12) are $49. Pets are $25 and extra bags are $10 each.",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "How long does the trip take?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "The trip from Columbus, GA to Atlanta Hartsfield-Jackson Airport takes about 2 hours each way. Vans leave Volt in Columbus every 2 hours from 4:00 AM to 8:00 PM, 7 days a week, and leave ATL every 2 hours from 6:00 AM to 10:00 PM.",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "What is the cancellation policy?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "You can cancel or make changes to your booking up until 11:59 PM the day before your scheduled trip for a full refund.",
-          },
-        },
-      ],
+      mainEntity: faqItems(s).map((f) => ({
+        "@type": "Question",
+        name: f.question,
+        acceptedAnswer: { "@type": "Answer", text: f.answer },
+      })),
     },
   ],
-};
+});
 
-export default function HomePage() {
+// "Columbus, GA 31909" → locality / region / postal code.
+function cityLineParts(line: string) {
+  const m = line.match(/^\s*([^,]+),\s*([A-Za-z]{2})\s+(\d{5})/);
+  return m ? { addressLocality: m[1], addressRegion: m[2].toUpperCase(), postalCode: m[3] } : { addressLocality: line };
+}
+
+export default async function HomePage() {
+  const jsonLd = jsonLdFor(await getAppSettings());
   return (
     <>
       <script

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { SettingsProvider } from "@/context/SettingsContext";
+import { getAppSettings } from "@/lib/settings-server";
 import CursorEffect from "@/components/ui/CursorEffect";
 
 const inter = Inter({
@@ -49,11 +51,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Live prices, business info and the website banner (Dashboard → Settings).
+  const settings = await getAppSettings();
   return (
     <html
       lang="en"
@@ -69,7 +73,9 @@ export default function RootLayout({
           }}
         />
         <CursorEffect />
-        <AuthProvider>{children}</AuthProvider>
+        <SettingsProvider value={settings}>
+          <AuthProvider>{children}</AuthProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

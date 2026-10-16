@@ -164,6 +164,7 @@ export default function EditReservationPage() {
         oldTotalCents={r.total_cents}
         heldSeats={held}
         returnOnly={returnOnly}
+        pricingSnapshot={r.pricing_snapshot}
         initial={initial}
       />
     </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editAccess } from "@/lib/staff-pricing";
+import { loadAppSettings } from "@/lib/settings-server";
 import {
   finishEdit, loadReservation, normalizePayment, normalizeStaffInput, planEdit, requireStaff, startEdit,
 } from "@/lib/staff-booking";
@@ -12,8 +13,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   const reservation = await loadReservation(ctx.sb, id);
   if (!reservation) return NextResponse.json({ error: "Reservation not found." }, { status: 404 });
+  const settings = await loadAppSettings();
   const access = editAccess(
     ctx.employee.role, reservation.status, reservation.trip, reservation.is_round_trip ? reservation.return_trip : null,
+    Date.now(), settings,
   );
   return NextResponse.json({ reservation, mode: access.mode, lockReason: access.reason });
 }

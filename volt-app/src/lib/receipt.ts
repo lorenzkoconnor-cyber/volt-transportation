@@ -3,7 +3,7 @@
 // the reservation's unguessable receipt_token.
 
 import { createAdminDb } from "@/lib/checkout";
-import { MILITARY_DISCOUNT_PERCENT, PRICING } from "@/lib/booking";
+import { snapshotPricing } from "@/lib/settings";
 import { codeLabel } from "@/lib/discount-codes";
 import { reservationBalance } from "@/lib/staff-pricing";
 
@@ -76,25 +76,27 @@ export async function loadReceipt(token: string): Promise<ReceiptData | null> {
     ? [leg("Outbound", r.trip, "outbound"), leg("Return", r.return_trip, "return")]
     : [leg("Trip", r.trip, "outbound")];
 
-  // Line items from the party (prices × 2 for round trips). Older bookings
-  // priced differently fall back to a single subtotal line.
+  // Line items from the party at the prices the booking was made at (× 2 for
+  // round trips). Anything that doesn't add up falls back to one subtotal line.
+  const { pricing: P, militaryPercent } = snapshotPricing(r.pricing_snapshot);
+  const usd = (n: number) => (Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`);
   const mult = roundTrip ? 2 : 1;
   const rt = roundTrip ? " · round trip" : "";
   const items: { label: string; cents: number }[] = [];
   const add = (n: number, one: string, many: string, price: number) => {
-    if (n > 0) items.push({ label: `${n} ${n === 1 ? one : many} × $${price}${rt}`, cents: n * price * 100 * mult });
+    if (n > 0) items.push({ label: `${n} ${n === 1 ? one : many} × ${usd(price)}${rt}`, cents: Math.round(n * price * 100 * mult) });
   };
-  add(r.adults, "Adult", "Adults", PRICING.adult);
-  add(r.children, "Child", "Children", PRICING.child);
-  add(r.pets, "Pet", "Pets", PRICING.pet);
-  add(r.extra_bags, "Extra Bag", "Extra Bags", PRICING.extraBag);
+  add(r.adults, "Adult", "Adults", P.adult);
+  add(r.children, "Child", "Children", P.child);
+  add(r.pets, "Pet", "Pets", P.pet);
+  add(r.extra_bags, "Extra Bag", "Extra Bags", P.extraBag);
   const lines = items.reduce((n, l) => n + l.cents, 0) === r.subtotal_cents
     ? items
     : [{ label: "Fare", cents: r.subtotal_cents }];
 
   const discountLabel = r.discount_code
     ? `Discount code ${r.discount_code.code} (${codeLabel({ type: r.discount_code.discount_type, value: r.discount_code.value })})`
-    : r.is_military ? `Military Discount (${MILITARY_DISCOUNT_PERCENT}%)`
+    : r.is_military ? `Military Discount (${militaryPercent}%)`
     : r.total_cents === 0 ? "Complimentary"
     : "Discount";
 

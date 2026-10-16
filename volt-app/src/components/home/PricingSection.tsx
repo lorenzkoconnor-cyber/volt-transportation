@@ -1,13 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
-
-const pricing = [
-  { label: "Adult Passenger", price: 59, per: "per seat" },
-  { label: "Child Passenger", price: 49, note: "Under 12", per: "per seat" },
-  { label: "Pet", price: 25, per: "per pet" },
-  { label: "Extra Bag", price: 10, per: "per bag" },
-];
+import { getAppSettings } from "@/lib/settings-server";
+import { dollars } from "@/lib/settings";
 
 const included = [
   "Complimentary bottled water",
@@ -16,7 +11,14 @@ const included = [
   "Real-time trip updates",
 ];
 
-export default function PricingSection() {
+export default async function PricingSection() {
+  const { pricing: P, military } = await getAppSettings();
+  const pricing: { label: string; price: number; note?: string; per: string }[] = [
+    { label: "Adult Passenger", price: P.adult, per: "per seat" },
+    { label: "Child Passenger", price: P.child, note: "Under 12", per: "per seat" },
+    { label: "Pet", price: P.pet, per: "per pet" },
+    { label: "Extra Bag", price: P.extraBag, per: "per bag" },
+  ];
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A]" id="pricing">
       <div className="max-w-7xl mx-auto">
@@ -52,7 +54,7 @@ export default function PricingSection() {
                   </div>
                   <div className="text-right">
                     <span className="text-white text-2xl font-bold">
-                      ${item.price}
+                      {dollars(item.price)}
                     </span>
                     <span className="text-[#A1A1AA] text-xs ml-1">
                       {item.per}
@@ -61,14 +63,16 @@ export default function PricingSection() {
                 </div>
               ))}
             </div>
+            {military.enabled && (
             <div className="p-5 bg-[#FCC300]/5 border-t border-[#FCC300]/20">
               <p className="text-[#FCC300] text-sm font-medium">
-                Active-duty &amp; retired military save 10% ·{" "}
+                Active-duty &amp; retired military save {military.percent}% ·{" "}
                 <Link href="/military" className="underline underline-offset-2 hover:text-[#FFD54A]">
                   Learn more
                 </Link>
               </p>
             </div>
+            )}
           </div>
 
           {/* What's included */}

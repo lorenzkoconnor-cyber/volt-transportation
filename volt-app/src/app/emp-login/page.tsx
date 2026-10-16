@@ -1,5 +1,6 @@
 "use client";
 
+import { useAppSettings } from "@/context/SettingsContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Shield } from "lucide-react";
@@ -10,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import Logo from "@/components/ui/Logo";
 
 export default function EmpLoginPage() {
+  const { business } = useAppSettings();
   const router = useRouter();
   const { signIn, isEmployee, employee, loading: authLoading } = useAuth();
 
@@ -129,7 +131,7 @@ export default function EmpLoginPage() {
 
           <p className="text-center text-[#A1A1AA] text-xs mt-5">
             Having trouble?{" "}
-            <a href="mailto:support@contactvolt.com" className="text-[#FCC300] hover:text-[#FFD54A] transition-colors">
+            <a href={`mailto:${business.email}`} className="text-[#FCC300] hover:text-[#FFD54A] transition-colors">
               Contact your administrator
             </a>
           </p>

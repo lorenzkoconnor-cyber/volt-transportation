@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select("id, role, first_name, last_name, email")
       .eq("user_id", userId)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setEmployee({
@@ -90,7 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .from("customers")
       .select("id, first_name, last_name, email, phone, is_military, military_status, military_category")
       .eq("user_id", userId)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (data) {
       setCustomer({

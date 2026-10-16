@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowRight, ArrowLeft, User, Plus, X } from "lucide-react";
-import { type BookingSearch, type Passenger, LOCATIONS, formatDate, slotTimes } from "@/lib/booking";
+import { type BookingSearch, type Passenger, LOCATIONS, MOBILITY_NOTE, formatDate, slotTimes } from "@/lib/booking";
 import type { DepartureSlot } from "@/lib/booking";
 import PriceSummary from "./PriceSummary";
 
@@ -39,6 +39,15 @@ export default function Step3Passengers({
   useEffect(() => {
     onChange?.(primary, additional, notes);
   }, [primary, additional, notes, onChange]);
+
+  // Mobility assistance lives in the notes so it reaches the driver's manifest.
+  const needsMobility = notes.includes(MOBILITY_NOTE);
+  const toggleMobility = (on: boolean) =>
+    setNotes((prev) => {
+      const rest = prev.split("\n").filter((l) => l.trim() !== MOBILITY_NOTE).join("\n").trim();
+      return on ? [MOBILITY_NOTE, rest].filter(Boolean).join("\n") : rest;
+    });
+  const visibleNotes = notes.split("\n").filter((l) => l.trim() !== MOBILITY_NOTE).join("\n");
 
   const setPrimaryField = (field: keyof Passenger, value: string) =>
     setPrimary((prev) => ({ ...prev, [field]: value }));
@@ -158,12 +167,30 @@ export default function Step3Passengers({
         </div>
       )}
 
+      {/* Mobility assistance */}
+      <label className="flex items-start gap-3 glass rounded-xl p-4 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={needsMobility}
+          onChange={(e) => toggleMobility(e.target.checked)}
+          className="mt-1 accent-[#FCC300] w-4 h-4"
+        />
+        <span>
+          <span className="text-white text-sm font-medium block">I need mobility assistance</span>
+          <span className="text-[#A1A1AA] text-xs block mt-0.5">
+            Bringing a folding wheelchair or walker, or need help boarding. Our vans don&apos;t have a lift, so riders
+            need to be able to move into a seat; your driver will help and stow the chair at no charge.{" "}
+            <a href="/safety-rules#accessibility" target="_blank" className="text-[#FCC300] hover:underline">Accessibility details</a>
+          </span>
+        </span>
+      </label>
+
       {/* Special requests */}
       <div>
         <Label className="text-[#A1A1AA] text-xs mb-2 block">Special Requests / Notes (optional)</Label>
         <Textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          value={visibleNotes}
+          onChange={(e) => setNotes(needsMobility ? [MOBILITY_NOTE, e.target.value].filter(Boolean).join("\n") : e.target.value)}
           placeholder="Any special requests, accessibility needs, or notes for your driver..."
           rows={3}
           className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 rounded-xl focus:border-[#FCC300] resize-none"

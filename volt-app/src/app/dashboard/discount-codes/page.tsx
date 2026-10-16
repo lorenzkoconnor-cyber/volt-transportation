@@ -1,9 +1,10 @@
 "use client";
 
+import { useAppSettings } from "@/context/SettingsContext";
 import { useEffect, useState, useCallback } from "react";
 import { formatDateShort } from "@/lib/format";
 import {
-  DISCOUNT_CODE_DAYS, CUSTOM_CODE_MAX, CUSTOM_CODE_MIN, codeLabel, codeState, formatCode,
+  CUSTOM_CODE_MAX, CUSTOM_CODE_MIN, codeLabel, codeState, formatCode,
   type CodeState, type DiscountCodeType,
 } from "@/lib/discount-codes";
 import { Ticket, Loader2, Copy, Check, Ban, Plus } from "lucide-react";
@@ -27,6 +28,7 @@ function timeLeft(iso: string): string {
 }
 
 export default function DiscountCodesPage() {
+  const codeDays = useAppSettings().discountCodeValidDays;
   const [codes, setCodes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -120,7 +122,7 @@ export default function DiscountCodesPage() {
         </h1>
         <p className="text-[#A1A1AA] text-sm mt-0.5">
           One-time codes for customers who need an exception beyond the standard discount. Each code works for{" "}
-          <strong className="text-white">one booking only</strong> and <strong className="text-white">expires after {DISCOUNT_CODE_DAYS} days</strong>.
+          <strong className="text-white">one booking only</strong> and <strong className="text-white">expires after {codeDays} day{codeDays === 1 ? "" : "s"}</strong>.
           The customer enters it at checkout; it replaces the Military Discount, and a code covering the whole fare
           books the trip free.
         </p>

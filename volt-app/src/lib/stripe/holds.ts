@@ -9,7 +9,7 @@
 
 import { getStripeServer } from "@/lib/stripe/server";
 import { isSimulatedPaymentId } from "@/lib/checkout";
-import { MILITARY_DISCOUNT_RATE } from "@/lib/booking";
+import { snapshotPricing } from "@/lib/settings";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
@@ -155,7 +155,7 @@ export async function settleMilitaryBookings(
 ) {
   let query = sb
     .from("reservations")
-    .select("id, status, subtotal_cents, payments(id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, created_at)")
+    .select("id, status, subtotal_cents, pricing_snapshot, payments(id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, created_at)")
     .eq("customer_id", customerId)
     .eq("military_discount_pending", true);
   if (reservationId) query = query.eq("id", reservationId);
@@ -173,7 +173,9 @@ export async function settleMilitaryBookings(
   for (const r of bookings ?? []) {
     const payments = (r.payments ?? []) as (HoldPayment & { created_at: string })[];
     const payment = payments.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
-    const discountCents = Math.round(r.subtotal_cents * MILITARY_DISCOUNT_RATE);
+    // The discount % in force when this booking was made.
+    const pct = snapshotPricing(r.pricing_snapshot).militaryPercent;
+    const discountCents = Math.round((r.subtotal_cents * pct) / 100);
 
     // Cancelled booking: never charge it — just let go of any hold.
     if (r.status === "cancelled") {
@@ -190,7 +192,7 @@ export async function settleMilitaryBookings(
       if (payment?.status === "authorized") {
         const amount = payment.amount_cents - discountCents;
         const res = await captureHold(sb, payment, amount, employeeId,
-          `Military Discount approved — captured ${100 - Math.round(MILITARY_DISCOUNT_RATE * 100)}% of the hold.`);
+          `Military Discount approved — captured ${100 - pct}% of the hold.`);
         if (res.ok) { summary.captured += 1; summary.capturedCents += amount; }
         else { settled = false; summary.failed.push(res.error); }
       } else if (payment?.status === "paid") {

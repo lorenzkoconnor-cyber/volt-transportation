@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendSMS, SMS_TEMPLATES } from "@/lib/notifications/sms";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseUrl } from "@/lib/supabase/url";
+import { SMS_TEMPLATES } from "@/lib/notifications/sms";
+import { enqueue } from "@/lib/notifications/queue";
+import { createAdminDb } from "@/lib/checkout";
 import { timingSafeEqual } from "crypto";
 
 function safeEqual(a: string, b: string): boolean {
@@ -52,30 +52,15 @@ export async function POST(request: NextRequest) {
         if (!message) return NextResponse.json({ error: "Unknown type and no message provided" }, { status: 400 });
     }
 
-    const result = await sendSMS(to, message);
-
-    // Log to notifications table if reservationId provided
-    if (reservationId && result.success) {
-      const supabase = createSupabaseClient(
-        getSupabaseUrl(),
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      await supabase.from("notifications").insert({
-        reservation_id: reservationId,
-        type: "sms",
-        recipient: to,
-        message,
-        status: result.success ? "sent" : "failed",
-        provider_id: result.sid ?? null,
-      });
-    }
+    // Through the message queue like every other text (logged + retried).
+    const [result] = await enqueue(createAdminDb(), [{
+      channel: "sms", to, text: message, reservationId: reservationId ?? null, kind: `internal:${type}`,
+    }]);
 
     return NextResponse.json({
-      success: result.success,
-      simulated: result.simulated ?? false,
-      sid: result.sid,
+      success: result.sent,
+      simulated: result.simulated,
+      id: result.id,
     });
   } catch (err) {
     console.error("[send-sms]", err);

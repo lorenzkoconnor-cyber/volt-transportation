@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCents, formatDateShort, localDateString } from "@/lib/format";
 import { TrendingUp, Users, Truck, DollarSign, Loader2, Download, HeartHandshake, Clock } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
-import { MILITARY_DISCOUNT_PERCENT } from "@/lib/booking";
+import { useAppSettings } from "@/context/SettingsContext";
 import { DONATION_PARTNER, DONATION_PERCENT_OF_PROFITS } from "@/lib/military";
 import { Button } from "@/components/ui/button";
 
@@ -21,6 +21,7 @@ function monthLabel(ym: string): string {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function ReportsPage() {
+  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
   const supabase = createClient();
   const sb = supabase as any;
 

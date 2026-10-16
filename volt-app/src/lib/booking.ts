@@ -1,5 +1,8 @@
 // ─── Volt Transportation Booking Logic ────────────────────────────────────────
 
+// The original fares. Live prices come from Dashboard → Settings
+// (src/lib/settings.ts); these are the defaults and the prices of any booking
+// made before bookings stored their own price snapshot.
 export const PRICING = {
   adult: 59,
   child: 49,
@@ -11,6 +14,15 @@ export const PRICING = {
 // military, applied only for verified accounts (see src/lib/military.ts and
 // /api/military/*).
 export const MILITARY_DISCOUNT_RATE = 0.10;
+// Website booking closes this long before a departure unless
+// booking_settings.online_booking_cutoff_minutes says otherwise (staff can still book).
+export const DEFAULT_ONLINE_CUTOFF_MINUTES = 120;
+
+// Added to a booking's notes when the rider asks for mobility assistance
+// (Step 3). Vans have no lift: riders must be able to transfer to a seat; a
+// folding wheelchair or walker rides free as luggage.
+export const MOBILITY_NOTE = "Mobility assistance: bringing a folding wheelchair or walker / needs help boarding";
+
 export const MILITARY_DISCOUNT_PERCENT = Math.round(MILITARY_DISCOUNT_RATE * 100); // 10
 
 // Format a dollar amount that may be fractional (e.g. after a % discount):
@@ -128,6 +140,9 @@ export interface DepartureSlot {
   available: boolean;
   seatsLeft: number;
   totalSeats: number;
+  // Set by the availability API, in Eastern time:
+  departed?: boolean;   // already left — never offered
+  closed?: boolean;     // inside the online booking cutoff — staff only, riders call
 }
 
 export interface Passenger {
@@ -319,36 +334,40 @@ export function bookingFlights(search: BookingSearch, outbound: DepartureSlot, r
   return legs;
 }
 
-// Calculate price breakdown. Pass { militaryDiscount: true } to apply the 10%
-// Military discount to the whole booking — do this only when
-// the customer's account is verified (checked server-side in /api/booking/create).
+// Calculate price breakdown. Pass { militaryDiscount: true } to apply the
+// Military Discount to the whole booking — do this only when the customer's
+// account is verified (checked server-side). Prices and the discount rate come
+// from Dashboard → Settings (`pricing`, `militaryRate`); they default to the
+// original prices.
 export function calcPrice(
   search: BookingSearch,
-  opts: { militaryDiscount?: boolean } = {},
+  opts: { militaryDiscount?: boolean; pricing?: { adult: number; child: number; pet: number; extraBag: number }; militaryRate?: number } = {},
 ): PriceBreakdown {
-  const adultTotal = search.adults * PRICING.adult;
-  const childTotal = search.children * PRICING.child;
-  const petTotal = search.pets * PRICING.pet;
-  const extraBagTotal = search.extraBags * PRICING.extraBag;
+  const P = opts.pricing ?? PRICING;
+  const rate = opts.militaryRate ?? MILITARY_DISCOUNT_RATE;
+  const adultTotal = search.adults * P.adult;
+  const childTotal = search.children * P.child;
+  const petTotal = search.pets * P.pet;
+  const extraBagTotal = search.extraBags * P.extraBag;
   const oneWaySubtotal = adultTotal + childTotal + petTotal + extraBagTotal;
   const subtotal = search.roundTrip ? oneWaySubtotal * 2 : oneWaySubtotal;
 
   // Work in cents so the percentage discount is exact.
-  const subtotalCents = subtotal * 100;
-  const militaryDiscount = !!opts.militaryDiscount;
-  const discountCents = militaryDiscount ? Math.round(subtotalCents * MILITARY_DISCOUNT_RATE) : 0;
+  const subtotalCents = Math.round(subtotal * 100);
+  const militaryDiscount = !!opts.militaryDiscount && rate > 0;
+  const discountCents = militaryDiscount ? Math.round(subtotalCents * rate) : 0;
   const totalCents = subtotalCents - discountCents;
 
   const lines: { label: string; amount: number }[] = [];
-  if (search.adults > 0) lines.push({ label: `${search.adults} Adult${search.adults > 1 ? "s" : ""} × $${PRICING.adult}`, amount: adultTotal });
-  if (search.children > 0) lines.push({ label: `${search.children} Child${search.children > 1 ? "ren" : ""} × $${PRICING.child}`, amount: childTotal });
-  if (search.pets > 0) lines.push({ label: `${search.pets} Pet${search.pets > 1 ? "s" : ""} × $${PRICING.pet}`, amount: petTotal });
-  if (search.extraBags > 0) lines.push({ label: `${search.extraBags} Extra Bag${search.extraBags > 1 ? "s" : ""} × $${PRICING.extraBag}`, amount: extraBagTotal });
+  if (search.adults > 0) lines.push({ label: `${search.adults} Adult${search.adults > 1 ? "s" : ""} × $${money(P.adult)}`, amount: adultTotal });
+  if (search.children > 0) lines.push({ label: `${search.children} Child${search.children > 1 ? "ren" : ""} × $${money(P.child)}`, amount: childTotal });
+  if (search.pets > 0) lines.push({ label: `${search.pets} Pet${search.pets > 1 ? "s" : ""} × $${money(P.pet)}`, amount: petTotal });
+  if (search.extraBags > 0) lines.push({ label: `${search.extraBags} Extra Bag${search.extraBags > 1 ? "s" : ""} × $${money(P.extraBag)}`, amount: extraBagTotal });
   if (search.roundTrip) lines.push({ label: "Round Trip (×2)", amount: oneWaySubtotal });
 
   return {
     adultTotal, childTotal, petTotal, extraBagTotal, oneWaySubtotal,
-    subtotal,
+    subtotal: subtotalCents / 100,
     discount: discountCents / 100,
     total: totalCents / 100,
     subtotalCents,

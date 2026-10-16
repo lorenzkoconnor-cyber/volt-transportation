@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { loadReceipt } from "@/lib/receipt";
 import { formatCents, formatDateLong, formatDateShort, formatTime12h } from "@/lib/format";
 import ReceiptActions from "./ReceiptActions";
+import { getAppSettings } from "@/lib/settings-server";
 
 // Customer receipt — printed at the counter or opened from a texted link.
 // The link carries the reservation's unguessable receipt token, so it isn't
@@ -37,7 +38,8 @@ export default async function ReceiptPage({
 }) {
   const { token } = await params;
   const { print } = await searchParams;
-  const r = await loadReceipt(token);
+  const [r, settings] = await Promise.all([loadReceipt(token), getAppSettings()]);
+  const { business } = settings;
   if (!r) notFound();
 
   return (
@@ -60,8 +62,8 @@ export default async function ReceiptPage({
           <div>
             <div className="text-2xl font-extrabold tracking-tight">Volt Transportation</div>
             <div className="text-sm text-[#555] mt-1 leading-snug">
-              3885 Miller Road, Suite C · Columbus, GA 31909<br />
-              (706) 530-5896 · volt-transportation.com
+              {business.street} · {business.cityLine}<br />
+              {business.phone} · volt-transportation.com
             </div>
           </div>
           <div className="sm:text-right sm:flex-shrink-0">
@@ -110,7 +112,7 @@ export default async function ReceiptPage({
               )}
             </div>
           ))}
-          <p className="text-xs text-[#555]">Please arrive 20 minutes before departure.</p>
+          <p className="text-xs text-[#555]">Please arrive {settings.arriveEarlyMinutes} minutes before departure.</p>
         </section>
 
         {/* Passengers */}
@@ -181,8 +183,8 @@ export default async function ReceiptPage({
         </section>
 
         <footer className="mt-8 pt-4 border-t border-[#ddd] text-xs text-[#777] leading-relaxed">
-          Thank you for riding with Volt. Changes can be made by calling or texting (706) 530-5896 — no changes within
-          24 hours of departure. Terms &amp; Conditions: volt-transportation.com/terms
+          Thank you for riding with Volt. To make changes, call or text {business.phone}.
+          Terms &amp; Conditions: volt-transportation.com/terms
         </footer>
       </article>
     </main>

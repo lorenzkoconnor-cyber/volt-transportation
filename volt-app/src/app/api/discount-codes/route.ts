@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { loadAppSettings } from "@/lib/settings-server";
 import { randomInt } from "crypto";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminDb } from "@/lib/checkout";
-import { CODE_ALPHABET, CODE_LENGTH, DISCOUNT_CODE_DAYS, checkCustomCode } from "@/lib/discount-codes";
+import { CODE_ALPHABET, CODE_LENGTH, checkCustomCode } from "@/lib/discount-codes";
 
 // /api/discount-codes — owner/manager only.
 //   GET                                        → recent codes (newest first)
@@ -86,7 +87,9 @@ export async function POST(request: NextRequest) {
     customCode = checked.code;
   }
 
-  const expiresAt = new Date(Date.now() + DISCOUNT_CODE_DAYS * 86_400_000).toISOString();
+  // How long a new code lasts is set in Dashboard → Settings.
+  const validDays = (await loadAppSettings()).discountCodeValidDays;
+  const expiresAt = new Date(Date.now() + validDays * 86_400_000).toISOString();
 
   // Retry on the (very unlikely) chance a generated code already exists.
   for (let attempt = 0; attempt < (customCode ? 1 : 5); attempt++) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useAppSettings } from "@/context/SettingsContext";
+import { dollars } from "@/lib/settings";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
@@ -22,6 +24,7 @@ const LOCATION_LABELS: Record<LocationKey, string> = {
 
 export default function HeroSection() {
   const router = useRouter();
+  const { pricing: P } = useAppSettings();
   const videoRef = useRef<HTMLVideoElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -55,7 +58,7 @@ export default function HeroSection() {
   const swapLocations = () => { setFrom(to); setTo(from); };
 
   const estimatedTotal =
-    (adults * 59 + children * 49 + pets * 25 + extraBags * 10) * (roundTrip ? 2 : 1);
+    (adults * P.adult + children * P.child + pets * P.pet + extraBags * P.extraBag) * (roundTrip ? 2 : 1);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +131,7 @@ export default function HeroSection() {
             Spacious Ford Transit Passenger Vans. Professional chauffeurs.{" "}
             <br className="hidden sm:block" />
             Reserved seating.{" "}
-            <span className="text-white font-semibold">Starting at $59.</span>
+            <span className="text-white font-semibold">Starting at {dollars(P.adult)}.</span>
           </p>
         </div>
 
@@ -266,7 +269,7 @@ export default function HeroSection() {
               <div className="bg-white/5 rounded-xl p-3 sm:p-4 flex items-center justify-between">
                 <div>
                   <p className="text-[#A1A1AA] text-xs">Estimated total</p>
-                  <p className="text-white font-bold text-lg">${estimatedTotal}</p>
+                  <p className="text-white font-bold text-lg">{dollars(estimatedTotal)}</p>
                 </div>
                 <p className="text-[#A1A1AA] text-xs text-right max-w-[120px]">Final price confirmed at checkout</p>
               </div>

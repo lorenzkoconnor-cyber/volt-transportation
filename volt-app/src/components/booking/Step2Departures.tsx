@@ -1,5 +1,6 @@
 "use client";
 
+import { useAppSettings } from "@/context/SettingsContext";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Users, ArrowLeft, Loader2, Plane, AlertTriangle, Timer } from "lucide-react";
@@ -22,7 +23,7 @@ import {
   shiftDate,
   LOCATIONS,
 } from "@/lib/booking";
-import { formatDateShort, localDateString } from "@/lib/format";
+import { formatDateShort } from "@/lib/format";
 import PriceSummary from "./PriceSummary";
 
 interface Props {
@@ -33,6 +34,8 @@ interface Props {
   onChange?: (outbound: DepartureSlot | null, returnSlot: DepartureSlot | null) => void;
   onNext: (outbound: DepartureSlot, returnSlot: DepartureSlot | null) => void;
   onBack: () => void;
+  // Team Portal: departures inside the online booking cutoff stay bookable.
+  staff?: boolean;
   // Team Portal edits: seats this reservation already holds (trip id → seats)
   // count as free, so it can stay on — or grow on — its own departure.
   heldSeats?: Record<string, number>;
@@ -65,12 +68,6 @@ async function fetchSlots(from: string, to: string, date: string): Promise<Depar
   return (await fetchDay(from, to, date)).slots;
 }
 
-// "2026-10-02T14:05" for now, comparable with a slot's date + time.
-function nowKey(): string {
-  const now = new Date();
-  return `${localDateString(now)}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-}
-
 // Without a flight, riders choose the time at the airport: when to arrive at
 // ATL (heading there) or when to be picked up at ATL (heading home). For the
 // ATL-bound leg `date` is the arrival date, so the evening before is loaded too
@@ -82,11 +79,10 @@ async function fetchAirportLeg(
   const days = await Promise.all(
     (toAirport ? [shiftDate(date, -1), date] : [date]).map((d) => fetchDay(from, to, d)),
   );
-  const now = nowKey();
   const slots = days
     .flatMap((d) => d.slots)
     .filter((s) => !toAirport || (s.arrivalDate ?? s.date) === date)
-    .filter((s) => `${s.date}T${s.time}` > now);
+    .filter((s) => !s.departed); // the server decides this in Eastern time
   return { slots, timing: days[days.length - 1].timing };
 }
 
@@ -107,10 +103,9 @@ async function fetchFlightLeg(from: LocationKey, to: LocationKey, flight: Flight
   const otherDates = candidateDatesForFlight(flight, direction, timing).filter((d) => d !== flight.date);
   const others = await Promise.all(otherDates.map((d) => fetchSlots(from, to, d)));
 
-  // Never offer a departure that has already left.
-  const now = nowKey();
+  // Never offer a departure that has already left (decided by the server in Eastern time).
   const matches = matchDeparturesToFlight([...first.slots, ...others.flat()], flight, direction, timing)
-    .filter((m) => `${m.departsAt.date}T${m.departsAt.time}` > now);
+    .filter((m) => !m.slot.departed);
 
   return { flight, direction, timing, schedule: first.schedule, matches };
 }
@@ -126,8 +121,9 @@ interface LoadedDepartures {
 }
 
 export default function Step2Departures({
-  search, initialOutbound, initialReturn, onChange, onNext, onBack, heldSeats, nextLabel,
+  search, initialOutbound, initialReturn, onChange, onNext, onBack, heldSeats, nextLabel, staff = false,
 }: Props) {
+  const { business } = useAppSettings();
   const [selectedOutbound, setSelectedOutbound] = useState<DepartureSlot | null>(null);
   const [selectedReturn, setSelectedReturn] = useState<DepartureSlot | null>(null);
   // Restore earlier picks once, against the first load only.
@@ -150,7 +146,11 @@ export default function Step2Departures({
     let cancelled = false;
     const finish = (loadedResult: Omit<LoadedDepartures, "search">) => {
       if (cancelled) return;
-      const held = (s: DepartureSlot) => withHeld(s, heldSeats);
+      // Riders can't pick a departure inside the online cutoff; staff can.
+      const held = (s: DepartureSlot) => {
+        const h = withHeld(s, heldSeats);
+        return staff || !h.closed ? h : { ...h, available: false };
+      };
       const leg = (l: FlightLeg | null | undefined) =>
         l ? { ...l, matches: l.matches.map((m) => ({ ...m, slot: held(m.slot) })) } : l;
       const result = {
@@ -194,7 +194,7 @@ export default function Step2Departures({
     }
 
     return () => { cancelled = true; };
-  }, [search, initialPicks, heldSeats]);
+  }, [search, initialPicks, heldSeats, staff]);
 
   useEffect(() => {
     if (!loading) onChange?.(selectedOutbound, selectedReturn);
@@ -202,6 +202,12 @@ export default function Step2Departures({
 
   const canProceed =
     selectedOutbound !== null && (!search.roundTrip || selectedReturn !== null);
+
+  // A departure that still has seats but leaves too soon to book online.
+  const phoneOnly = !staff && !loading && [
+    ...outboundSlots, ...returnSlots,
+    ...(outboundLeg?.matches.map((m) => m.slot) ?? []), ...(returnLeg?.matches.map((m) => m.slot) ?? []),
+  ].some((s) => s.closed && s.seatsLeft > 0);
 
   return (
     <div className="space-y-6">
@@ -287,6 +293,13 @@ export default function Step2Departures({
             />
           )}
         </>
+      )}
+
+      {phoneOnly && (
+        <p className="text-[#A1A1AA] text-xs">
+          Departures marked &ldquo;Call to book&rdquo; leave too soon to book online — call{" "}
+          <a href={business.phoneHref} className="text-[#FCC300]">{business.phone}</a> and we&apos;ll get you a seat.
+        </p>
       )}
 
       <PriceSummary search={search} />
@@ -390,7 +403,7 @@ function FlightOptions({
                 </div>
                 <div className="text-right flex-shrink-0">
                   {full ? (
-                    <span className="text-xs text-[#A1A1AA]">Full</span>
+                    <span className="text-xs text-[#A1A1AA]">{m.slot.closed && m.slot.seatsLeft > 0 ? "Call to book" : "Full"}</span>
                   ) : (
                     <span className="flex items-center gap-1 text-xs text-[#A1A1AA]">
                       <Users className="w-3 h-3" /> {m.slot.seatsLeft} left
@@ -483,7 +496,7 @@ function DepartureGrid({
                     <span className="text-xs opacity-70">{slot.seatsLeft} left</span>
                   </div>
                 ) : (
-                  <span className="text-xs opacity-50">Full</span>
+                  <span className="text-xs opacity-50">{slot.closed && slot.seatsLeft > 0 ? "Call to book" : "Full"}</span>
                 )}
                 {isSelected && (
                   <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-white" />

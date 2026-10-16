@@ -127,11 +127,35 @@ and 2 hours before each departure.
 
 ---
 
-## Step 4 — Trip reminders (already scheduled)
+## Step 3b — Email through Hostinger (confirmations, receipts, alerts, Contact form)
+
+No outside email service — the site logs into a Hostinger mailbox and sends from it.
+
+1. Use the existing `support@contactvolt.com` mailbox (hPanel → **Emails** →
+   `contactvolt.com`). You need its password; reset it there if nobody has it.
+   Customer replies to Volt's emails then land in that same inbox.
+2. Add to the Hostinger environment, then redeploy:
+   `SMTP_HOST=smtp.hostinger.com`, `SMTP_PORT=465`,
+   `SMTP_USER=support@contactvolt.com`, `SMTP_PASS=<that password>`,
+   `EMAIL_FROM="Volt Transportation <support@contactvolt.com>"`,
+   `SUPPORT_EMAIL=support@contactvolt.com`.
+3. Test: send a message from the Contact page — it should arrive at
+   support@contactvolt.com, and replying goes straight to the customer.
+
+Hostinger caps how many emails one mailbox can send per day (see your email
+plan in hPanel); that's far above Volt's volume. Every text and email is listed
+under **Dashboard → Messages → Outbox**, with failures retried automatically.
+
+---
+
+## Step 4 — Trip reminders, retries & staff alerts (already scheduled)
 
 Supabase **pg_cron** calls `https://volt-transportation.com/api/cron/reminders`
 every 10 minutes (migration `019_trip_reminder_cron`). It authenticates with a
-secret stored in Supabase Vault as `cron_secret`.
+secret stored in Supabase Vault as `cron_secret`. Each run queues due reminder
+texts, retries failed texts/emails, and checks for staff alerts (card holds
+about to expire, vans full, payments with no booking). Choose who gets each
+alert under **Dashboard → Settings → Staff Alerts**.
 
 - Add **`CRON_SECRET`** to the Hostinger environment with the same value as in
   `.env.local` (it's already in Vault), then redeploy.
@@ -189,7 +213,11 @@ Copy `.env.local.example` to `.env.local` and fill in:
 | `RINGCENTRAL_CLIENT_SECRET` | RingCentral Developer Console → your app | SMS |
 | `RINGCENTRAL_JWT` | RingCentral Developer Console → Credentials | SMS |
 | `RINGCENTRAL_FROM_NUMBER` | The Volt office number, `+1XXXXXXXXXX` | SMS |
-| `CRON_SECRET` | Same value as Supabase Vault `cron_secret` | Trip reminders |
+| `CRON_SECRET` | Same value as Supabase Vault `cron_secret` | Reminders, retries, staff alerts |
+| `SMTP_HOST` / `SMTP_PORT` | `smtp.hostinger.com` / `465` | Email |
+| `SMTP_USER` / `SMTP_PASS` | The Hostinger mailbox you send from | Email |
+| `EMAIL_FROM` | `Volt Transportation <that mailbox>` | Email |
+| `SUPPORT_EMAIL` | `support@contactvolt.com` | Contact-page messages |
 | `TWILIO_*` (optional) | Twilio Console | SMS fallback only |
 | `NEXT_PUBLIC_APP_URL` | Your domain | SMS reminders, callbacks |
 | `INTERNAL_API_SECRET` | Generate a random string | Internal API security |

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl, SUPABASE_ANON_KEY } from "@/lib/supabase/url";
-import { DEFAULT_FLIGHT_TIMING, arrivalFor, displayTime12h, type FlightTimingSettings, type RouteSchedule } from "@/lib/booking";
+import {
+  DEFAULT_FLIGHT_TIMING, DEFAULT_ONLINE_CUTOFF_MINUTES, arrivalFor, displayTime12h,
+  type FlightTimingSettings, type RouteSchedule,
+} from "@/lib/booking";
+import { easternInstant } from "@/lib/staff-pricing";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createClient(): Promise<any> {
@@ -56,11 +60,17 @@ export async function GET(request: NextRequest) {
     if (tripsError) throw tripsError;
 
     const routeMinutes = route.duration_minutes ?? DEFAULT_FLIGHT_TIMING.routeMinutes;
+    // Times are judged in Eastern time on the server — never the rider's clock.
+    //   departed: already left (never offered)
+    //   closed:   inside the online cutoff — staff can still book it, riders must call
+    const cutoffMinutes = settings?.online_booking_cutoff_minutes ?? DEFAULT_ONLINE_CUTOFF_MINUTES;
+    const now = Date.now();
 
     // Format response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const slots = (trips || []).map((trip: any) => {
       const seatsLeft = trip.total_capacity - trip.seats_booked;
+      const departsIn = easternInstant(date, trip.departure_time.slice(0, 5)) - now;
 
       return {
         id: trip.id,
@@ -71,6 +81,8 @@ export async function GET(request: NextRequest) {
         available: seatsLeft > 0,
         seatsLeft,
         totalSeats: trip.total_capacity,
+        departed: departsIn <= 0,
+        closed: departsIn < cutoffMinutes * 60_000,
       };
     });
 
@@ -91,7 +103,7 @@ export async function GET(request: NextRequest) {
         }
       : null;
 
-    return NextResponse.json({ slots, timing, schedule });
+    return NextResponse.json({ slots, timing, schedule, cutoffMinutes });
   } catch (err) {
     console.error("[trips/availability]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

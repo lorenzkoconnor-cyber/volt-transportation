@@ -48,6 +48,11 @@ function isTwilioConfigured(): boolean {
   );
 }
 
+/** Which provider texts go through right now. */
+export function smsProvider(): "RingCentral" | "Twilio" | null {
+  return isRingCentralConfigured() ? "RingCentral" : isTwilioConfigured() ? "Twilio" : null;
+}
+
 /** True when texts would really be sent (not just logged). */
 export function isSmsConfigured(): boolean {
   return isRingCentralConfigured() || isTwilioConfigured();

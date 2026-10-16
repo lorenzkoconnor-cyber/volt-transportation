@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDateShort } from "@/lib/format";
 import { categoryLabel } from "@/lib/military";
-import { MILITARY_DISCOUNT_PERCENT } from "@/lib/booking";
+import { useAppSettings } from "@/context/SettingsContext";
 import {
   ShieldCheck, Loader2, Check, X, ExternalLink, Mail, Phone, Clock, BadgeCheck, CircleSlash, AlertTriangle,
 } from "lucide-react";
@@ -43,7 +43,7 @@ function daysLeft(iso: string | null): number | null {
   return (new Date(iso).getTime() - Date.now()) / 86_400_000;
 }
 
-function holdLabel(b: HeldBooking): { text: string; tone: "ok" | "warn" | "bad" | "muted" } {
+function holdLabel(b: HeldBooking, MILITARY_DISCOUNT_PERCENT: number): { text: string; tone: "ok" | "warn" | "bad" | "muted" } {
   const p = b.payment;
   if (b.status === "cancelled") return { text: "Cancelled", tone: "muted" };
   if (!p) return { text: "No payment on file", tone: "bad" };
@@ -67,6 +67,7 @@ const TONE: Record<string, string> = {
 };
 
 export default function VerificationsPage() {
+  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
   const supabase = createClient();
   const sb = supabase as any;
 
@@ -243,7 +244,7 @@ export default function VerificationsPage() {
                 {held.filter((b) => b.customer_id === r.id).length > 0 && (
                   <ul className="mt-2.5 space-y-1">
                     {held.filter((b) => b.customer_id === r.id).map((b) => {
-                      const label = holdLabel(b);
+                      const label = holdLabel(b, MILITARY_DISCOUNT_PERCENT);
                       return (
                         <li key={b.id} className="flex items-center gap-2 text-xs flex-wrap">
                           <span className="font-mono text-white">{b.confirmation_number}</span>
