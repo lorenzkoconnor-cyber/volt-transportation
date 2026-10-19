@@ -24,6 +24,7 @@ type Db = any;
 export const DEFAULT_SHORT_NOTICE_HOURS = 6;
 const HOLD_WARN_MS = 2 * 86_400_000;
 const STUCK_PAYMENT_MS = 15 * 60_000;
+export const STAFF_TRIP_REMINDER_MS = 2 * 3_600_000;
 
 export interface AlertContent {
   key: string;      // unique per occurrence, e.g. "reservation:<id>"
@@ -179,6 +180,69 @@ async function scanExpiringHolds(sb: Db): Promise<number> {
         `Settle it in Verifications (Approve, Reject, or Can't verify) before it lapses, or the fare can't be collected.`,
       link: "/dashboard/verifications",
     });
+    n++;
+  }
+  return n;
+}
+
+// Staff trip reminders: about 2 hours before each departure that has riders,
+// subscribed staff get the rider count, van and driver; the assigned driver
+// (if they have an email and aren't already subscribed) is emailed too.
+export async function scanStaffTripReminders(sb: Db): Promise<number> {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const tomorrow = new Date(Date.now() + 86_400_000).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const { data } = await sb
+    .from("trips")
+    .select(
+      "id, departure_date, departure_time, total_capacity, seats_booked, route:routes(origin_label, destination_label), " +
+      "trip_vehicles(vehicle:vehicles(name), driver:drivers(id, employee_id, first_name, last_name, email, phone))",
+    )
+    .in("status", ["scheduled", "boarding"])
+    .gt("seats_booked", 0)
+    .gte("departure_date", today)
+    .lte("departure_date", tomorrow);
+
+  let subscribed: Set<string> | null = null;
+  let n = 0;
+  for (const t of data ?? []) {
+    const msUntil = easternInstant(t.departure_date, t.departure_time.slice(0, 5)) - Date.now();
+    if (msUntil > STAFF_TRIP_REMINDER_MS || msUntil < 15 * 60_000) continue;
+
+    const route = `${t.route?.origin_label ?? ""} → ${t.route?.destination_label ?? ""}`;
+    const when = `${formatDateShort(t.departure_date)} at ${formatTime12h(t.departure_time)}`;
+    const vans = (t.trip_vehicles ?? []) as { vehicle: { name: string } | null; driver: Record<string, string> | null }[];
+    const vanLines = vans.length
+      ? vans.map((v) => `Van: ${v.vehicle?.name ?? "—"} · Driver: ${v.driver ? `${v.driver.first_name} ${v.driver.last_name}` : "not assigned"}`).join("\n")
+      : "No van or driver assigned yet — assign one in Dispatch.";
+    const text = `${route}, ${when}.\n${t.seats_booked} of ${t.total_capacity} seats booked.\n${vanLines}`;
+    const link = `/dashboard/manifest?tripId=${t.id}`;
+    const subject = `Departure in about ${Math.max(1, Math.round(msUntil / 3_600_000))} hr — ${formatTime12h(t.departure_time)} ${t.route?.origin_label ?? ""}`;
+
+    await raiseStaffAlert(sb, "trip_reminder", { key: `trip:${t.id}`, subject, text, link });
+
+    if (!subscribed) {
+      const { data: subs } = await sb.from("staff_alert_subscriptions").select("employee_id").eq("alert_type", "trip_reminder");
+      subscribed = new Set((subs ?? []).map((s: { employee_id: string }) => s.employee_id));
+    }
+    const { business } = await loadAppSettings();
+    const driverItems: QueueItem[] = [];
+    for (const v of vans) {
+      const d = v.driver;
+      if (!d || !isDeliverableEmail(d.email) || (d.employee_id && subscribed.has(d.employee_id))) continue;
+      driverItems.push({
+        channel: "email",
+        audience: "staff",
+        kind: "alert:trip_reminder",
+        to: d.email,
+        subject: `[Volt] Your trip: ${subject}`,
+        text: `Hi ${d.first_name}, you're driving ${route}, ${when}.\n${t.seats_booked} riders booked. Van: ${v.vehicle?.name ?? "—"}.\n\nManifest: ${appUrl()}${link}`,
+        html: emailHtml(`Your trip — ${when}`,
+          `Hi ${d.first_name}, you're driving ${route}, ${when}.\n${t.seats_booked} riders booked. Van: ${v.vehicle?.name ?? "—"}.`,
+          { label: "Open manifest", url: `${appUrl()}${link}` }, business),
+        dedupeKey: `alert:trip_reminder:trip:${t.id}:driver:${d.id}:email`,
+      });
+    }
+    if (driverItems.length) await enqueue(sb, driverItems);
     n++;
   }
   return n;

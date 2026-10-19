@@ -52,8 +52,8 @@ export const TEMPLATES: TemplateInfo[] = [
   {
     key: "reminder_first",
     label: "First trip reminder",
-    description: "Text sent before each departure (timing set under Reminders).",
-    hasEmail: false,
+    description: "Text + email sent before each departure (timing set under Reminders).",
+    hasEmail: true,
     placeholders: [
       ...COMMON,
       { name: "when", help: "\"tomorrow\", \"today\", or \"on Friday\"" },
@@ -66,8 +66,8 @@ export const TEMPLATES: TemplateInfo[] = [
   {
     key: "reminder_second",
     label: "Second trip reminder",
-    description: "Text sent shortly before each departure (timing set under Reminders).",
-    hasEmail: false,
+    description: "Text + email sent shortly before each departure (timing set under Reminders).",
+    hasEmail: true,
     placeholders: [
       ...COMMON,
       { name: "hours", help: "How long until departure, e.g. \"2 hours\"" },
@@ -134,15 +134,21 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateText> = {
     sms:
       "Volt Transportation: Reminder — your ride departs {when} at {time} from {from}.\n\n" +
       "Confirmation: {confirmation}\nPlease arrive {arrive_minutes} minutes early. See you soon!",
-    emailSubject: "",
-    emailBody: "",
+    emailSubject: "Reminder: your Volt ride is {when} at {time} — {confirmation}",
+    emailBody:
+      "Hi {name}, this is a reminder that your ride departs {when} at {time} from {from}.\n\n" +
+      "Confirmation: {confirmation}\n\n" +
+      "Please arrive {arrive_minutes} minutes early. Questions? Reply to this email or call us at {phone}.",
   },
   reminder_second: {
     sms:
       "Volt Transportation: Hi {name}, your ride departs in about {hours} — {time} from {from}.\n\n" +
       "Confirmation: {confirmation}\nPlease arrive {arrive_minutes} minutes early.",
-    emailSubject: "",
-    emailBody: "",
+    emailSubject: "Your Volt ride departs in about {hours} — {confirmation}",
+    emailBody:
+      "Hi {name}, your ride departs in about {hours} — {time} from {from}.\n\n" +
+      "Confirmation: {confirmation}\n\n" +
+      "Please arrive {arrive_minutes} minutes early. Running late? Call us at {phone}.",
   },
   updated: {
     sms:

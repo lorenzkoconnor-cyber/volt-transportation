@@ -34,6 +34,11 @@ export const ALERT_TYPES = [
     description: "A blackout / service pause was added and booked riders were affected — who needs follow-up.",
   },
   {
+    type: "trip_reminder",
+    label: "Upcoming trip reminders",
+    description: "About 2 hours before each departure that has riders: riders booked, van and driver. The assigned driver is also emailed.",
+  },
+  {
     type: "message_failed",
     label: "Customer message failed",
     description: "A text or email to a customer still failed after every retry.",
