@@ -59,9 +59,19 @@ function getTransporter(): Transporter {
   return transporter;
 }
 
-function fromAddress(): string {
-  const from = process.env.EMAIL_FROM;
-  return from && from.includes("@") ? from : `Volt Transportation <${process.env.SMTP_USER}>`;
+/**
+ * Split EMAIL_FROM into a display name and address, however it was typed into
+ * the host's env settings: `Volt Transportation <support@x.com>`, with stray
+ * quotes, without the < >, or just the address. Falls back to the mailbox.
+ */
+export function parseSender(raw: string | undefined, mailbox: string): { name: string; address: string } {
+  const value = (raw ?? "").trim().replace(/^(["'])(.*)\1$/, "$2").trim();
+  const address = value.match(/[^\s<>"']+@[^\s<>"']+\.[^\s<>"']+/)?.[0] ?? mailbox;
+  const name = value
+    .replace(address, "")
+    .replace(/[<>"']/g, "")
+    .trim();
+  return { name: name || "Volt Transportation", address };
 }
 
 /** Real email addresses only — guest bookings without one get a placeholder like 7065551234@guest.volt. */
@@ -80,8 +90,11 @@ export async function sendEmail(msg: EmailMessage): Promise<EmailResult> {
     return { success: true, simulated: true };
   }
   try {
+    const mailbox = process.env.SMTP_USER ?? "";
     const info = await getTransporter().sendMail({
-      from: fromAddress(),
+      from: parseSender(process.env.EMAIL_FROM, mailbox),
+      // Hostinger only accepts mail whose envelope sender is the logged-in mailbox.
+      envelope: { from: mailbox, to: msg.to },
       to: msg.to,
       subject: msg.subject,
       text: msg.text,
