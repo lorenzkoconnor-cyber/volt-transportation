@@ -15,6 +15,7 @@ const footerLinks = {
     { href: "/pricing", label: "Pricing" },
     { href: "/book", label: "Book a Ride" },
     { href: "/manage-reservation", label: "Manage Reservation" },
+    { href: "/text-alerts", label: "Text Alerts" },
     { href: "/safety-rules", label: "Safety & Rules" },
     { href: "/military", label: "Military & Giving Back" },
   ],

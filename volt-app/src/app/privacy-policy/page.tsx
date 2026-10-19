@@ -24,7 +24,7 @@ const sectionsFor = (b: { phone: string; email: string }) => [
   },
   {
     title: "SMS / Text Messages",
-    body: `Volt Transportation only texts you if you opt in by checking the optional text-message box when you book online, or by telling our staff yes when booking by phone or in person. Texting is never required to book. If you opt in, we send messages about your reservation only: booking confirmations, trip reminders, pickup and schedule updates, changes and cancellations. Message frequency varies by booking. Message and data rates may apply. Reply STOP to any message to opt out, or HELP for help; you can also contact us at ${b.email} or ${b.phone}. We do not send marketing texts.`,
+    body: `Volt Transportation only texts you if you opt in by checking the optional text-message box when you book online or on our Text Alerts page (volt-transportation.com/text-alerts), or by telling our staff yes when booking by phone or in person. Texting is never required to book. If you opt in, we send messages about your reservation only: booking confirmations, trip reminders, pickup and schedule updates, changes and cancellations. Message frequency varies by booking. Message and data rates may apply. Reply STOP to any message to opt out, or HELP for help; you can also contact us at ${b.email} or ${b.phone}. We do not send marketing texts.`,
   },
   {
     title: "Mobile Information Is Not Shared",
