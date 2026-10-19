@@ -90,8 +90,8 @@ export default function StaffBookingForm({
   // New bookings use today's prices; edits keep the booking's own prices.
   const settings = useAppSettings();
   const rates: StaffRates = isEdit
-    ? (() => { const s = snapshotPricing(pricingSnapshot); return { pricing: s.pricing, militaryPercent: s.militaryPercent }; })()
-    : { pricing: settings.pricing, militaryPercent: settings.military.percent };
+    ? (() => { const s = snapshotPricing(pricingSnapshot); return { pricing: s.pricing, militaryAmount: s.militaryAmount }; })()
+    : { pricing: settings.pricing, militaryAmount: settings.military.amount };
   const P = rates.pricing;
 
   const [phase, setPhaseState] = useState<Phase>(initial.outbound ? "details" : "trip");
@@ -526,7 +526,7 @@ export default function StaffBookingForm({
 
             {discountTab === "military" && (
               <p className="text-[#A1A1AA] text-sm">
-                {rates.militaryPercent}% off the whole booking for active-duty or retired military.
+                {dollars(rates.militaryAmount)} off the whole booking for active-duty or retired military.
                 Check their military ID in person — no upload needed.
               </p>
             )}

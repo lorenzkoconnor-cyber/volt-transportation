@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDateShort } from "@/lib/format";
 import { categoryLabel } from "@/lib/military";
 import { useAppSettings } from "@/context/SettingsContext";
+import { dollars } from "@/lib/settings";
 import {
   ShieldCheck, Loader2, Check, X, ExternalLink, Mail, Phone, Clock, BadgeCheck, CircleSlash, AlertTriangle,
 } from "lucide-react";
@@ -43,7 +44,7 @@ function daysLeft(iso: string | null): number | null {
   return (new Date(iso).getTime() - Date.now()) / 86_400_000;
 }
 
-function holdLabel(b: HeldBooking, MILITARY_DISCOUNT_PERCENT: number): { text: string; tone: "ok" | "warn" | "bad" | "muted" } {
+function holdLabel(b: HeldBooking, MILITARY_OFF: string): { text: string; tone: "ok" | "warn" | "bad" | "muted" } {
   const p = b.payment;
   if (b.status === "cancelled") return { text: "Cancelled", tone: "muted" };
   if (!p) return { text: "No payment on file", tone: "bad" };
@@ -54,7 +55,7 @@ function holdLabel(b: HeldBooking, MILITARY_DISCOUNT_PERCENT: number): { text: s
     const left = d < 1 ? `${Math.max(1, Math.round(d * 24))}h` : `${Math.floor(d)}d`;
     return { text: `Hold ${cents(p.amount_cents)} — expires in ${left}`, tone: d <= EXPIRING_SOON_DAYS ? "warn" : "ok" };
   }
-  if (p.status === "paid") return { text: `Charged ${cents(p.amount_cents)} — ${MILITARY_DISCOUNT_PERCENT}% refunded if approved`, tone: "muted" };
+  if (p.status === "paid") return { text: `Charged ${cents(p.amount_cents)} — ${MILITARY_OFF} refunded if approved`, tone: "muted" };
   if (p.status === "voided") return { text: "Hold expired — collect payment", tone: "bad" };
   return { text: `Payment ${p.status}`, tone: "muted" };
 }
@@ -67,7 +68,7 @@ const TONE: Record<string, string> = {
 };
 
 export default function VerificationsPage() {
-  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
+  const MILITARY_OFF = dollars(useAppSettings().military.amount);
   const supabase = createClient();
   const sb = supabase as any;
 
@@ -131,7 +132,7 @@ export default function VerificationsPage() {
   const review = async (customerId: string, decision: "approve" | "reject" | "unverifiable") => {
     if (decision === "unverifiable" && !window.confirm(
       "Charge the FULL fare on this rider's held bookings now? Their request stays in review — " +
-      `if you approve them later, the ${MILITARY_DISCOUNT_PERCENT}% is refunded automatically.`,
+      `if you approve them later, the ${MILITARY_OFF} discount is refunded automatically.`,
     )) return;
     setBusyId(customerId);
     try {
@@ -149,7 +150,7 @@ export default function VerificationsPage() {
         parts.push(`Charged ${data.captured} held booking${data.captured > 1 ? "s" : ""} (${cents(data.capturedCents)}).`);
       }
       if (data.refunded > 0) {
-        parts.push(`Refunded ${MILITARY_DISCOUNT_PERCENT}% on ${data.refunded} booking${data.refunded > 1 ? "s" : ""} (${cents(data.refundedCents)}).`);
+        parts.push(`Refunded the discount on ${data.refunded} booking${data.refunded > 1 ? "s" : ""} (${cents(data.refundedCents)}).`);
       }
       if (data.released > 0) parts.push(`Released ${data.released} hold${data.released > 1 ? "s" : ""} on cancelled bookings.`);
       if (data.failed?.length > 0) parts.push(`Needs attention: ${data.failed.join(" ")}`);
@@ -182,10 +183,10 @@ export default function VerificationsPage() {
             Review Military Discount requests. Only <strong className="text-white">active-duty</strong> and{" "}
             <strong className="text-white">retired</strong> military qualify — former members who didn&apos;t
             retire and first responders do not. Bookings made while pending have a card hold for the full fare:{" "}
-            <strong className="text-white">Approve</strong> charges {100 - MILITARY_DISCOUNT_PERCENT}%,{" "}
-            <strong className="text-white">Reject</strong> charges 100%, and{" "}
-            <strong className="text-white">Can&apos;t verify</strong> charges 100% but keeps the request open (approving later
-            refunds the {MILITARY_DISCOUNT_PERCENT}%). Card holds expire after 7 days.
+            <strong className="text-white">Approve</strong> charges the fare minus {MILITARY_OFF},{" "}
+            <strong className="text-white">Reject</strong> charges the full fare, and{" "}
+            <strong className="text-white">Can&apos;t verify</strong> charges the full fare but keeps the request open (approving later
+            refunds the {MILITARY_OFF}). Card holds expire after 7 days.
           </p>
         </div>
         <div className="glass rounded-xl px-4 py-2 text-center">
@@ -245,7 +246,7 @@ export default function VerificationsPage() {
                 {held.filter((b) => b.customer_id === r.id).length > 0 && (
                   <ul className="mt-2.5 space-y-1">
                     {held.filter((b) => b.customer_id === r.id).map((b) => {
-                      const label = holdLabel(b, MILITARY_DISCOUNT_PERCENT);
+                      const label = holdLabel(b, MILITARY_OFF);
                       return (
                         <li key={b.id} className="flex items-center gap-2 text-xs flex-wrap">
                           <span className="font-mono text-white">{b.confirmation_number}</span>

@@ -44,9 +44,8 @@ export default function Step5Confirmation({
   military = { applied: false, pending: false },
 }: Props) {
   const settings = useAppSettings();
-  const MILITARY_DISCOUNT_PERCENT = settings.military.percent;
   const priced = calcPrice(search, {
-    pricing: settings.pricing, militaryRate: MILITARY_DISCOUNT_PERCENT / 100,
+    pricing: settings.pricing, militaryAmount: settings.military.amount,
     militaryDiscount: military.applied && !military.code,
   });
   const { lines } = priced;
@@ -54,7 +53,7 @@ export default function Step5Confirmation({
   const total = (priced.subtotalCents - discountCents) / 100;
   const discountLabel = military.code
     ? `Discount Code ${military.code.code} (${codeLabel(military.code)})`
-    : `Military Discount (−${MILITARY_DISCOUNT_PERCENT}%)`;
+    : "Military Discount";
   const outboundFlight = search.hasFlight ? flightSummary(search.outboundFlight, flightDirection(search.from)) : "";
   const returnFlight = search.hasFlight && returnSlot ? flightSummary(search.returnFlight, flightDirection(search.to)) : "";
   const [texting, setTexting] = useState<"idle" | "busy" | "sent" | "error">("idle");
@@ -212,7 +211,8 @@ export default function Step5Confirmation({
           <h3 className="text-yellow-400 font-semibold mb-1 text-sm">Military discount — under review</h3>
           <p className="text-[#A1A1AA] text-sm">
             Thanks for submitting your ID. Your card has a hold for the full fare — nothing is charged yet.
-            Once we verify your eligibility we charge only {100 - MILITARY_DISCOUNT_PERCENT}% of it (${money(total * (1 - MILITARY_DISCOUNT_PERCENT / 100))}),
+            Once we verify your eligibility we take ${money(settings.military.amount)} off and charge only $
+            {money(Math.max(0, total - settings.military.amount))},
             and the discount applies automatically to future bookings. If we can&apos;t verify it, the full fare is charged.
           </p>
         </div>

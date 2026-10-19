@@ -1,15 +1,19 @@
 // ─── Card holds (authorize now, capture later) ─────────────────────────────────
 // Military Discount bookings made while the rider's ID is under review are
 // authorized for the full fare. The Verifications queue then settles them:
-//   • approved        → capture 90% (the rest of the hold is released)
-//   • denied          → capture 100%
-//   • can't verify    → capture 100%; if approved later, the 10% is refunded
+//   • approved        → capture the fare minus the flat discount (the rest of
+//                       the hold is released)
+//   • denied          → capture the full fare
+//   • can't verify    → capture the full fare; if approved later, the discount is refunded
 // A hold on a cancelled booking is released (voided) without charging.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { getStripeServer } from "@/lib/stripe/server";
 import { isSimulatedPaymentId } from "@/lib/checkout";
 import { snapshotPricing } from "@/lib/settings";
+import { militaryDiscountCents } from "@/lib/booking";
+
+const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
@@ -112,7 +116,7 @@ export async function markVoided(sb: Db, paymentId: string, note: string) {
   await sb.from("payments").update({ status: "voided", notes: note }).eq("id", paymentId).eq("status", "authorized");
 }
 
-// Refund part of an already-captured card payment (e.g. the 10% for a rider
+// Refund part of an already-captured card payment (e.g. the discount for a rider
 // approved after being charged full price).
 export async function refundPart(
   sb: Db,
@@ -164,7 +168,7 @@ export async function settleMilitaryBookings(
   const summary = {
     captured: 0,        // holds captured
     capturedCents: 0,
-    refunded: 0,        // already-charged bookings refunded 10%
+    refunded: 0,        // already-charged bookings refunded the discount
     refundedCents: 0,
     released: 0,        // holds released on cancelled bookings
     failed: [] as string[],
@@ -173,9 +177,8 @@ export async function settleMilitaryBookings(
   for (const r of bookings ?? []) {
     const payments = (r.payments ?? []) as (HoldPayment & { created_at: string })[];
     const payment = payments.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
-    // The discount % in force when this booking was made.
-    const pct = snapshotPricing(r.pricing_snapshot).militaryPercent;
-    const discountCents = Math.round((r.subtotal_cents * pct) / 100);
+    // The discount amount in force when this booking was made.
+    const discountCents = militaryDiscountCents(r.subtotal_cents, snapshotPricing(r.pricing_snapshot).militaryAmount);
 
     // Cancelled booking: never charge it — just let go of any hold.
     if (r.status === "cancelled") {
@@ -192,7 +195,7 @@ export async function settleMilitaryBookings(
       if (payment?.status === "authorized") {
         const amount = payment.amount_cents - discountCents;
         const res = await captureHold(sb, payment, amount, employeeId,
-          `Military Discount approved — captured ${100 - pct}% of the hold.`);
+          `Military Discount approved — captured the hold minus the ${usd(discountCents)} discount.`);
         if (res.ok) { summary.captured += 1; summary.capturedCents += amount; }
         else { settled = false; summary.failed.push(res.error); }
       } else if (payment?.status === "paid") {
@@ -219,7 +222,7 @@ export async function settleMilitaryBookings(
       const res = await captureHold(sb, payment, payment.amount_cents, employeeId,
         decision === "reject"
           ? "Military Discount denied — captured the full fare."
-          : "Military Discount could not be verified — captured the full fare; refund 10% if approved later.");
+          : "Military Discount could not be verified — captured the full fare; the discount is refunded if approved later.");
       if (res.ok) { summary.captured += 1; summary.capturedCents += payment.amount_cents; }
       else { summary.failed.push(res.error); continue; }
     }
@@ -228,7 +231,7 @@ export async function settleMilitaryBookings(
         .update({ military_discount_pending: false, is_military: false })
         .eq("id", r.id);
     }
-    // unverifiable: the booking stays flagged so a later approval refunds the 10%.
+    // unverifiable: the booking stays flagged so a later approval refunds the discount.
   }
 
   return summary;

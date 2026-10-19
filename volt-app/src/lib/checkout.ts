@@ -22,8 +22,8 @@ import { getSupabaseUrl } from "@/lib/supabase/url";
 import { getStripeServer } from "@/lib/stripe/server";
 import { loadMessageInfo, notifyConfirmation } from "@/lib/reservation-messages";
 import { alertIfShortNotice } from "@/lib/notifications/alerts";
-import { generateConfirmationNumber } from "@/lib/booking";
-import { DEFAULT_SETTINGS, militaryRate, type AppSettings } from "@/lib/settings";
+import { generateConfirmationNumber, militaryDiscountCents } from "@/lib/booking";
+import { DEFAULT_SETTINGS, militaryAmount, type AppSettings } from "@/lib/settings";
 import {
   CODE_ERRORS, codeDiscountCents, codeLabel, codeState, formatCode, normalizeCode,
   type DiscountCodeTerms,
@@ -158,7 +158,7 @@ export interface CheckoutPrice {
 // verification status:
 //   • discount code                → code's discount, charged immediately (it
 //                                    replaces the Military Discount; may be free)
-//   • approved account            → Military Discount % off now, charged immediately
+//   • approved account            → flat Military Discount off now, charged immediately
 //   • verification pending         → full fare AUTHORIZED only; captured minus the
 //                                    discount on approval or in full on denial
 //   • discount not requested, or the program is switched off → full fare
@@ -185,7 +185,7 @@ export function priceCheckout(
   }
   if (!militaryRequested || !settings.military.enabled) return full;
   if (militaryStatus === "approved") {
-    const discountCents = Math.round(subtotalCents * militaryRate(settings));
+    const discountCents = militaryDiscountCents(subtotalCents, militaryAmount(settings));
     return { ...full, discountCents, totalCents: subtotalCents - discountCents, isMilitary: true };
   }
   if (militaryStatus === "pending") {

@@ -6,12 +6,12 @@ import { settleMilitaryBookings } from "@/lib/stripe/holds";
 // Owner/manager only. Settles every booking the rider made while their
 // Military Discount verification was pending:
 //
-//   approve      → account verified; card holds captured at 90%. Bookings that
-//                  were already charged in full get the 10% refunded.
-//   reject       → account not eligible; card holds captured at 100%.
+//   approve      → account verified; card holds captured minus the flat
+//                  discount. Bookings already charged in full get it refunded.
+//   reject       → account not eligible; card holds captured in full.
 //   unverifiable → verification couldn't be completed (or a hold is about to
-//                  expire): holds captured at 100%, account stays in review.
-//                  If the rider is approved later, "approve" refunds the 10%.
+//                  expire): holds captured in full, account stays in review.
+//                  If the rider is approved later, "approve" refunds the discount.
 //                  Pass reservationId to settle just one booking.
 import type { MilitaryDecision as Decision } from "@/lib/stripe/holds";
 

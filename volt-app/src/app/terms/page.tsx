@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { getAppSettings } from "@/lib/settings-server";
+import { dollars } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions | Volt Transportation",
@@ -8,7 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://volt-transportation.com/terms" },
 };
 
-const sections = [
+// §17 quotes the live Military Discount amount from Dashboard → Settings.
+const sectionsFor = (OFF: string) => [
   {
     title: "1. Booking Agreement",
     body: `By completing a booking with Volt Transportation, you agree to these Terms & Conditions in full. A reservation is confirmed upon receipt of full payment via our secure checkout. Volt Transportation reserves the right to refuse service to anyone who violates our Safety & Rules policy.`,
@@ -75,11 +78,12 @@ const sections = [
   },
   {
     title: "17. Military Discount",
-    body: `Active-duty and retired members of the U.S. Armed Forces are eligible for a 10% discount on their entire booking after verifying eligibility with a valid military ID. Former service members who did not retire and first responders are not eligible. Verification is reviewed by Volt Transportation staff; for bookings made while a verification is under review, your card is authorized (placed on hold) for the regular fare rather than charged. If eligibility is approved, only 90% of the fare is charged and the remainder of the hold is released. If eligibility is denied or cannot be verified, the regular fare is charged; if eligibility is approved later, the 10% is refunded to the original payment method. Volt Transportation may deny the discount if eligibility cannot be verified.`,
+    body: `Active-duty and retired members of the U.S. Armed Forces are eligible for a flat ${OFF} discount on each booking after verifying eligibility with a valid military ID. The discount applies once per reservation regardless of the fare, the number of passengers, or whether the booking is one way or round trip, and never exceeds the fare. Former service members who did not retire and first responders are not eligible. Verification is reviewed by Volt Transportation staff; for bookings made while a verification is under review, your card is authorized (placed on hold) for the regular fare rather than charged. If eligibility is approved, the fare less the ${OFF} discount is charged and the remainder of the hold is released. If eligibility is denied or cannot be verified, the regular fare is charged; if eligibility is approved later, the ${OFF} discount is refunded to the original payment method. Volt Transportation may deny the discount if eligibility cannot be verified.`,
   },
 ];
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const sections = sectionsFor(dollars((await getAppSettings()).military.amount));
   return (
     <>
       <Navbar />
@@ -88,7 +92,7 @@ export default function TermsPage() {
           <div className="max-w-3xl mx-auto">
             <div className="mb-10">
               <h1 className="text-4xl font-bold text-white mb-3">Terms & Conditions</h1>
-              <p className="text-[#A1A1AA] text-sm">Effective Date: October 16, 2026</p>
+              <p className="text-[#A1A1AA] text-sm">Effective Date: October 19, 2026</p>
             </div>
 
             <div className="glass rounded-2xl divide-y divide-white/8 overflow-hidden">

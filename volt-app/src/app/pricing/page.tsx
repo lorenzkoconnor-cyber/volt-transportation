@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Pricing | Columbus GA to ATL Airport Shuttle Fares",
     description:
       `Volt Transportation pricing: Adults ${dollars(P.adult)}, Children ${dollars(P.child)}, Pets ${dollars(P.pet)}, Extra bags ${dollars(P.extraBag)}. Transparent fares, no hidden fees.` +
-      (military.enabled ? ` ${military.percent}% off for active-duty and retired military.` : ""),
+      (military.enabled ? ` ${dollars(military.amount)} off every booking for active-duty and retired military.` : ""),
     alternates: { canonical: "https://volt-transportation.com/pricing" },
   };
 }
@@ -38,7 +38,7 @@ const included = [
 const policiesFor = (s: AppSettings) => [
   { title: "No Hidden Fees", desc: "The price you see at checkout is the price you pay. No surge pricing, no service fees, no surprises." },
   ...(s.military.enabled
-    ? [{ title: "Military Discount", desc: `Active-duty and retired military save ${s.military.percent}% on the whole booking. Tick the box at checkout and upload your military ID. Once you're verified, it applies automatically every time.` }]
+    ? [{ title: "Military Discount", desc: `Active-duty and retired military save ${dollars(s.military.amount)} on every booking — round trip or one way, any party size. Tick the box at checkout and upload your military ID. Once you're verified, it applies automatically every time.` }]
     : []),
   { title: "Round Trip", desc: "Book both legs at once and the total is calculated automatically at checkout. No separate booking needed." },
   {
@@ -101,7 +101,7 @@ export default async function PricingPage() {
                   <div className="p-5 bg-[#FCC300]/5 border-t border-[#FCC300]/20 flex items-start gap-2">
                     <Info className="w-4 h-4 text-[#FCC300] flex-shrink-0 mt-0.5" />
                     <p className="text-[#FCC300] text-sm">
-                      Active-duty &amp; retired military save {settings.military.percent}% on every booking.{" "}
+                      Active-duty &amp; retired military save {dollars(settings.military.amount)} on every booking.{" "}
                       <Link href="/military" className="underline underline-offset-2 hover:text-[#FFD54A]">
                         See who qualifies &amp; how we give back
                       </Link>

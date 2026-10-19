@@ -35,7 +35,7 @@ export const SETTINGS_FIELDS: FieldDef[] = [
   { column: "return_edit_cutoff_hours", label: "Return-trip edit cutoff (hours)", kind: "int", min: 0, max: 48 },
   // Discounts
   { column: "military_discount_enabled", label: "Military Discount on", kind: "bool" },
-  { column: "military_discount_percent", label: "Military Discount %", kind: "int", min: 1, max: 50 },
+  { column: "military_discount_amount_cents", label: "Military Discount amount", kind: "money", min: 1, max: 100 },
   { column: "discount_code_valid_days", label: "Discount codes last (days)", kind: "int", min: 1, max: 365 },
   // Business info
   { column: "business_phone", label: "Phone number", kind: "phone", maxLength: 30 },

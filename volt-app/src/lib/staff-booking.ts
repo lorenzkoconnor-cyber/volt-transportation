@@ -288,7 +288,7 @@ export async function createStaffReservation(
   if (input.discount.kind === "military" && !settings.military.enabled) {
     return { error: "The Military Discount is turned off in Settings." };
   }
-  const rates: StaffRates = { pricing: settings.pricing, militaryPercent: settings.military.percent };
+  const rates: StaffRates = { pricing: settings.pricing, militaryAmount: settings.military.amount };
   const comp = payment.method === "comp";
   const subtotalCents = staffSubtotalCents(payload, rates);
   const discount = comp
@@ -496,7 +496,7 @@ export async function planEdit(sb: Db, resv: any, input: StaffInput, role: strin
   // An edit keeps the prices the booking was made at (a later price change
   // never re-prices an existing booking).
   const snap = snapshotPricing(resv.pricing_snapshot);
-  const rates: StaffRates = { pricing: snap.pricing, militaryPercent: snap.militaryPercent };
+  const rates: StaffRates = { pricing: snap.pricing, militaryAmount: snap.militaryAmount };
   const subtotalCents = staffSubtotalCents(payload, rates);
   const discount = await resolveDiscount(sb, input.discount, subtotalCents, resv.discount_code_id ?? null, rates);
   if ("error" in discount) return discount;

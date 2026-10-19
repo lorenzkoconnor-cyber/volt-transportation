@@ -68,7 +68,7 @@ export function faqItems(s: AppSettings): { question: string; answer: string }[]
     ...(s.military.enabled
       ? [{
           question: "Do you offer a military discount?",
-          answer: `Yes. Active-duty and retired military save ${s.military.percent}% on their whole booking after a one-time ID verification. Volt also donates 10% of its profits to Warrior Outreach Ranch to support local veterans. See our Military & Giving Back page for details.`,
+          answer: `Yes. Active-duty and retired military save ${dollars(s.military.amount)} on every booking after a one-time ID verification, and for every one of those bookings Volt donates ${dollars(s.military.amount)} to Warrior Outreach Ranch to support local veterans. See our Military & Giving Back page for details.`,
         }]
       : []),
     {

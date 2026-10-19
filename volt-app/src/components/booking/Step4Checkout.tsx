@@ -83,7 +83,7 @@ function TripSummary({
   discountedIfApproved: number;
   discountLabel: string;
 }) {
-  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
+  const MILITARY_OFF = `$${money(useAppSettings().military.amount)}`;
   const { lines, discountCents, total } = breakdown;
   return (
     <div className="glass rounded-2xl p-5 space-y-3">
@@ -135,7 +135,7 @@ function TripSummary({
           <p className="text-[#A1A1AA] text-xs leading-relaxed">
             Your card is authorized, not charged. Once your ID is verified we charge only{" "}
             <span className="text-green-400 font-medium">${money(discountedIfApproved)}</span>{" "}
-            ({MILITARY_DISCOUNT_PERCENT}% off). If it can&apos;t be verified, the full ${money(total)} is charged.
+            ({MILITARY_OFF} off). If it can&apos;t be verified, the full ${money(total)} is charged.
           </p>
         )}
       </div>
@@ -165,7 +165,7 @@ function MilitaryDiscountSection({
   fileError: string;
   onFileChange: (f: File | null) => void;
 }) {
-  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
+  const MILITARY_OFF = `$${money(useAppSettings().military.amount)}`;
   // Already verified — discount is automatic.
   if (approved) {
     return (
@@ -174,7 +174,7 @@ function MilitaryDiscountSection({
         <div>
           <p className="text-green-400 text-sm font-medium">Military discount applied</p>
           <p className="text-[#A1A1AA] text-xs mt-0.5">
-            Your account is verified — {MILITARY_DISCOUNT_PERCENT}% is taken off every booking. Thank you for your service.
+            Your account is verified — {MILITARY_OFF} is taken off every booking. Thank you for your service.
           </p>
         </div>
       </div>
@@ -190,8 +190,8 @@ function MilitaryDiscountSection({
           <p className="text-yellow-400 text-sm font-medium">Verification under review</p>
           <p className="text-[#A1A1AA] text-xs mt-0.5">
             We&apos;re reviewing your ID. For this booking we&apos;ll place a hold on your card for the full fare —
-            once you&apos;re approved we charge only {100 - MILITARY_DISCOUNT_PERCENT}% of it, and future bookings get{" "}
-            {MILITARY_DISCOUNT_PERCENT}% off automatically.
+            once you&apos;re approved we take {MILITARY_OFF} off it, and future bookings get{" "}
+            {MILITARY_OFF} off automatically.
           </p>
         </div>
       </div>
@@ -214,8 +214,8 @@ function MilitaryDiscountSection({
             I&apos;m active-duty or retired military
           </span>
           <span className="block text-[#A1A1AA] text-xs mt-0.5">
-            Get {MILITARY_DISCOUNT_PERCENT}% off. Upload your military ID for a quick review — today we only place a hold on
-            your card for the full fare. Once you&apos;re verified we charge {100 - MILITARY_DISCOUNT_PERCENT}% of it; if we
+            Get {MILITARY_OFF} off your booking. Upload your military ID for a quick review — today we only place a hold on
+            your card for the full fare. Once you&apos;re verified we charge {MILITARY_OFF} less; if we
             can&apos;t verify, the full fare is charged. You&apos;ll stay verified for future trips.{" "}
             <Link href="/military" target="_blank" className="text-[#FCC300] hover:underline">Who qualifies?</Link>
           </span>
@@ -287,7 +287,7 @@ function DiscountCodeSection({
   disabled: boolean;
   smallerThanMilitary: boolean;
 }) {
-  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
+  const MILITARY_OFF = `$${money(useAppSettings().military.amount)}`;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [checking, setChecking] = useState(false);
@@ -334,7 +334,7 @@ function DiscountCodeSection({
         </div>
         {smallerThanMilitary && (
           <p className="text-yellow-400 text-xs px-1">
-            Your {MILITARY_DISCOUNT_PERCENT}% military discount saves more than this code — remove the code to keep it.
+            Your {MILITARY_OFF} military discount saves more than this code — remove the code to keep it.
           </p>
         )}
       </div>
@@ -781,9 +781,8 @@ export default function Step4Checkout({
 }: Props) {
   const { customer } = useAuth();
   const settings = useAppSettings();
-  const MILITARY_DISCOUNT_PERCENT = settings.military.percent;
   const militaryOn = settings.military.enabled;
-  const priceOpts = { pricing: settings.pricing, militaryRate: settings.military.percent / 100 };
+  const priceOpts = { pricing: settings.pricing, militaryAmount: settings.military.amount };
 
   // While the program is switched off in Settings nobody gets the discount
   // (the server prices it the same way).
@@ -829,7 +828,7 @@ export default function Step4Checkout({
   }, []);
   const discountLabel = appliedCode
     ? `Discount Code ${appliedCode.code} (${codeLabel(appliedCode)})`
-    : `Military Discount (−${MILITARY_DISCOUNT_PERCENT}%)`;
+    : "Military Discount";
   const codeSmallerThanMilitary = !!appliedCode && militaryApproved &&
     breakdown.discountCents < calcPrice(search, { ...priceOpts, militaryDiscount: true }).discountCents;
   const discountedIfApproved = useMemo(

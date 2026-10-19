@@ -3,11 +3,12 @@
 // customer checkout does (prices × 2 for round trips), plus the discounts
 // staff can give at the counter. The server re-prices everything from the same
 // inputs, so the browser's numbers are only a preview.
-// `rates` = the prices + Military Discount % to use: the live settings for a new
+// `rates` = the prices + Military Discount amount to use: the live settings for a new
 // booking, the booking's own price snapshot for an edit. Defaults: the originals.
 
-import { MILITARY_DISCOUNT_PERCENT, PRICING } from "@/lib/booking";
+import { MILITARY_DISCOUNT_AMOUNT, PRICING, militaryDiscountCents } from "@/lib/booking";
 import { codeDiscountCents, codeLabel } from "@/lib/discount-codes";
+import { dollars } from "@/lib/settings";
 
 export type StaffDiscount =
   | { kind: "none" }
@@ -35,10 +36,10 @@ export interface StaffPrice {
 
 export interface StaffRates {
   pricing: { adult: number; child: number; pet: number; extraBag: number };
-  militaryPercent: number;
+  militaryAmount: number; // dollars
 }
 
-export const DEFAULT_RATES: StaffRates = { pricing: PRICING, militaryPercent: MILITARY_DISCOUNT_PERCENT };
+export const DEFAULT_RATES: StaffRates = { pricing: PRICING, militaryAmount: MILITARY_DISCOUNT_AMOUNT };
 
 export function staffSubtotalCents(c: StaffCounts, rates: StaffRates = DEFAULT_RATES): number {
   const P = rates.pricing;
@@ -49,7 +50,7 @@ export function staffSubtotalCents(c: StaffCounts, rates: StaffRates = DEFAULT_R
 export function staffDiscountCents(subtotalCents: number, d: StaffDiscount, rates: StaffRates = DEFAULT_RATES): number {
   switch (d.kind) {
     case "military":
-      return Math.round((subtotalCents * rates.militaryPercent) / 100);
+      return militaryDiscountCents(subtotalCents, rates.militaryAmount);
     case "code":
       return codeDiscountCents(subtotalCents, { type: d.type, value: d.value });
     case "manual": {
@@ -173,7 +174,7 @@ export function reservationBalance(totalCents: number, payments: PaymentLike[]) 
 export function staffDiscountLabel(d: StaffDiscount, rates: StaffRates = DEFAULT_RATES): string {
   switch (d.kind) {
     case "military":
-      return `Military Discount (${rates.militaryPercent}%)`;
+      return `Military Discount (−${dollars(rates.militaryAmount)})`;
     case "code":
       return `Discount Code ${d.code} (${codeLabel({ type: d.type, value: d.value })})`;
     case "manual":

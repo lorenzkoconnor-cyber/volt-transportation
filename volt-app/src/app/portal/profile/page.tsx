@@ -21,9 +21,10 @@ import {
   type MilitaryCategory,
 } from "@/lib/military";
 import { useAppSettings } from "@/context/SettingsContext";
+import { dollars } from "@/lib/settings";
 
 export default function EditProfilePage() {
-  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
+  const MILITARY_OFF = dollars(useAppSettings().military.amount);
   const router = useRouter();
   const { user, customer, loading, refreshProfile } = useAuth();
   const supabase = createClient();
@@ -280,7 +281,7 @@ export default function EditProfilePage() {
               <div>
                 <h2 className="text-white font-semibold">Military Discount</h2>
                 <p className="text-[#A1A1AA] text-xs">
-                  {MILITARY_DISCOUNT_PERCENT}% off every booking for verified active-duty &amp; retired military ·{" "}
+                  {MILITARY_OFF} off every booking for verified active-duty &amp; retired military ·{" "}
                   <Link href="/military" className="text-[#FCC300] hover:underline">Learn more</Link>
                 </p>
               </div>
@@ -292,7 +293,7 @@ export default function EditProfilePage() {
                 <div>
                   <p className="text-green-400 text-sm font-medium">Verified</p>
                   <p className="text-[#A1A1AA] text-xs mt-0.5">
-                    Your {MILITARY_DISCOUNT_PERCENT}% discount is applied automatically at checkout. Thank you for your service.
+                    Your {MILITARY_OFF} discount is applied automatically at checkout. Thank you for your service.
                   </p>
                 </div>
               </div>
@@ -305,7 +306,7 @@ export default function EditProfilePage() {
                   <p className="text-yellow-400 text-sm font-medium">Under review</p>
                   <p className="text-[#A1A1AA] text-xs mt-0.5">
                     We&apos;re verifying your ID. Bookings you make in the meantime place a hold on your card for
-                    the full fare — once approved we charge only {100 - MILITARY_DISCOUNT_PERCENT}% of it, and the
+                    the full fare — once approved we take {MILITARY_OFF} off, and the
                     discount applies automatically after that.
                   </p>
                 </div>

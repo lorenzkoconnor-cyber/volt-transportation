@@ -78,7 +78,7 @@ export async function loadReceipt(token: string): Promise<ReceiptData | null> {
 
   // Line items from the party at the prices the booking was made at (× 2 for
   // round trips). Anything that doesn't add up falls back to one subtotal line.
-  const { pricing: P, militaryPercent } = snapshotPricing(r.pricing_snapshot);
+  const { pricing: P } = snapshotPricing(r.pricing_snapshot);
   const usd = (n: number) => (Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`);
   const mult = roundTrip ? 2 : 1;
   const rt = roundTrip ? " · round trip" : "";
@@ -96,7 +96,7 @@ export async function loadReceipt(token: string): Promise<ReceiptData | null> {
 
   const discountLabel = r.discount_code
     ? `Discount code ${r.discount_code.code} (${codeLabel({ type: r.discount_code.discount_type, value: r.discount_code.value })})`
-    : r.is_military ? `Military Discount (${militaryPercent}%)`
+    : r.is_military ? "Military Discount"
     : r.total_cents === 0 ? "Complimentary"
     : "Discount";
 

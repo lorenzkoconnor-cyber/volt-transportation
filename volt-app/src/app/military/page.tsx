@@ -16,14 +16,15 @@ import {
 } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars } from "@/lib/settings";
-import { DONATION_PARTNER, DONATION_PERCENT_OF_PROFITS } from "@/lib/military";
+import { DONATION_PARTNER } from "@/lib/military";
 
-// The discount % (and whether it's on) comes from Dashboard → Settings.
+// The discount amount (and whether it's on) comes from Dashboard → Settings.
+// Volt donates the same amount to the partner for every Military Discount booking.
 export async function generateMetadata(): Promise<Metadata> {
   const { military } = await getAppSettings();
   return {
     title: "Military Discount & Giving Back",
-    description: `Active-duty and retired military save ${military.percent}% on every Volt shuttle booking between Columbus, GA and ATL. Volt donates ${DONATION_PERCENT_OF_PROFITS}% of its profits to ${DONATION_PARTNER.name}.`,
+    description: `Active-duty and retired military save ${dollars(military.amount)} on every Volt shuttle booking between Columbus, GA and ATL, and Volt donates ${dollars(military.amount)} to ${DONATION_PARTNER.name} for each one.`,
     alternates: { canonical: "https://volt-transportation.com/military" },
   };
 }
@@ -33,7 +34,7 @@ const eligible = [
   { title: "Retired military", desc: "Retired from the U.S. Armed Forces." },
 ];
 
-const stepsFor = (MILITARY_DISCOUNT_PERCENT: number) => [
+const stepsFor = (OFF: string) => [
   {
     icon: ShieldCheck,
     title: "Tick the box at checkout",
@@ -47,12 +48,12 @@ const stepsFor = (MILITARY_DISCOUNT_PERCENT: number) => [
   {
     icon: Clock,
     title: "We review it",
-    desc: `Our team checks your ID. Your first booking places a hold on your card for the regular fare — once you’re approved we charge only ${100 - MILITARY_DISCOUNT_PERCENT}% of it. If we can’t verify your eligibility, the regular fare is charged.`,
+    desc: `Our team checks your ID. Your first booking places a hold on your card for the regular fare — once you’re approved we take ${OFF} off it. If we can’t verify your eligibility, the regular fare is charged.`,
   },
   {
     icon: BadgeCheck,
     title: "Verified once, saved every time",
-    desc: `Once approved, ${MILITARY_DISCOUNT_PERCENT}% comes off automatically every time you book while signed in — no codes, no re-uploading.`,
+    desc: `Once approved, ${OFF} comes off automatically every time you book while signed in — no codes, no re-uploading.`,
   },
 ];
 
@@ -63,14 +64,14 @@ const ranchPrograms = [
   "Operation Song",
 ];
 
-const faqs = [
+const faqsFor = (OFF: string) => [
   {
     q: "What does the discount apply to?",
-    a: `Your whole booking — every passenger on the reservation, pets, extra bags, and both legs of a round trip.`,
+    a: `It’s ${OFF} off each booking, whatever the total — one reservation counts once, whether it’s one way or a round trip and however many passengers, pets or bags are on it.`,
   },
   {
     q: "I served but didn’t retire. Do I qualify?",
-    a: "Not at this time. The discount is for active-duty service members and military retirees. We’re grateful for your service, and every ride you take with Volt still helps support veterans through our donations.",
+    a: "Not at this time. The discount is for active-duty service members and military retirees. We’re grateful for your service, and you’re always welcome to ride with us.",
   },
   {
     q: "Can I use it as a guest without an account?",
@@ -78,17 +79,18 @@ const faqs = [
   },
   {
     q: "How do the donations work?",
-    a: `Volt donates ${DONATION_PERCENT_OF_PROFITS}% of its profits to ${DONATION_PARTNER.name}. The donation comes from Volt’s profits, not from your discount. Every rider helps support veterans simply by riding with us.`,
+    a: `Every time a verified service member books with their Military Discount, Volt donates ${OFF} to ${DONATION_PARTNER.name}. You save ${OFF}, and veterans get ${OFF}. The donation comes from Volt, not from your fare.`,
   },
 ];
 
 export default async function MilitaryPage() {
   const settings = await getAppSettings();
-  const MILITARY_DISCOUNT_PERCENT = settings.military.percent;
-  const steps = stepsFor(MILITARY_DISCOUNT_PERCENT);
+  const OFF = dollars(settings.military.amount);
+  const steps = stepsFor(OFF);
+  const faqs = faqsFor(OFF);
   // Example uses one adult round trip, so the numbers on this page always match live pricing.
   const exampleFare = settings.pricing.adult * 2;
-  const exampleSavings = (exampleFare * MILITARY_DISCOUNT_PERCENT) / 100;
+  const exampleSavings = Math.min(exampleFare, settings.military.amount);
   return (
     <>
       <Navbar />
@@ -106,13 +108,12 @@ export default async function MilitaryPage() {
               <span className="gradient-text-volt">Supporting those who served.</span>
             </h1>
             <p className="text-[#A1A1AA] text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-              Active-duty and retired military save {MILITARY_DISCOUNT_PERCENT}% on every Volt ride. And every
-              ride, military or not, helps veterans: Volt donates {DONATION_PERCENT_OF_PROFITS}% of its profits
-              to {DONATION_PARTNER.name}.
+              Active-duty and retired military save {OFF} on every Volt booking. And for every one of those
+              bookings, Volt donates {OFF} to {DONATION_PARTNER.name}.
             </p>
             {!settings.military.enabled && (
               <p className="mt-6 inline-block rounded-xl border border-[#FCC300]/30 bg-[#FCC300]/10 px-4 py-3 text-sm text-[#FFE08A]">
-                The Military Discount is paused right now — check back soon. Our donations to {DONATION_PARTNER.name} continue.
+                The Military Discount is paused right now — check back soon.
               </p>
             )}
           </div>
@@ -122,8 +123,8 @@ export default async function MilitaryPage() {
         <section className="pb-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { big: `${MILITARY_DISCOUNT_PERCENT}%`, label: "off every booking", sub: "Active-duty & retired military" },
-              { big: `${DONATION_PERCENT_OF_PROFITS}%`, label: "of Volt’s profits donated", sub: "To support local veterans" },
+              { big: OFF, label: "off every booking", sub: "Active-duty & retired military" },
+              { big: OFF, label: "donated per military booking", sub: `To ${DONATION_PARTNER.name}` },
             ].map((s) => (
               <div key={s.label} className="glass rounded-2xl p-6 text-center">
                 <div className="text-[#FCC300] text-4xl font-bold mb-1">{s.big}</div>
@@ -140,7 +141,7 @@ export default async function MilitaryPage() {
             <div className="text-center mb-10">
               <h2 className="text-3xl font-bold text-white mb-3">Who Qualifies</h2>
               <p className="text-[#A1A1AA] max-w-xl mx-auto">
-                The {MILITARY_DISCOUNT_PERCENT}% Military Discount is for active-duty service members and military
+                The {OFF} Military Discount is for active-duty service members and military
                 retirees, verified with a military ID.
               </p>
             </div>
@@ -202,12 +203,12 @@ export default async function MilitaryPage() {
                   <span className="text-white">{dollars(exampleFare)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-400">Military Discount (−{MILITARY_DISCOUNT_PERCENT}%)</span>
-                  <span className="text-green-400">−${exampleSavings.toFixed(2)}</span>
+                  <span className="text-green-400">Military Discount</span>
+                  <span className="text-green-400">−{dollars(exampleSavings)}</span>
                 </div>
                 <div className="flex justify-between font-bold border-t border-white/10 pt-2">
                   <span className="text-white">You pay</span>
-                  <span className="text-[#FCC300]">${(exampleFare - exampleSavings).toFixed(2)}</span>
+                  <span className="text-[#FCC300]">{dollars(exampleFare - exampleSavings)}</span>
                 </div>
               </div>
             </div>
@@ -223,12 +224,12 @@ export default async function MilitaryPage() {
                 <span className="text-[#A1A1AA] text-xs font-medium">Giving Back</span>
               </div>
               <h2 className="text-3xl font-bold text-white mb-5">
-                {DONATION_PERCENT_OF_PROFITS}% of our profits go to veterans.
+                You save {OFF}. Veterans get {OFF}.
               </h2>
               <p className="text-[#A1A1AA] leading-relaxed mb-4">
-                Volt donates {DONATION_PERCENT_OF_PROFITS}% of its profits to {DONATION_PARTNER.name}. That means
-                every trip you take with us, whether or not you use the Military Discount, helps support veterans,
-                service members, and their families in our community.
+                For every booking made with the Military Discount, Volt donates {OFF} to {DONATION_PARTNER.name}.
+                Every service member who rides with us also helps support veterans, service members, and their
+                families in our community.
               </p>
               <p className="text-[#A1A1AA] leading-relaxed">
                 We chose a local partner on purpose. Supporting an organization that serves veterans and families

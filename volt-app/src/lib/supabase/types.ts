@@ -168,7 +168,7 @@ export interface Database {
           special_notes: string | null;
           discount_id: string | null;
           is_military: boolean;                 // part of the Military Discount program
-          military_discount_pending: boolean;   // verification pending — card held for full fare (or charged in full; 10% refunded on approval)
+          military_discount_pending: boolean;   // verification pending — card held for full fare (or charged in full; discount refunded on approval)
           subtotal_cents: number;          // stored in cents to avoid float issues
           discount_cents: number;
           total_cents: number;

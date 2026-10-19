@@ -10,10 +10,12 @@ export const PRICING = {
   extraBag: 10,
 } as const;
 
-// Military discount — 10% off the whole booking for active-duty and retired
-// military, applied only for verified accounts (see src/lib/military.ts and
-// /api/military/*).
-export const MILITARY_DISCOUNT_RATE = 0.10;
+// Military discount — a flat $10 off the whole booking (one reservation, round
+// trip or not, any party size) for active-duty and retired military, applied
+// only for verified accounts (see src/lib/military.ts and /api/military/*).
+// Volt donates the same amount to Warrior Outreach Ranch for every one.
+// The live amount comes from Dashboard → Settings; this is the default.
+export const MILITARY_DISCOUNT_AMOUNT = 10;
 // Website booking closes this long before a departure unless
 // booking_settings.online_booking_cutoff_minutes says otherwise (staff can still book).
 export const DEFAULT_ONLINE_CUTOFF_MINUTES = 120;
@@ -23,9 +25,12 @@ export const DEFAULT_ONLINE_CUTOFF_MINUTES = 120;
 // folding wheelchair or walker rides free as luggage.
 export const MOBILITY_NOTE = "Mobility assistance: bringing a folding wheelchair or walker / needs help boarding";
 
-export const MILITARY_DISCOUNT_PERCENT = Math.round(MILITARY_DISCOUNT_RATE * 100); // 10
+/** The Military Discount in cents: the flat amount, but never more than the fare. */
+export function militaryDiscountCents(subtotalCents: number, amountDollars: number): number {
+  return Math.max(0, Math.min(subtotalCents, Math.round(amountDollars * 100)));
+}
 
-// Format a dollar amount that may be fractional (e.g. after a % discount):
+// Format a dollar amount that may be fractional (e.g. after a discount):
 // "59" stays "59", but "56.05" keeps its cents.
 export function money(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2);
@@ -336,15 +341,15 @@ export function bookingFlights(search: BookingSearch, outbound: DepartureSlot, r
 
 // Calculate price breakdown. Pass { militaryDiscount: true } to apply the
 // Military Discount to the whole booking — do this only when the customer's
-// account is verified (checked server-side). Prices and the discount rate come
-// from Dashboard → Settings (`pricing`, `militaryRate`); they default to the
-// original prices.
+// account is verified (checked server-side). Prices and the discount amount
+// come from Dashboard → Settings (`pricing`, `militaryAmount` in dollars); they
+// default to the original prices and $10.
 export function calcPrice(
   search: BookingSearch,
-  opts: { militaryDiscount?: boolean; pricing?: { adult: number; child: number; pet: number; extraBag: number }; militaryRate?: number } = {},
+  opts: { militaryDiscount?: boolean; pricing?: { adult: number; child: number; pet: number; extraBag: number }; militaryAmount?: number } = {},
 ): PriceBreakdown {
   const P = opts.pricing ?? PRICING;
-  const rate = opts.militaryRate ?? MILITARY_DISCOUNT_RATE;
+  const amount = opts.militaryAmount ?? MILITARY_DISCOUNT_AMOUNT;
   const adultTotal = search.adults * P.adult;
   const childTotal = search.children * P.child;
   const petTotal = search.pets * P.pet;
@@ -352,10 +357,9 @@ export function calcPrice(
   const oneWaySubtotal = adultTotal + childTotal + petTotal + extraBagTotal;
   const subtotal = search.roundTrip ? oneWaySubtotal * 2 : oneWaySubtotal;
 
-  // Work in cents so the percentage discount is exact.
   const subtotalCents = Math.round(subtotal * 100);
-  const militaryDiscount = !!opts.militaryDiscount && rate > 0;
-  const discountCents = militaryDiscount ? Math.round(subtotalCents * rate) : 0;
+  const militaryDiscount = !!opts.militaryDiscount && amount > 0;
+  const discountCents = militaryDiscount ? militaryDiscountCents(subtotalCents, amount) : 0;
   const totalCents = subtotalCents - discountCents;
 
   const lines: { label: string; amount: number }[] = [];

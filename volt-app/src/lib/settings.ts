@@ -5,7 +5,7 @@
 // <SettingsProvider> (src/context/SettingsContext.tsx). Nothing in here is
 // secret — it's what the public website shows.
 
-import { PRICING } from "@/lib/booking";
+import { MILITARY_DISCOUNT_AMOUNT, PRICING } from "@/lib/booking";
 
 export interface Pricing {
   adult: number;    // dollars
@@ -40,7 +40,7 @@ export interface RouteSchedule {
 
 export interface AppSettings {
   pricing: Pricing;
-  military: { enabled: boolean; percent: number };
+  military: { enabled: boolean; amount: number }; // amount: dollars off each booking (and donated)
   business: BusinessInfo;
   arriveEarlyMinutes: number;
   onlineCutoffMinutes: number;
@@ -70,7 +70,7 @@ function business(phone: string, email: string, street: string, cityLine: string
 
 export const DEFAULT_SETTINGS: AppSettings = {
   pricing: { ...PRICING },
-  military: { enabled: true, percent: 10 },
+  military: { enabled: true, amount: MILITARY_DISCOUNT_AMOUNT },
   business: business("(706) 530-5896", "support@contactvolt.com", "3885 Miller Road, Suite C", "Columbus, GA 31909", "Daily · 4:00 AM – 12:00 AM"),
   arriveEarlyMinutes: 20,
   onlineCutoffMinutes: 120,
@@ -118,7 +118,7 @@ export function settingsFromRow(row: any, announcement: Announcement | null = nu
       pet: num(row.price_pet_cents, d.pricing.pet * 100) / 100,
       extraBag: num(row.price_extra_bag_cents, d.pricing.extraBag * 100) / 100,
     },
-    military: { enabled: bool(row.military_discount_enabled, true), percent: num(row.military_discount_percent, 10) },
+    military: { enabled: bool(row.military_discount_enabled, true), amount: num(row.military_discount_amount_cents, d.military.amount * 100) / 100 },
     business: business(
       str(row.business_phone, d.business.phone),
       str(row.business_email, d.business.email),
@@ -145,9 +145,9 @@ export function settingsFromRow(row: any, announcement: Announcement | null = nu
   };
 }
 
-/** The military discount rate to apply now (0 when the program is switched off). */
-export function militaryRate(s: AppSettings): number {
-  return s.military.enabled ? s.military.percent / 100 : 0;
+/** The Military Discount in dollars to apply now (0 when the program is switched off). */
+export function militaryAmount(s: AppSettings): number {
+  return s.military.enabled ? s.military.amount : 0;
 }
 
 // ── Price snapshot ───────────────────────────────────────────────────────────
@@ -158,7 +158,8 @@ export interface PricingSnapshot {
   child_cents: number;
   pet_cents: number;
   extra_bag_cents: number;
-  military_percent: number;
+  military_amount_cents: number;
+  military_percent?: number; // bookings made while the discount was a percentage
 }
 
 export function snapshotFrom(s: AppSettings): PricingSnapshot {
@@ -167,12 +168,12 @@ export function snapshotFrom(s: AppSettings): PricingSnapshot {
     child_cents: Math.round(s.pricing.child * 100),
     pet_cents: Math.round(s.pricing.pet * 100),
     extra_bag_cents: Math.round(s.pricing.extraBag * 100),
-    military_percent: s.military.percent,
+    military_amount_cents: Math.round(s.military.amount * 100),
   };
 }
 
 /** A booking's prices. Bookings made before snapshots existed used the original prices. */
-export function snapshotPricing(snap: Partial<PricingSnapshot> | null | undefined): { pricing: Pricing; militaryPercent: number } {
+export function snapshotPricing(snap: Partial<PricingSnapshot> | null | undefined): { pricing: Pricing; militaryAmount: number } {
   return {
     pricing: {
       adult: num(snap?.adult_cents, PRICING.adult * 100) / 100,
@@ -180,7 +181,8 @@ export function snapshotPricing(snap: Partial<PricingSnapshot> | null | undefine
       pet: num(snap?.pet_cents, PRICING.pet * 100) / 100,
       extraBag: num(snap?.extra_bag_cents, PRICING.extraBag * 100) / 100,
     },
-    militaryPercent: num(snap?.military_percent, 10),
+    // Older snapshots stored a percentage; they're settled at the flat amount.
+    militaryAmount: num(snap?.military_amount_cents, MILITARY_DISCOUNT_AMOUNT * 100) / 100,
   };
 }
 

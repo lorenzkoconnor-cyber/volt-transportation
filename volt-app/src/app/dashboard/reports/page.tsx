@@ -6,7 +6,8 @@ import { formatCents, formatDateShort, localDateString } from "@/lib/format";
 import { TrendingUp, Users, Truck, DollarSign, Loader2, Download, HeartHandshake, Clock } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
 import { useAppSettings } from "@/context/SettingsContext";
-import { DONATION_PARTNER, DONATION_PERCENT_OF_PROFITS } from "@/lib/military";
+import { DONATION_PARTNER } from "@/lib/military";
+import { dollars, snapshotPricing } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 
 type Period = "7d" | "30d" | "90d";
@@ -21,7 +22,7 @@ function monthLabel(ym: string): string {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function ReportsPage() {
-  const MILITARY_DISCOUNT_PERCENT = useAppSettings().military.percent;
+  const MILITARY_OFF = dollars(useAppSettings().military.amount);
   const supabase = createClient();
   const sb = supabase as any;
 
@@ -33,12 +34,14 @@ export default function ReportsPage() {
   const [milLoading, setMilLoading] = useState(true);
 
   // Military discount totals run program-wide by calendar month
-  // (independent of the period selector above), so load them once.
+  // (independent of the period selector above), so load them once. Volt
+  // donates the booking's flat discount amount (from its price snapshot) for
+  // every military booking that got the discount.
   useEffect(() => {
     (async () => {
       const { data } = await sb
         .from("reservations")
-        .select("discount_cents, created_at, military_discount_pending")
+        .select("discount_cents, created_at, military_discount_pending, pricing_snapshot")
         .eq("is_military", true)
         .neq("status", "cancelled");
       setMilRows(data ?? []);
@@ -48,17 +51,19 @@ export default function ReportsPage() {
   }, []);
 
   const milSummary = useMemo(() => {
-    const monthMap = new Map<string, number>();
-    let allTime = 0;
+    type Month = { bookings: number; donationCents: number };
+    const monthMap = new Map<string, Month>();
+    const allTime: Month = { bookings: 0, donationCents: 0 };
     let pendingCount = 0;
     milRows.forEach((r) => {
       if (r.military_discount_pending) pendingCount += 1;
-      const cents = r.discount_cents ?? 0;
-      if (cents > 0) {
-        const month = String(r.created_at ?? "").slice(0, 7); // YYYY-MM
-        monthMap.set(month, (monthMap.get(month) ?? 0) + cents);
-        allTime += cents;
-      }
+      if ((r.discount_cents ?? 0) <= 0) return;
+      const donation = Math.round(snapshotPricing(r.pricing_snapshot).militaryAmount * 100);
+      const month = String(r.created_at ?? "").slice(0, 7); // YYYY-MM
+      const m = monthMap.get(month) ?? { bookings: 0, donationCents: 0 };
+      m.bookings += 1; m.donationCents += donation;
+      monthMap.set(month, m);
+      allTime.bookings += 1; allTime.donationCents += donation;
     });
     const months = [...monthMap.entries()].sort(([a], [b]) => b.localeCompare(a));
     const currentMonth = localDateString().slice(0, 7);
@@ -67,7 +72,7 @@ export default function ReportsPage() {
       allTime,
       pendingCount,
       currentMonth,
-      currentTotal: monthMap.get(currentMonth) ?? 0,
+      current: monthMap.get(currentMonth) ?? { bookings: 0, donationCents: 0 },
     };
   }, [milRows]);
 
@@ -205,38 +210,41 @@ export default function ReportsPage() {
           <div>
             <h2 className="text-white font-bold text-lg">Military Discount &amp; Giving Back</h2>
             <p className="text-[#A1A1AA] text-xs">
-              Volt donates {DONATION_PERCENT_OF_PROFITS}% of its profits to {DONATION_PARTNER.name}. The donation is
-              based on profit, not on discounts given — the app tracks revenue but not expenses, so calculate it
-              from your books. Figures below are the {MILITARY_DISCOUNT_PERCENT}% military discounts given.
+              Each military booking saves the rider {MILITARY_OFF}, and Volt donates {MILITARY_OFF} to{" "}
+              {DONATION_PARTNER.name} for it. Donation owed = military bookings that got the discount (not
+              cancelled, not still awaiting verification).
             </p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/6">
           <div className="bg-[#0F0F0F] p-5">
-            <div className="text-[#A1A1AA] text-xs mb-1">{monthLabel(milSummary.currentMonth)} — discounts given</div>
-            <div className="text-[#FCC300] font-bold text-2xl">{milLoading ? "…" : formatCents(milSummary.currentTotal)}</div>
-            <div className="text-[#A1A1AA] text-xs mt-1">Saved by verified military this month</div>
+            <div className="text-[#A1A1AA] text-xs mb-1">{monthLabel(milSummary.currentMonth)} — donation owed</div>
+            <div className="text-[#FCC300] font-bold text-2xl">{milLoading ? "…" : formatCents(milSummary.current.donationCents)}</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">
+              {milSummary.current.bookings} military booking{milSummary.current.bookings === 1 ? "" : "s"} this month
+            </div>
           </div>
           <div className="bg-[#0F0F0F] p-5">
-            <div className="text-[#A1A1AA] text-xs mb-1">All-time discounts given</div>
-            <div className="text-white font-bold text-2xl">{milLoading ? "…" : formatCents(milSummary.allTime)}</div>
-            <div className="text-[#A1A1AA] text-xs mt-1">Total military savings to date</div>
+            <div className="text-[#A1A1AA] text-xs mb-1">All-time donation owed</div>
+            <div className="text-white font-bold text-2xl">{milLoading ? "…" : formatCents(milSummary.allTime.donationCents)}</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">{milSummary.allTime.bookings} military bookings to date</div>
           </div>
           <div className="bg-[#0F0F0F] p-5">
             <div className="text-[#A1A1AA] text-xs mb-1 flex items-center gap-1"><Clock className="w-3 h-3" />Awaiting verification</div>
             <div className="text-white font-bold text-2xl">{milLoading ? "…" : milSummary.pendingCount}</div>
-            <div className="text-[#A1A1AA] text-xs mt-1">Card on hold; {100 - MILITARY_DISCOUNT_PERCENT}% charged on approval</div>
+            <div className="text-[#A1A1AA] text-xs mt-1">Card on hold; {MILITARY_OFF} off on approval</div>
           </div>
         </div>
         {milSummary.months.length > 0 && (
           <div className="divide-y divide-white/6">
-            <div className="grid grid-cols-2 px-6 py-2.5 border-t border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
-              <div>Month</div><div className="text-right">Discounts given</div>
+            <div className="grid grid-cols-3 px-6 py-2.5 border-t border-white/8 text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">
+              <div>Month</div><div className="text-right">Military bookings</div><div className="text-right">Donation owed</div>
             </div>
-            {milSummary.months.map(([ym, cents]) => (
-              <div key={ym} className="grid grid-cols-2 px-6 py-3 hover:bg-white/3 transition-colors">
+            {milSummary.months.map(([ym, m]) => (
+              <div key={ym} className="grid grid-cols-3 px-6 py-3 hover:bg-white/3 transition-colors">
                 <div className="text-white text-sm">{monthLabel(ym)}</div>
-                <div className="text-right text-white font-semibold text-sm">{formatCents(cents as number)}</div>
+                <div className="text-right text-white text-sm">{m.bookings}</div>
+                <div className="text-right text-white font-semibold text-sm">{formatCents(m.donationCents)}</div>
               </div>
             ))}
           </div>

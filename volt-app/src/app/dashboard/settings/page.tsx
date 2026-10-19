@@ -103,7 +103,9 @@ export default function SettingsPage() {
                 description="Switching the Military Discount off hides it at checkout and on the website; bookings already made keep their discount."
                 rows={[
                   { column: "military_discount_enabled", title: "Military Discount" },
-                  { column: "military_discount_percent", title: "Military Discount amount", suffix: "% off the whole booking" },
+                  { column: "military_discount_amount_cents", title: "Military Discount amount", step: 1,
+                    help: "Taken off every verified military booking (once per reservation, round trip or not). Volt donates the same amount to Warrior Outreach Ranch for each one.",
+                    suffix: "off each booking" },
                   { column: "discount_code_valid_days", title: "New discount codes last", suffix: "days" },
                 ]} />
               <FieldsCard icon={UserCog} title="Staff Edit Windows" settings={s} onSaved={load}

@@ -39,9 +39,9 @@ export function categoryLabel(value: string | null | undefined): string {
 }
 
 // ─── Giving back ───────────────────────────────────────────────────────────────
-// Volt donates 10% of its profits to Warrior Outreach Ranch. This is separate
-// from the discount — it is NOT tied to how much riders save.
-export const DONATION_PERCENT_OF_PROFITS = 10;
+// For every Military Discount booking, Volt donates the same flat amount the
+// rider saved (Dashboard → Settings → Military Discount amount, default $10) to
+// Warrior Outreach Ranch. Reports totals it by month.
 export const DONATION_PARTNER = {
   name: "Warrior Outreach Ranch",
   location: "Fortson, Georgia",

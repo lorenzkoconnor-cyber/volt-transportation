@@ -66,7 +66,7 @@ export default async function PricingSection() {
             {military.enabled && (
             <div className="p-5 bg-[#FCC300]/5 border-t border-[#FCC300]/20">
               <p className="text-[#FCC300] text-sm font-medium">
-                Active-duty &amp; retired military save {military.percent}% ·{" "}
+                Active-duty &amp; retired military save {dollars(military.amount)} per booking ·{" "}
                 <Link href="/military" className="underline underline-offset-2 hover:text-[#FFD54A]">
                   Learn more
                 </Link>
