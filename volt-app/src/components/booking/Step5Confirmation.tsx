@@ -68,12 +68,12 @@ export default function Step5Confirmation({
         body: JSON.stringify({ confirmationNumber }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "We couldn't send the text.");
+      if (!res.ok) throw new Error(data.error ?? "We couldn't send your confirmation.");
       setTexting("sent");
-      setTextMsg(`Sent to the phone ending in ${data.phoneEnding}.`);
+      setTextMsg(`Sent to ${data.sentTo}.`);
     } catch (err) {
       setTexting("error");
-      setTextMsg(err instanceof Error ? err.message : "We couldn't send the text.");
+      setTextMsg(err instanceof Error ? err.message : "We couldn't send your confirmation.");
     }
   };
   const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -247,7 +247,7 @@ export default function Step5Confirmation({
           className="w-full border-[#FCC300]/40 text-white hover:bg-[#FCC300]/10"
         >
           {texting === "busy" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MessageSquare className="w-4 h-4 mr-2" />}
-          {texting === "sent" ? "Text me my confirmation again" : "Text me my confirmation"}
+          {texting === "sent" ? "Send my confirmation again" : "Send me my confirmation"}
         </Button>
         {textMsg && (
           <p className={`text-xs ${texting === "error" ? "text-red-400" : "text-green-400"}`}>{textMsg}</p>

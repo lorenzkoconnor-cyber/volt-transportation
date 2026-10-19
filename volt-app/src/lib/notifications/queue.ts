@@ -206,7 +206,7 @@ async function deliver(sb: Db, row: Row): Promise<DeliveryResult> {
 async function alertMessageFailed(sb: Db, row: Row, error: string) {
   try {
     const { raiseStaffAlert } = await import("@/lib/notifications/alerts");
-    const what = row.type === "sms" ? "text" : "email";
+    const aWhat = row.type === "sms" ? "A text" : "An email";
     let ref = "";
     if (row.reservation_id) {
       const { data } = await sb.from("reservations").select("confirmation_number").eq("id", row.reservation_id).maybeSingle();
@@ -214,9 +214,9 @@ async function alertMessageFailed(sb: Db, row: Row, error: string) {
     }
     await raiseStaffAlert(sb, "message_failed", {
       key: `notification:${row.id}`,
-      subject: `A ${what} to a customer failed${ref}`,
+      subject: `${aWhat} to a customer failed${ref}`,
       text:
-        `A ${what}${ref} to ${row.recipient} could not be delivered after ${MAX_ATTEMPTS} tries.\n` +
+        `${aWhat}${ref} to ${row.recipient} could not be delivered after ${MAX_ATTEMPTS} tries.\n` +
         `Error: ${error}\n\n` +
         `Please reach the customer another way.\n\nMessage:\n${row.message.slice(0, 400)}`,
     });

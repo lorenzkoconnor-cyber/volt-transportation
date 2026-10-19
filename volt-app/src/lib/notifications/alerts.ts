@@ -12,6 +12,7 @@ import type Stripe from "stripe";
 import { loadAppSettings } from "@/lib/settings-server";
 import { enqueue, type QueueItem } from "@/lib/notifications/queue";
 import { emailHtml, isDeliverableEmail } from "@/lib/notifications/email";
+import { isSmsConfigured } from "@/lib/notifications/sms";
 import { getStripeServer } from "@/lib/stripe/server";
 import { easternInstant } from "@/lib/staff-pricing";
 import { formatDateShort, formatTime12h } from "@/lib/format";
@@ -43,6 +44,8 @@ export async function raiseStaffAlert(sb: Db, type: AlertType, alert: AlertConte
 
     const label = ALERT_TYPES.find((a) => a.type === type)?.label ?? type;
     const link = alert.link ? `${appUrl()}${alert.link}` : null;
+    // Until texting is set up, anyone who chose text gets the alert by email instead.
+    const smsReady = isSmsConfigured();
     const items: QueueItem[] = [];
     for (const s of subs ?? []) {
       const e = s.employee;
@@ -57,7 +60,7 @@ export async function raiseStaffAlert(sb: Db, type: AlertType, alert: AlertConte
           dedupeKey: `alert:${type}:${alert.key}:${e.id}:sms`,
         });
       }
-      if (s.via_email && isDeliverableEmail(e.email)) {
+      if ((s.via_email || (s.via_sms && !smsReady)) && isDeliverableEmail(e.email)) {
         items.push({
           ...base,
           channel: "email",

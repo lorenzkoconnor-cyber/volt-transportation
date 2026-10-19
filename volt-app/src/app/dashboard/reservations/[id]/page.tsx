@@ -342,14 +342,19 @@ export default function ReservationDetailPage() {
               <Printer className="w-3.5 h-3.5 mr-1" /> Print Receipt
             </Button>
           </a>
-          <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone} onClick={() => sendText("receipt")}
-            className="border-white/15 text-white hover:bg-white/5 text-xs">
-            <MessageSquare className="w-3.5 h-3.5 mr-1" /> Text Receipt
-          </Button>
           <Button size="sm" variant="outline" disabled={busy || !customerEmail} onClick={() => sendText("receipt", "email")}
             title={customerEmail ? `Email the receipt to ${customerEmail}` : "No email address on file"}
             className="border-white/15 text-white hover:bg-white/5 text-xs">
             <Mail className="w-3.5 h-3.5 mr-1" /> Email Receipt
+          </Button>
+          <Button size="sm" variant="outline" disabled={busy || !customerEmail} onClick={() => sendText("confirmation", "email")}
+            title={customerEmail ? `Email the confirmation to ${customerEmail}` : "No email address on file"}
+            className="border-white/15 text-white hover:bg-white/5 text-xs">
+            <Mail className="w-3.5 h-3.5 mr-1" /> Email Confirmation
+          </Button>
+          <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone} onClick={() => sendText("receipt")}
+            className="border-white/15 text-white hover:bg-white/5 text-xs">
+            <MessageSquare className="w-3.5 h-3.5 mr-1" /> Text Receipt
           </Button>
           <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone} onClick={() => sendText("confirmation")}
             className="border-white/15 text-white hover:bg-white/5 text-xs">
