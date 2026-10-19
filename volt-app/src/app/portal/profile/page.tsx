@@ -232,7 +232,9 @@ export default function EditProfilePage() {
                 className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
               />
               <p className="text-[#A1A1AA] text-xs mt-1.5">
-                We use this to reach you about your trips (delays, reminders, pickup updates).
+                We use this to reach you about your trips. We only text it if you opt in to booking texts when you book
+                (reply STOP anytime). See our{" "}
+                <a href="/privacy-policy" target="_blank" className="text-[#FCC300] hover:underline">Privacy Policy</a>.
               </p>
             </div>
 

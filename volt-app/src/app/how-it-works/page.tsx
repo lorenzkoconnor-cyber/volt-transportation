@@ -25,7 +25,7 @@ const stepsFor = (s: AppSettings) => [
     number: "02",
     icon: MessageSquare,
     title: "Receive Your Confirmation",
-    desc: "You'll receive a text (and an email, if you give one) with your booking summary, confirmation number, and pickup details immediately after booking.",
+    desc: "You'll receive an email with your booking summary, confirmation number, and pickup details immediately after booking — plus a text if you opt in to booking texts at checkout.",
   },
   {
     number: "03",

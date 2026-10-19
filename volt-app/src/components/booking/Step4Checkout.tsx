@@ -967,7 +967,7 @@ export default function Step4Checkout({
         msg && msg !== "PAID_NOT_BOOKED"
           ? msg
           : "Your payment went through, but confirming your booking is taking longer than usual. " +
-            "Please don't pay again — you'll get a text with your confirmation number shortly. " +
+            "Please don't pay again — you'll get your confirmation number by email shortly. " +
             `If you don't, contact us at ${settings.business.email} or ${settings.business.phone}.`,
       );
       setSubmitting(false);

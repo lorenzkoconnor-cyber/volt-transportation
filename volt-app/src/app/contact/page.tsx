@@ -162,6 +162,9 @@ export default function ContactPage() {
                           placeholder="(706) 555-0000"
                           className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/50 h-12 rounded-xl focus:border-[#FCC300]"
                         />
+                        <p className="text-[#A1A1AA] text-xs mt-1.5">
+                          Optional — we may call to answer your message. We never text marketing.
+                        </p>
                       </div>
                     </div>
                     <div>

@@ -98,7 +98,7 @@ const sectionsFor = (s: AppSettings): { id?: string; title: string; items: strin
     items: [
       "Volt will make every effort to operate on schedule in adverse weather conditions.",
       "In cases of severe weather, Volt reserves the right to delay, reschedule, or cancel a departure.",
-      "Affected passengers will be notified by SMS as soon as possible.",
+      "Affected passengers will be notified as soon as possible by email, by text (if they opted in to booking texts), or by phone.",
       "Full refunds will be issued for any Volt-initiated cancellation.",
     ],
   },

@@ -31,8 +31,8 @@ const included = [
   "Complimentary bottled water",
   "Luggage assistance (loading & unloading)",
   "Professional chauffeur-style driver",
-  "SMS booking confirmation",
-  "Trip reminder notification",
+  "Email booking confirmation (text too, if you opt in)",
+  "Trip reminder notifications",
 ];
 
 const policiesFor = (s: AppSettings) => [

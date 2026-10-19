@@ -162,6 +162,10 @@ function LoginForm() {
                   placeholder="(706) 555-0000"
                   className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
                 />
+                <p className="text-[#A1A1AA] text-xs mt-1.5">
+                  We only text this number if you opt in when you book. See our{" "}
+                  <a href="/privacy-policy" target="_blank" className="text-[#FCC300] hover:underline">Privacy Policy</a>.
+                </p>
               </div>
             )}
 
