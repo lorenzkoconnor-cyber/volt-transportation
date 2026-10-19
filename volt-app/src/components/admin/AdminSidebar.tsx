@@ -90,7 +90,7 @@ export default function AdminSidebar({
       />
 
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-[#0F0F0F] border-r border-white/6 flex flex-col z-50 transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 h-dvh w-64 bg-[#0F0F0F] border-r border-white/6 flex flex-col z-50 transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -159,7 +159,7 @@ export default function AdminSidebar({
       </nav>
 
       {/* Bottom: back to site + sign out */}
-      <div className="px-3 pb-4 space-y-1 border-t border-white/6 pt-3">
+      <div className="px-3 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-1 border-t border-white/6 pt-3">
         <Link
           href="/"
           onClick={onClose}

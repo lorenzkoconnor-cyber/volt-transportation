@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatDateLong } from "@/lib/format";
 import {
   ArrowLeft, Phone, CheckCircle2, XCircle, UserX, MapPin,
-  MessageSquare, Loader2, AlertCircle, Plane,
+  MessageSquare, Loader2, AlertCircle, Plane, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { canAccessRoute } from "@/lib/permissions";
+import { useDashboardRole } from "@/lib/useDashboardRole";
 
 type PassengerStatus = "boarded" | "no_show";
 
@@ -22,6 +24,7 @@ interface Passenger {
   isNoShow: boolean;
   notes: string;
   confirmation: string;
+  reservationId: string;
   isReturnLeg: boolean;   // riding this trip as the return half of a round trip
   flight: string;   // lead passenger only — "DL 1234 · lands 2:15 PM · Domestic – South"
 }
@@ -40,6 +43,9 @@ function ManifestContent() {
   const tripId = params.get("tripId");
   const supabase = createClient();
   const sb = supabase as any;
+  // Drivers can't open reservations, so their rows aren't links.
+  const canOpenReservation = canAccessRoute("/dashboard/reservations", useDashboardRole());
+  const router = useRouter();
 
   const [trip, setTrip] = useState<any>(null);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
@@ -64,7 +70,8 @@ function ManifestContent() {
         )
         // Outbound riders AND round-trip riders coming back on this trip.
         .or(`trip_id.eq.${tripId},return_trip_id.eq.${tripId}`, { referencedTable: "reservation" })
-        .neq("reservation.status", "cancelled"),
+        .neq("reservation.status", "cancelled")
+        .is("reservation.deleted_at", null),
       sb.from("reservation_flights")
         .select("reservation_id, direction, airline, flight_number, terminal, flight_time")
         .eq("trip_id", tripId),
@@ -91,6 +98,7 @@ function ManifestContent() {
           isReturnLeg,
           notes: p.is_primary ? (p.reservation?.special_notes ?? "") : "",
           confirmation: p.reservation?.confirmation_number ?? "",
+          reservationId: p.reservation?.id ?? "",
           flight: p.is_primary ? (flightByReservation.get(p.reservation?.id) ?? "") : "",
         };
       })
@@ -166,7 +174,7 @@ function ManifestContent() {
       <div className="flex flex-col items-center py-24 gap-3">
         <AlertCircle className="w-10 h-10 text-[#A1A1AA]" />
         <p className="text-white font-semibold">Trip not found</p>
-        <p className="text-[#A1A1AA] text-sm">Open a manifest from the Dispatch page.</p>
+        <p className="text-[#A1A1AA] text-sm">Open a boarding list from the Dispatch page.</p>
         <Link href="/dashboard/dispatch" className="text-[#FCC300] hover:underline text-sm">← Back to dispatch</Link>
       </div>
     );
@@ -182,7 +190,7 @@ function ManifestContent() {
           </button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">Passenger Manifest</h1>
+          <h1 className="text-2xl font-bold text-white">Boarding List</h1>
           <p className="text-[#A1A1AA] text-sm mt-0.5">
             {formatTime12h(trip.departure_time)} · {trip.route?.name} · {formatDateLong(trip.departure_date)} · {passengers.length} passenger{passengers.length !== 1 ? "s" : ""}
           </p>
@@ -219,7 +227,7 @@ function ManifestContent() {
       {/* Passenger list */}
       <div className="glass rounded-2xl overflow-hidden">
         <div className="px-5 py-3 border-b border-white/8 flex items-center justify-between">
-          <span className="text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">Passenger Manifest</span>
+          <span className="text-[#A1A1AA] text-xs font-medium uppercase tracking-wider">Riders</span>
           {passengers.length > 0 && (
             <Button variant="ghost" size="sm" disabled={busy} onClick={markAllBoarded}
               className="text-[#FCC300] hover:text-[#FFD54A] text-xs">
@@ -241,7 +249,21 @@ function ManifestContent() {
                   p.isBoarded ? "bg-green-500/4" : p.isNoShow ? "bg-red-500/4" : ""
                 }`}
               >
-                <div className="flex items-start gap-3 flex-1 min-w-0">
+                {/* Not an <a>: the row holds a tap-to-call link, and links can't nest. */}
+                <div
+                  {...(canOpenReservation && p.reservationId ? {
+                    role: "link",
+                    tabIndex: 0,
+                    title: "Open reservation",
+                    onClick: () => router.push(`/dashboard/reservations/${p.reservationId}`),
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter") router.push(`/dashboard/reservations/${p.reservationId}`);
+                    },
+                  } : {})}
+                  className={`flex items-start gap-3 flex-1 min-w-0 ${
+                    canOpenReservation && p.reservationId ? "cursor-pointer rounded-lg -m-2 p-2 hover:bg-white/5 transition-colors" : ""
+                  }`}
+                >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${
                     p.isBoarded ? "bg-green-500/20 text-green-400" :
                     p.isNoShow  ? "bg-red-500/20 text-red-400" :
@@ -261,10 +283,11 @@ function ManifestContent() {
                         <span className="text-[#A1A1AA] text-xs bg-white/10 px-1.5 py-0.5 rounded">Return</span>
                       )}
                       <span className="text-[#A1A1AA] text-xs font-mono">{p.confirmation}</span>
+                      {canOpenReservation && p.reservationId && <ChevronRight className="w-3.5 h-3.5 text-[#A1A1AA]" />}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-[#A1A1AA] text-xs flex-wrap">
                       {p.phone && (
-                        <a href={`tel:${p.phone}`} className="flex items-center gap-1 hover:text-white transition-colors">
+                        <a href={`tel:${p.phone}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-white transition-colors">
                           <Phone className="w-3 h-3" />{p.phone}
                         </a>
                       )}
@@ -348,7 +371,7 @@ function ManifestContent() {
 
 export default function ManifestPage() {
   return (
-    <Suspense fallback={<div className="text-[#A1A1AA] p-8">Loading manifest…</div>}>
+    <Suspense fallback={<div className="text-[#A1A1AA] p-8">Loading boarding list…</div>}>
       <ManifestContent />
     </Suspense>
   );

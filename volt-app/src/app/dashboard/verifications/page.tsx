@@ -94,6 +94,7 @@ export default function VerificationsPage() {
         .select("id, customer_id, confirmation_number, status, subtotal_cents, trip:trips!reservations_trip_id_fkey(departure_date), payments(status, amount_cents, authorization_expires_at, created_at)")
         .in("customer_id", ids)
         .eq("military_discount_pending", true)
+        .is("deleted_at", null)
         .order("created_at", { ascending: true });
       setHeld((bookings ?? []).map((b: any) => ({
         ...b,

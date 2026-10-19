@@ -74,6 +74,7 @@ function ReservationsContent() {
           "customer:customers(first_name, last_name, phone), " +
           `trip:trips!reservations_trip_id_fkey${todayOnly ? "!inner" : ""}(departure_date, departure_time, route:routes(name))`
         );
+      req = req.is("deleted_at", null);
       if (todayOnly) req = req.eq("trip.departure_date", localDateString());
       const { data } = await req
         .order("created_at", { ascending: false })

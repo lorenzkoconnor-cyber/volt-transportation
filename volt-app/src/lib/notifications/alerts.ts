@@ -238,10 +238,10 @@ export async function scanStaffTripReminders(sb: Db): Promise<number> {
         kind: "alert:trip_reminder",
         to: d.email,
         subject: `[Volt] Your trip: ${subject}`,
-        text: `Hi ${d.first_name}, you're driving ${route}, ${when}.\n${t.seats_booked} riders booked. Van: ${v.vehicle?.name ?? "—"}.\n\nManifest: ${appUrl()}${link}`,
+        text: `Hi ${d.first_name}, you're driving ${route}, ${when}.\n${t.seats_booked} riders booked. Van: ${v.vehicle?.name ?? "—"}.\n\nBoarding list: ${appUrl()}${link}`,
         html: emailHtml(`Your trip — ${when}`,
           `Hi ${d.first_name}, you're driving ${route}, ${when}.\n${t.seats_booked} riders booked. Van: ${v.vehicle?.name ?? "—"}.`,
-          { label: "Open manifest", url: `${appUrl()}${link}` }, business),
+          { label: "Open boarding list", url: `${appUrl()}${link}` }, business),
         dedupeKey: `alert:trip_reminder:trip:${t.id}:driver:${d.id}:email`,
       });
     }

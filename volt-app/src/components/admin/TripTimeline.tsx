@@ -84,7 +84,7 @@ export function TripLegTimeline({
           {label} · {t.kind === "to_atl" ? "Columbus → ATL (drop-off)" : "ATL → Columbus (pickup)"}
         </div>
         <Link href={`/dashboard/manifest?tripId=${trip.id}`} className="text-[#FCC300] hover:text-[#FFD54A] text-xs font-medium">
-          Manifest →
+          Boarding List →
         </Link>
       </div>
       <div className="text-white font-semibold">{formatDateLong(t.leaveVolt.date)}</div>

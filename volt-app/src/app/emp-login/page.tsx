@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import Logo from "@/components/ui/Logo";
+import { IDLE_SIGNOUT_FLAG, resetIdleClock } from "@/lib/idle-clock";
 
 export default function EmpLoginPage() {
   const { business } = useAppSettings();
@@ -20,6 +21,20 @@ export default function EmpLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [idleNotice, setIdleNotice] = useState(false);
+
+  // Explain an automatic sign-out (set by IdleSignOut), once.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        if (sessionStorage.getItem(IDLE_SIGNOUT_FLAG)) {
+          sessionStorage.removeItem(IDLE_SIGNOUT_FLAG);
+          setIdleNotice(true);
+        }
+      } catch { /* ignore */ }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   // Redirect once employee profile is confirmed loaded
   useEffect(() => {
@@ -40,6 +55,8 @@ export default function EmpLoginPage() {
       setLoading(false);
       return;
     }
+    resetIdleClock();
+    setIdleNotice(false);
 
     // AuthContext onAuthStateChange will update employee state — redirect handled by the
     // useEffect below once isEmployee becomes true
@@ -70,6 +87,12 @@ export default function EmpLoginPage() {
               Access the Volt operations dashboard.
             </p>
           </div>
+
+          {idleNotice && !error && (
+            <div className="mb-4 p-3 rounded-xl bg-[#FCC300]/10 border border-[#FCC300]/20">
+              <p className="text-[#FFE08A] text-sm">You were signed out after 15 minutes of inactivity. Sign in again to continue.</p>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20">

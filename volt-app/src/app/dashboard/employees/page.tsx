@@ -467,7 +467,7 @@ function EmployeesContent() {
                     <option value="owner">Owner — full access, including employee management</option>
                     <option value="manager">Manager — full access except owner settings</option>
                     <option value="office_staff">Office Staff — bookings, check-in, payments</option>
-                    <option value="driver">Driver — assigned trips and manifest only</option>
+                    <option value="driver">Driver — assigned trips and boarding list only</option>
                   </select>
                   {inviteRole === "owner" && (
                     <p className="text-yellow-400/90 text-xs mt-1.5">

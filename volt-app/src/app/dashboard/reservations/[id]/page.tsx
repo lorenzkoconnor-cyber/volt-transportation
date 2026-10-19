@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { canViewFinancials } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
 import { useAppSettings } from "@/context/SettingsContext";
 import { createClient } from "@/lib/supabase/client";
-import { formatCents } from "@/lib/format";
+import { formatCents, easternToday } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
@@ -16,7 +16,7 @@ import { TripLegTimeline } from "@/components/admin/TripTimeline";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, XCircle,
   Phone, Mail, Users, MapPin, CreditCard, Banknote, Gift, FileText,
-  Pencil, Printer, MessageSquare, History, Undo2, Lock,
+  Pencil, Printer, MessageSquare, History, Undo2, Lock, Trash2,
 } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -54,6 +54,8 @@ export default function ReservationDetailPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [notice, setNotice] = useState("");
   const [confirmRefund, setConfirmRefund] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const router = useRouter();
 
   const load = useCallback(async () => {
     const { data, error: err } = await sb
@@ -68,6 +70,7 @@ export default function ReservationDetailPage() {
         "reservation_flights(id, leg, direction, airline, flight_number, terminal, flight_date, flight_time)"
       )
       .eq("id", id)
+      .is("deleted_at", null)
       .single();
 
     if (err || !data) {
@@ -117,6 +120,20 @@ export default function ReservationDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to cancel.");
     }
+    setBusy(false);
+  };
+
+  const deleteReservation = async () => {
+    setBusy(true);
+    setError("");
+    const res = await fetch(`/api/reservations/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      router.replace("/dashboard/reservations");
+      return;
+    }
+    setError(data.error ?? "Couldn't delete the reservation.");
+    setConfirmDelete(false);
     setBusy(false);
   };
 
@@ -219,6 +236,10 @@ export default function ReservationDetailPage() {
   const access = editAccess(role, resv.status, trip, resv.is_round_trip ? resv.return_trip : null, undefined, settings);
   const { refundDueCents } = reservationBalance(resv.total_cents, resv.payments ?? []);
   const receiptHref = `/receipt/${resv.receipt_token}`;
+  // Upcoming reservations must be cancelled before they can be deleted.
+  const today = easternToday();
+  const isUpcoming = [trip?.departure_date, resv.return_trip?.departure_date].some((d) => d && d >= today);
+  const canDelete = (role === "owner" || role === "manager") && (resv.status === "cancelled" || !isUpcoming);
   const customerEmail = resv.customer?.email && !/@(walkin|guest)\.volt$/.test(resv.customer.email) ? resv.customer.email : "";
 
   return (
@@ -640,6 +661,43 @@ export default function ReservationDetailPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Delete — owners/managers, past or cancelled reservations only */}
+      {canDelete && (
+        <div className="glass rounded-2xl p-6 border-red-500/20">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="text-white font-semibold">Delete Reservation</div>
+              <div className="text-[#A1A1AA] text-sm mt-0.5">
+                Removes it from Reservations, the Boarding List, the Calendar and the customer&apos;s account.
+                Payment records are kept so Payments and Reports still add up.
+              </div>
+            </div>
+            {confirmDelete ? (
+              <div className="flex items-center gap-2">
+                <Button size="sm" disabled={busy} onClick={deleteReservation}
+                  className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold">
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Yes, Delete It"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}
+                  className="border-white/15 text-white hover:bg-white/5 text-xs">
+                  Keep It
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setConfirmDelete(true)}
+                className="border-red-500/40 text-red-400 hover:bg-red-500/10 text-xs">
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete Reservation
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+      {(role === "owner" || role === "manager") && !canDelete && resv.status !== "cancelled" && (
+        <p className="text-[#A1A1AA] text-xs px-1">
+          To delete this reservation, cancel it first. Past trips can be deleted without cancelling.
+        </p>
       )}
     </div>
   );

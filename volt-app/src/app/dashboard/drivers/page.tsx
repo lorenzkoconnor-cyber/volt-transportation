@@ -272,7 +272,7 @@ export default function DriversPage() {
               </div>
               <p className="text-[#A1A1AA] text-xs">
                 Drivers are assigned to a vehicle per trip in Dispatch, so no fixed vehicle or license
-                is stored here. To give this driver dashboard access (manifests, trips), also create an
+                is stored here. To give this driver dashboard access (boarding lists, trips), also create an
                 employee account for them on the Employees page with the &quot;Driver&quot; role.
               </p>
 

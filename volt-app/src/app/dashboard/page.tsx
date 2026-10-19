@@ -89,6 +89,7 @@ export default function AdminDashboardPage() {
             "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, route:routes(name)), " +
             "payments(status)"
           )
+          .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(5),
         sb.from("vehicles").select("id").eq("status", "active"),

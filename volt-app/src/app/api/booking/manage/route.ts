@@ -28,6 +28,7 @@ async function findReservation(supabase: any, confirmationNumber: string, phone:
       "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, route:routes(origin_label, destination_label))"
     )
     .eq("confirmation_number", confirmationNumber.trim().toUpperCase())
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!data) return null;

@@ -63,6 +63,7 @@ export default function PortalPage() {
           "route:routes(origin_label, destination_label))"
         )
         .eq("customer_id", customer.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       const today = localDateString();

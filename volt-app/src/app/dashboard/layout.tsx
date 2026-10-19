@@ -5,8 +5,9 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import IdleSignOut from "@/components/admin/IdleSignOut";
 import { canAccessRoute } from "@/lib/permissions";
-import { Loader2, AlertTriangle, Menu, ShieldAlert } from "lucide-react";
+import { Loader2, AlertTriangle, Menu, ShieldAlert, LogOut } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 
 // Dev preview mode — lets you see the dashboard without Supabase connected.
@@ -15,7 +16,7 @@ import Logo from "@/components/ui/Logo";
 const DEV_PREVIEW_ENABLED = process.env.NODE_ENV === "development";
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
-  const { isEmployee, employee, loading } = useAuth();
+  const { isEmployee, employee, loading, signOut } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const pathname = usePathname();
@@ -57,6 +58,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[#0A0A0A]">
+      {!isPreview && <IdleSignOut />}
       <AdminSidebar
         previewMode={isPreview}
         mobileOpen={sidebarOpen}
@@ -76,6 +78,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             <Logo className="h-7 w-auto" />
             <span className="flex flex-col text-[#FCC300] text-xs leading-tight font-semibold uppercase tracking-[0.2em] border-l border-white/10 pl-2.5"><span>Team</span><span>Portal</span></span>
           </div>
+          {/* Always-visible sign out on phones (the sidebar's can sit below the browser bar) */}
+          {!isPreview && (
+            <button
+              onClick={async () => { await signOut(); router.replace("/emp-login"); }}
+              className="ml-auto flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm text-[#A1A1AA] hover:text-red-400 hover:bg-red-500/8 transition-colors"
+            >
+              <LogOut className="w-4 h-4" /> Sign Out
+            </button>
+          )}
         </div>
 
         {/* Dev preview banner */}

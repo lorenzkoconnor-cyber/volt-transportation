@@ -133,7 +133,7 @@ export default function Step3Passengers({
         <div className="glass rounded-2xl p-6 space-y-3">
           <h3 className="text-white font-semibold mb-1">
             Additional Passengers
-            <span className="text-[#A1A1AA] text-xs font-normal ml-2">(optional — names for manifest)</span>
+            <span className="text-[#A1A1AA] text-xs font-normal ml-2">(optional — names for the boarding list)</span>
           </h3>
           {additional.map((name, i) => (
             <div key={i} className="flex items-center gap-2">

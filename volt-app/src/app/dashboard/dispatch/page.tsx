@@ -317,7 +317,7 @@ export default function DispatchPage() {
                     {dep.seats_booked > 0 && (
                       <Link href={`/dashboard/manifest?tripId=${dep.id}`}>
                         <span className="flex items-center gap-1 text-[#FCC300] hover:text-[#FFD54A] text-xs font-medium transition-colors cursor-pointer">
-                          Manifest <ChevronRight className="w-3.5 h-3.5" />
+                          Boarding List <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </Link>
                     )}

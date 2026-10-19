@@ -420,6 +420,7 @@ function TripRiders({ item, canOpenBookings }: { item: TripItem; canOpenBookings
       )
       .or(`trip_id.eq.${item.id},return_trip_id.eq.${item.id}`)
       .neq("status", "cancelled")
+      .is("deleted_at", null)
       .then(({ data, error }: any) => {
         if (cancelled) return;
         if (error) setErr(error.message);
@@ -480,7 +481,7 @@ function TripRiders({ item, canOpenBookings }: { item: TripItem; canOpenBookings
         {riders.length === 0 && <li className="text-[#A1A1AA] text-sm">No active bookings on this trip.</li>}
       </ul>
       <Link href={`/dashboard/manifest?tripId=${item.id}`} className="inline-block text-[#FCC300] hover:text-[#FFD54A] text-sm font-medium">
-        Open manifest →
+        Open boarding list →
       </Link>
     </div>
   );

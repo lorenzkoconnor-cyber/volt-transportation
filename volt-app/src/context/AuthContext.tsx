@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { clearIdleClock } from "@/lib/idle-clock";
 import type { EmployeeRole } from "@/lib/supabase/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -205,6 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    clearIdleClock();
     await supabase.auth.signOut();
     setEmployee(null);
     setCustomer(null);

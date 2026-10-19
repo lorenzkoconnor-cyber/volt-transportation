@@ -6,9 +6,10 @@
 //   • Outbox: every text and email the system has sent or is retrying — the
 //     message queue (src/lib/notifications/queue.ts).
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Inbox, Loader2, Mail, MessageSquare, Phone, RefreshCw } from "lucide-react";
+import { useDashboardRole } from "@/lib/useDashboardRole";
+import { Inbox, Loader2, Mail, MessageSquare, Phone, RefreshCw, Trash2 } from "lucide-react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -27,8 +28,38 @@ const STATUS_STYLE: Record<string, string> = {
 
 const AUDIENCE_LABEL: Record<string, string> = { customer: "Customer", staff: "Staff alert", support: "Support" };
 
+// Two taps to delete: the first arms the button, the second deletes.
+function DeleteButton({ armed, busy, onArm, onDelete }: { armed: boolean; busy: boolean; onArm: () => void; onDelete: () => void }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); if (armed) onDelete(); else onArm(); }}
+      disabled={busy}
+      className={`inline-flex items-center gap-1 text-xs rounded-lg px-2 py-1 transition-colors ${
+        armed ? "bg-red-500 text-white hover:bg-red-600" : "text-[#A1A1AA] hover:text-red-400 hover:bg-red-500/10"
+      }`}
+    >
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+      {armed ? "Tap again to delete" : "Delete"}
+    </button>
+  );
+}
+
 export default function MessagesPage() {
+  // useSearchParams (via useDashboardRole) needs a Suspense boundary.
+  return (
+    <Suspense fallback={null}>
+      <MessagesContent />
+    </Suspense>
+  );
+}
+
+function MessagesContent() {
   const sb = createClient() as any;
+  const role = useDashboardRole();
+  const canDelete = role === "owner" || role === "manager";
+  const [armed, setArmed] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("contact");
   const [loading, setLoading] = useState(true);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -54,6 +85,22 @@ export default function MessagesPage() {
     const t = setTimeout(load, 0); // async, so no setState runs synchronously in the effect
     return () => clearTimeout(t);
   }, [load]);
+
+  const remove = async (table: "contact_messages" | "notifications", id: string) => {
+    setDeleting(id);
+    setError("");
+    // RLS only lets owners/managers delete; a blocked delete returns no rows.
+    const { data, error: err } = await sb.from(table).delete().eq("id", id).select("id");
+    if (err || !data?.length) {
+      setError(err?.message ?? "Couldn't delete that message.");
+    } else if (table === "contact_messages") {
+      setContacts((prev) => prev.filter((m) => m.id !== id));
+    } else {
+      setOutbox((prev) => prev.filter((n) => n.id !== id));
+    }
+    setArmed(null);
+    setDeleting(null);
+  };
 
   const failed = outbox.filter((n) => n.status === "failed").length;
   const retrying = outbox.filter((n) => n.status === "pending" && n.attempts > 0).length;
@@ -88,6 +135,8 @@ export default function MessagesPage() {
         ))}
       </div>
 
+      {error && <p className="text-sm text-red-400 bg-red-500/10 rounded-xl px-4 py-3">{error}</p>}
+
       {loading ? (
         <div className="glass rounded-2xl p-12 flex justify-center"><Loader2 className="w-6 h-6 text-[#FCC300] animate-spin" /></div>
       ) : tab === "contact" ? (
@@ -100,7 +149,7 @@ export default function MessagesPage() {
                   <div className="text-white font-medium">{m.subject}</div>
                   <div className="text-[#A1A1AA] text-xs mt-0.5">{m.name} · {when(m.created_at)} ET</div>
                 </div>
-                <div className="flex gap-3 text-xs">
+                <div className="flex items-center gap-3 text-xs flex-wrap">
                   <a href={`mailto:${m.email}?subject=${encodeURIComponent(`Re: ${m.subject}`)}`} className="inline-flex items-center gap-1 text-[#FCC300] hover:underline">
                     <Mail className="w-3.5 h-3.5" /> {m.email}
                   </a>
@@ -108,6 +157,10 @@ export default function MessagesPage() {
                     <a href={`tel:${m.phone}`} className="inline-flex items-center gap-1 text-[#FCC300] hover:underline">
                       <Phone className="w-3.5 h-3.5" /> {m.phone}
                     </a>
+                  )}
+                  {canDelete && (
+                    <DeleteButton armed={armed === m.id} busy={deleting === m.id}
+                      onArm={() => setArmed(m.id)} onDelete={() => remove("contact_messages", m.id)} />
                   )}
                 </div>
               </div>
@@ -148,6 +201,12 @@ export default function MessagesPage() {
                     <div className="px-4 pb-4 text-xs space-y-2">
                       {n.last_error && <p className="text-red-400">Error: {n.last_error} (tries: {n.attempts})</p>}
                       <pre className="whitespace-pre-wrap break-words text-[#D4D4D8] font-sans bg-white/5 rounded-lg p-3">{n.message}</pre>
+                      {canDelete && (
+                        <div className="flex justify-end">
+                          <DeleteButton armed={armed === n.id} busy={deleting === n.id}
+                            onArm={() => setArmed(n.id)} onDelete={() => remove("notifications", n.id)} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

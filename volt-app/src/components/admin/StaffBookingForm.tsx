@@ -469,7 +469,7 @@ export default function StaffBookingForm({
 
           {seatCount > 1 && (
             <div className="space-y-2 pt-2">
-              <Label className="text-[#A1A1AA] text-xs block">Other passenger names (for the manifest)</Label>
+              <Label className="text-[#A1A1AA] text-xs block">Other passenger names (for the boarding list)</Label>
               {additional.map((name, i) => (
                 <div key={i} className="flex gap-2">
                   <Input value={name} placeholder={`Passenger ${i + 2} name`} className={inputCls}
