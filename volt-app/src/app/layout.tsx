@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { getAppSettings } from "@/lib/settings-server";
 import CursorEffect from "@/components/ui/CursorEffect";
+import GoogleTag from "@/components/analytics/GoogleTag";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -73,6 +74,7 @@ export default async function RootLayout({
           }}
         />
         <CursorEffect />
+        <GoogleTag />
         <SettingsProvider value={settings}>
           <AuthProvider>{children}</AuthProvider>
         </SettingsProvider>

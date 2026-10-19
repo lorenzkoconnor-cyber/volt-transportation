@@ -34,6 +34,7 @@ import {
 } from "@/lib/military";
 import { getStripeClient } from "@/lib/stripe/client";
 import { codeDiscountCents, codeLabel, type DiscountCodeTerms } from "@/lib/discount-codes";
+import { trackBeginCheckout, trackPurchase, type TripItem } from "@/lib/analytics";
 import { useAuth } from "@/context/AuthContext";
 import { useAppSettings } from "@/context/SettingsContext";
 import Link from "next/link";
@@ -812,6 +813,20 @@ export default function Step4Checkout({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, discountActive, appliedCode, settings]);
   const free = !!appliedCode && breakdown.totalCents === 0;
+
+  // Google Analytics: route + fare only, never rider details.
+  const tripItem: TripItem = {
+    route: `${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short}`,
+    roundTrip: !!returnSlot,
+    riders: search.adults + search.children,
+  };
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current) return;
+    checkoutTracked.current = true;
+    trackBeginCheckout(tripItem, breakdown.total);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const discountLabel = appliedCode
     ? `Discount Code ${appliedCode.code} (${codeLabel(appliedCode)})`
     : `Military Discount (−${MILITARY_DISCOUNT_PERCENT}%)`;
@@ -932,6 +947,7 @@ export default function Step4Checkout({
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           intentRef.current = null;
+          trackPurchase(data.confirmationNumber, tripItem, breakdown.total);
           onNext(data.confirmationNumber, {
             ...(data.military ?? { applied: discountActive, pending: hold }),
             code: appliedCode ? { ...appliedCode, discountCents: breakdown.discountCents } : null,

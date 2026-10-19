@@ -44,7 +44,7 @@ const sectionsFor = (b: { phone: string; email: string }) => [
   },
   {
     title: "Cookies",
-    body: `Our website uses minimal cookies necessary for the site to function (such as session management). We do not use third-party tracking or advertising cookies.`,
+    body: `Our website uses cookies necessary for the site to function (such as session management). We also use Google Analytics, which sets cookies to help us understand how visitors find and use our website (for example, which pages are viewed and whether a booking was completed). Google Analytics does not receive your name, email, phone number, payment details or flight information. You can opt out with the Google Analytics Opt-out Browser Add-on (tools.google.com/dlpage/gaoptout) or by blocking cookies in your browser. Google's use of this data is described at policies.google.com/technologies/partner-sites.`,
   },
   {
     title: "Changes to This Policy",
@@ -66,7 +66,7 @@ export default async function PrivacyPolicyPage() {
           <div className="max-w-3xl mx-auto">
             <div className="mb-10">
               <h1 className="text-4xl font-bold text-white mb-3">Privacy Policy</h1>
-              <p className="text-[#A1A1AA] text-sm">Effective Date: October 16, 2026</p>
+              <p className="text-[#A1A1AA] text-sm">Effective Date: October 19, 2026</p>
             </div>
 
             <div className="glass rounded-2xl divide-y divide-white/8 overflow-hidden">
