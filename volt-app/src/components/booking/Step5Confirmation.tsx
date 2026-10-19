@@ -142,7 +142,7 @@ export default function Step5Confirmation({
         <div>
           <h2 className="text-white text-2xl font-bold mb-1">You&apos;re booked!</h2>
           <p className="text-[#A1A1AA]">
-            A confirmation has been sent to {primary.email} and via SMS to {primary.phone}.
+            A confirmation has been sent to {primary.email}{primary.smsConsent ? <> and by text to {primary.phone}</> : null}.
           </p>
         </div>
       </div>
@@ -223,10 +223,12 @@ export default function Step5Confirmation({
         <h3 className="text-white font-semibold mb-3">What&apos;s Next</h3>
         <ul className="space-y-2">
           {[
-            "You'll receive a text (and an email, if you gave one) confirming your pickup details",
+            primary.smsConsent
+              ? "You'll receive a text (and an email, if you gave one) confirming your pickup details"
+              : "You'll receive an email confirming your pickup details",
             `Arrive at your pickup location ${settings.arriveEarlyMinutes} minutes before departure`,
             "Your driver will assist with luggage",
-            reminderLine(settings.reminders),
+            primary.smsConsent ? reminderLine(settings.reminders) : "",
           ].filter(Boolean).map((item, i) => (
             <li key={i} className="flex items-start gap-2.5 text-sm text-[#A1A1AA]">
               <span className="w-5 h-5 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-[#FCC300] text-xs flex-shrink-0 mt-0.5">

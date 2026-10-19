@@ -154,6 +154,7 @@ export interface Passenger {
   name: string;
   phone: string;
   email: string;
+  smsConsent?: boolean;   // optional opt-in to booking texts (never required)
 }
 
 export interface BookingState {

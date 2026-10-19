@@ -124,8 +124,31 @@ export default function Step3Passengers({
             placeholder="you@email.com"
             className="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-11 rounded-xl focus:border-[#FCC300]"
           />
-          <p className="text-[#A1A1AA] text-xs mt-1.5">Confirmation sent here and by SMS</p>
+          <p className="text-[#A1A1AA] text-xs mt-1.5">Your confirmation and receipt are emailed here</p>
         </div>
+
+        {/* Text-message opt-in — optional; booking works without it (10DLC rules). */}
+        <label htmlFor="sms-consent" className="flex items-start gap-3 rounded-xl bg-white/3 border border-white/10 p-4 cursor-pointer">
+          <input
+            id="sms-consent"
+            type="checkbox"
+            checked={!!primary.smsConsent}
+            onChange={(e) => setPrimary((prev) => ({ ...prev, smsConsent: e.target.checked }))}
+            className="mt-0.5 accent-[#FCC300] w-4 h-4 flex-shrink-0"
+          />
+          <span>
+            <span className="text-white text-sm font-medium block">Text me about this booking (optional)</span>
+            <span className="text-[#A1A1AA] text-xs leading-relaxed block mt-1">
+              By checking this box, I agree to receive text messages from Volt Transportation at the phone number
+              above about my reservation, including booking confirmations, trip reminders, and pickup or schedule
+              updates. Consent is not a condition of purchase. Message frequency varies. Message and data rates may
+              apply. Reply STOP to opt out at any time or HELP for help. See our{" "}
+              <a href="/privacy-policy" target="_blank" className="text-[#FCC300] hover:underline">Privacy Policy</a>
+              {" "}and{" "}
+              <a href="/terms#sms" target="_blank" className="text-[#FCC300] hover:underline">Terms &amp; Conditions</a>.
+            </span>
+          </span>
+        </label>
       </div>
 
       {/* Additional passengers */}

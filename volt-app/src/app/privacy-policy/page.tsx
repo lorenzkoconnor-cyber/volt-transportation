@@ -16,15 +16,19 @@ const sectionsFor = (b: { phone: string; email: string }) => [
   },
   {
     title: "How We Use Your Information",
-    body: `We use your information to process bookings and send booking confirmations, send trip reminders and updates via SMS, manage your account and reservations, respond to customer service requests, and improve our service and website. We do not use your information for advertising purposes or sell it to third parties.`,
+    body: `We use your information to process bookings and send booking confirmations, send trip reminders and updates by text message (only if you opt in), manage your account and reservations, respond to customer service requests, and improve our service and website. We do not use your information for advertising purposes or sell it to third parties.`,
   },
   {
     title: "Payment Information",
     body: `All payment processing is handled by Stripe, a PCI-compliant payment processor. Volt Transportation does not store your full credit card number, CVV, or other sensitive payment details on our servers. Stripe's privacy policy governs how your payment data is handled.`,
   },
   {
-    title: "SMS Communications",
-    body: `By providing your phone number at booking, you consent to receive SMS messages from Volt Transportation including booking confirmations and trip reminders. Standard messaging rates may apply. You may opt out of SMS communications at any time by replying STOP to any message.`,
+    title: "SMS / Text Messages",
+    body: `Volt Transportation only texts you if you opt in by checking the optional text-message box when you book online, or by telling our staff yes when booking by phone or in person. Texting is never required to book. If you opt in, we send messages about your reservation only: booking confirmations, trip reminders, pickup and schedule updates, changes and cancellations. Message frequency varies by booking. Message and data rates may apply. Reply STOP to any message to opt out, or HELP for help; you can also contact us at ${b.email} or ${b.phone}. We do not send marketing texts.`,
+  },
+  {
+    title: "Mobile Information Is Not Shared",
+    body: `No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Text messaging originator opt-in data and consent will not be shared with any third parties, except the text-messaging provider that delivers our messages on our behalf (RingCentral). All other categories of information described in this policy exclude text messaging originator opt-in data and consent.`,
   },
   {
     title: "Email Communications",
@@ -32,7 +36,7 @@ const sectionsFor = (b: { phone: string; email: string }) => [
   },
   {
     title: "Data Sharing",
-    body: `We do not sell your personal information. We may share limited information with trusted third-party service providers who help us operate our business (such as Stripe for payments, RingCentral for text messages, and Hostinger for email). These providers are contractually prohibited from using your data for any other purpose.`,
+    body: `We do not sell your personal information. We may share limited information with trusted third-party service providers who help us operate our business (such as Stripe for payments, RingCentral for text messages, and Hostinger for email). These providers are contractually prohibited from using your data for any other purpose. Phone numbers and text-message consent are never shared for marketing — see "Mobile Information Is Not Shared" above.`,
   },
   {
     title: "Data Retention",

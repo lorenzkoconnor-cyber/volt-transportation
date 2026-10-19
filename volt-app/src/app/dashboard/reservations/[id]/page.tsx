@@ -374,17 +374,24 @@ export default function ReservationDetailPage() {
             className="border-white/15 text-white hover:bg-white/5 text-xs">
             <Mail className="w-3.5 h-3.5 mr-1" /> Email Confirmation
           </Button>
-          <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone} onClick={() => sendText("receipt")}
+          <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone || !resv.sms_consent} onClick={() => sendText("receipt")}
+            title={resv.sms_consent ? undefined : "This customer didn't opt in to texts"}
             className="border-white/15 text-white hover:bg-white/5 text-xs">
             <MessageSquare className="w-3.5 h-3.5 mr-1" /> Text Receipt
           </Button>
-          <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone} onClick={() => sendText("confirmation")}
+          <Button size="sm" variant="outline" disabled={busy || !resv.customer?.phone || !resv.sms_consent} onClick={() => sendText("confirmation")}
+            title={resv.sms_consent ? undefined : "This customer didn't opt in to texts"}
             className="border-white/15 text-white hover:bg-white/5 text-xs">
             <MessageSquare className="w-3.5 h-3.5 mr-1" /> Text Confirmation
           </Button>
         </div>
         <p className="text-[#A1A1AA] text-xs mt-2">
           The receipt lists the trip, passengers, charges and how they paid — use it alongside the Square slip.
+        </p>
+        <p className="text-[#A1A1AA] text-xs mt-1">
+          Texts: {resv.sms_consent
+            ? `opted in${resv.sms_consent_source === "verbal" ? " (told staff yes)" : " (online checkout)"}`
+            : "not opted in — this customer only gets emails."}
         </p>
       </div>
 

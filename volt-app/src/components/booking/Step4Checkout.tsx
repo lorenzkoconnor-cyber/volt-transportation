@@ -479,7 +479,9 @@ function TermsLine({ checked, onChange }: { checked: boolean; onChange: (v: bool
         I have read and agree to Volt Transportation&apos;s{" "}
         <a href="/terms" target="_blank" className="text-[#FCC300] hover:underline">Terms &amp; Conditions</a>
         {" "}and{" "}
-        <a href="/safety-rules" target="_blank" className="text-[#FCC300] hover:underline">Safety &amp; Rules</a>.
+        <a href="/safety-rules" target="_blank" className="text-[#FCC300] hover:underline">Safety &amp; Rules</a>, and
+        acknowledge the{" "}
+        <a href="/privacy-policy" target="_blank" className="text-[#FCC300] hover:underline">Privacy Policy</a>.
       </span>
     </label>
   );

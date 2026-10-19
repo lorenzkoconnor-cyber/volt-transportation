@@ -60,6 +60,7 @@ export interface CheckoutPayload {
   additionalPassengers: string[];
   specialNotes: string;
   flights: unknown[];
+  smsConsent: boolean;   // optional "text me about this booking" opt-in
 }
 
 const count = (v: unknown, min: number) => Math.max(min, Math.min(20, Math.floor(Number(v) || 0)));
@@ -83,6 +84,7 @@ export function normalizePayload(body: Record<string, unknown>): CheckoutPayload
       .slice(0, 20),
     specialNotes: text(body.specialNotes, 1000),
     flights: Array.isArray(body.flights) ? body.flights.slice(0, 2) : [],
+    smsConsent: body.smsConsent === true || p.smsConsent === true,
   };
   if (!payload.tripId || !payload.primaryPassenger.name || !payload.primaryPassenger.phone) return null;
   return payload;
@@ -479,6 +481,9 @@ export async function finalizeCheckout(
         // Checkout can't be paid without ticking the Terms box.
         terms_acceptance: "online",
         terms_accepted_at: checkout.created_at ?? new Date().toISOString(),
+        sms_consent: !!payload.smsConsent,
+        sms_consent_at: payload.smsConsent ? (checkout.created_at ?? new Date().toISOString()) : null,
+        sms_consent_source: payload.smsConsent ? "online" : null,
       })
       .select()
       .single();

@@ -117,6 +117,7 @@ export default function StaffBookingForm({
   const [discountTab, setDiscountTab] = useState<StaffDiscount["kind"]>(initial.discount.kind);
 
   const [termsAgreed, setTermsAgreed] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
   const [payMethod, setPayMethod] = useState<PayMethod>("cash");
   const [payNow, setPayNow] = useState(true);
   const [splitCash, setSplitCash] = useState("");
@@ -188,6 +189,7 @@ export default function StaffBookingForm({
     },
     discount: activeDiscount,
     termsAgreed,
+    smsConsent,
     payment: { method: payMethod, collectNow: payNow, splitCashCents },
   });
 
@@ -588,6 +590,22 @@ export default function StaffBookingForm({
               The customer agreed to Volt&apos;s{" "}
               <a href="/terms" target="_blank" className="text-[#FCC300] hover:underline">Terms &amp; Conditions</a>{" "}
               (verbally, in person or over the phone).
+            </span>
+          </label>
+        )}
+
+        {/* Text opt-in (new bookings) — optional, never required to book */}
+        {!isEdit && (
+          <label className="glass rounded-2xl p-5 flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={smsConsent} onChange={(e) => setSmsConsent(e.target.checked)}
+              className="w-4 h-4 mt-0.5 accent-[#FCC300] flex-shrink-0" />
+            <span className="text-white text-sm">
+              The customer said <strong>yes</strong> when asked: &ldquo;May we text you about this booking?&rdquo;
+              <span className="text-[#A1A1AA] text-xs block mt-1">
+                Optional. Confirmations, changes and trip reminders. Message frequency varies; msg &amp; data rates
+                may apply; reply STOP to opt out, HELP for help. Leave unticked if they said no or weren&apos;t asked —
+                they&apos;ll get emails only.
+              </span>
             </span>
           </label>
         )}

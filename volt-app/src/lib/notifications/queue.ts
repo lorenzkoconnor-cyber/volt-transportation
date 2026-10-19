@@ -72,6 +72,16 @@ function providerReady(channel: Channel): boolean {
   return channel === "sms" ? isSmsConfigured() : isEmailConfigured();
 }
 
+export const NO_SMS_CONSENT = "This customer hasn't agreed to receive text messages.";
+
+// Customer texts about a reservation need the rider's opt-in
+// (reservations.sms_consent, migration 028) — a 10DLC carrier requirement.
+async function mayText(sb: Db, item: QueueItem): Promise<boolean> {
+  if (item.channel !== "sms" || (item.audience ?? "customer") !== "customer" || !item.reservationId) return true;
+  const { data } = await sb.from("reservations").select("sms_consent").eq("id", item.reservationId).maybeSingle();
+  return !!data?.sms_consent;
+}
+
 /** Queue messages and try to send each one now. Never throws. */
 export async function enqueue(sb: Db, items: QueueItem[]): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
@@ -81,6 +91,10 @@ export async function enqueue(sb: Db, items: QueueItem[]): Promise<DeliveryResul
       continue;
     }
     try {
+      if (!(await mayText(sb, item))) {
+        results.push({ id: null, sent: false, simulated: false, error: NO_SMS_CONSENT });
+        continue;
+      }
       const { data: row, error } = await sb
         .from("notifications")
         .insert({

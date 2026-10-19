@@ -361,6 +361,9 @@ export async function createStaffReservation(
         pricing_snapshot: snapshotFrom(settings),
         terms_acceptance: "verbal",
         terms_accepted_at: new Date().toISOString(),
+        sms_consent: !!payload.smsConsent,
+        sms_consent_at: payload.smsConsent ? new Date().toISOString() : null,
+        sms_consent_source: payload.smsConsent ? "verbal" : null,
       })
       .select("id")
       .single();
@@ -392,6 +395,7 @@ export async function createStaffReservation(
       summary: [
         `Booked by ${employee.name}`,
         "Customer agreed to the Terms & Conditions verbally",
+        payload.smsConsent ? "Customer agreed to receive booking texts" : "Customer did not opt in to texts",
         ...(discount.isMilitary ? ["Military Discount — ID checked in person"] : []),
         ...(discount.codeRow ? [`Discount code ${formatCode(discount.codeRow.code)}`] : []),
       ],
@@ -800,6 +804,7 @@ function serializeInput(input: StaffInput) {
     tripId: p.tripId, returnTripId: p.returnTripId, isRoundTrip: p.isRoundTrip,
     adults: p.adults, children: p.children, pets: p.pets, extraBags: p.extraBags,
     additionalPassengers: p.additionalPassengers, specialNotes: p.specialNotes, flights: p.flights,
+    smsConsent: p.smsConsent,
     customer: input.customer, discount: input.discount, termsAgreed: input.termsAgreed,
   };
 }

@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
     const info = await loadMessageInfo(sb, resv.id);
     if (!info) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
     const msg = await confirmationMessage(sb, info);
-    const byText = !!info.phone && (isSmsConfigured() || !isDeliverableEmail(info.email));
+    // Texts only go to riders who opted in at checkout; everyone else gets email.
+    const byText = !!info.phone && info.smsConsent && (isSmsConfigured() || !isDeliverableEmail(info.email));
     const result = byText
       ? await sendReservationText(sb, info, msg.sms, "confirmation_resend")
       : await sendReservationEmail(sb, info, { subject: msg.emailSubject, body: msg.emailBody }, "confirmation_resend");

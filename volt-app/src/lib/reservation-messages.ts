@@ -6,7 +6,7 @@
 // and retries each one.
 
 import { emailHtml, isDeliverableEmail } from "@/lib/notifications/email";
-import { enqueue } from "@/lib/notifications/queue";
+import { enqueue, NO_SMS_CONSENT } from "@/lib/notifications/queue";
 import { easternToday, formatDateLong, formatDateShort, formatTime12h } from "@/lib/format";
 import { loadAppSettings } from "@/lib/settings-server";
 import {
@@ -33,6 +33,7 @@ export interface MessageInfo {
   phone: string;
   email: string;
   firstName: string;
+  smsConsent: boolean;   // rider opted in to texts (migration 028)
   outbound: { date: string; time: string; from: string; to: string } | null;
   ret: { date: string; time: string } | null;
 }
@@ -41,7 +42,7 @@ export async function loadMessageInfo(sb: Db, reservationId: string): Promise<Me
   const { data: r } = await sb
     .from("reservations")
     .select(
-      "id, confirmation_number, receipt_token, is_round_trip, " +
+      "id, confirmation_number, receipt_token, is_round_trip, sms_consent, " +
       "customer:customers(first_name, phone, email), " +
       "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, route:routes(origin_label, destination_label)), " +
       "return_trip:trips!reservations_return_trip_id_fkey(departure_date, departure_time)",
@@ -56,6 +57,7 @@ export async function loadMessageInfo(sb: Db, reservationId: string): Promise<Me
     phone: r.customer?.phone ?? "",
     email: r.customer?.email ?? "",
     firstName: r.customer?.first_name ?? "",
+    smsConsent: !!r.sms_consent,
     outbound: r.trip
       ? {
           date: r.trip.departure_date,
@@ -190,6 +192,7 @@ export async function sendReservationText(
   kind: string | null = null,
 ): Promise<TextResult> {
   if (!info.phone) return { sent: false, simulated: false, error: "No phone number on this reservation." };
+  if (!info.smsConsent) return { sent: false, simulated: false, error: NO_SMS_CONSENT };
   const [r] = await enqueue(sb, [{ channel: "sms", to: info.phone, text: message, reservationId: info.id, kind }]);
   return { sent: r.sent, simulated: r.simulated, error: r.error };
 }

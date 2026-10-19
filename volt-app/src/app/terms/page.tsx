@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 };
 
 // §17 quotes the live Military Discount amount from Dashboard → Settings.
-const sectionsFor = (OFF: string) => [
+// §18 (id "sms") is linked from the checkout's text opt-in box.
+const sectionsFor = (OFF: string, b: { phone: string; email: string }): { title: string; body: string; id?: string }[] => [
   {
     title: "1. Booking Agreement",
     body: `By completing a booking with Volt Transportation, you agree to these Terms & Conditions in full. A reservation is confirmed upon receipt of full payment via our secure checkout. Volt Transportation reserves the right to refuse service to anyone who violates our Safety & Rules policy.`,
@@ -80,10 +81,16 @@ const sectionsFor = (OFF: string) => [
     title: "17. Military Discount",
     body: `Active-duty and retired members of the U.S. Armed Forces are eligible for a flat ${OFF} discount on each booking after verifying eligibility with a valid military ID. The discount applies once per reservation regardless of the fare, the number of passengers, or whether the booking is one way or round trip, and never exceeds the fare. Former service members who did not retire and first responders are not eligible. Verification is reviewed by Volt Transportation staff; for bookings made while a verification is under review, your card is authorized (placed on hold) for the regular fare rather than charged. If eligibility is approved, the fare less the ${OFF} discount is charged and the remainder of the hold is released. If eligibility is denied or cannot be verified, the regular fare is charged; if eligibility is approved later, the ${OFF} discount is refunded to the original payment method. Volt Transportation may deny the discount if eligibility cannot be verified.`,
   },
+  {
+    id: "sms",
+    title: "18. Text Message (SMS) Terms",
+    body: `Program: Volt Transportation booking notifications. If you opt in — by checking the optional text-message box at checkout, or by telling our staff yes when booking by phone or in person — Volt Transportation will text the mobile number you provide about your reservation: booking confirmations, trip reminders, pickup and schedule updates, changes, cancellations and receipts. We do not send marketing texts. Opting in is not a condition of purchase; you can book without it and still receive email confirmations. Message frequency varies by booking. Message and data rates may apply. To stop receiving texts, reply STOP to any message; you will receive one final message confirming you have been unsubscribed. Reply HELP for help, or contact us at ${b.email} or ${b.phone}. Carriers are not liable for delayed or undelivered messages. Your mobile information and text-message consent are never sold or shared with third parties for marketing; see our Privacy Policy.`,
+  },
 ];
 
 export default async function TermsPage() {
-  const sections = sectionsFor(dollars((await getAppSettings()).military.amount));
+  const settings = await getAppSettings();
+  const sections = sectionsFor(dollars(settings.military.amount), settings.business);
   return (
     <>
       <Navbar />
@@ -97,7 +104,7 @@ export default async function TermsPage() {
 
             <div className="glass rounded-2xl divide-y divide-white/8 overflow-hidden">
               {sections.map((section) => (
-                <div key={section.title} className="p-6 sm:p-8">
+                <div key={section.title} id={section.id} className="p-6 sm:p-8 scroll-mt-24">
                   <h2 className="text-white font-semibold text-lg mb-3">{section.title}</h2>
                   <p className="text-[#A1A1AA] text-sm leading-relaxed">{section.body}</p>
                 </div>
