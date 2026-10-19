@@ -12,6 +12,8 @@ export const ALL_ROLES: EmployeeRole[] = ["owner", "manager", "office_staff", "d
 // first match wins (see canAccessRoute). Every dashboard path should be covered
 // by an entry here; anything unmatched is denied by default.
 const ROUTE_ACCESS: { prefix: string; roles: EmployeeRole[] }[] = [
+  // Everyone sees the calendar; only owners/managers add or change events (RLS on calendar_events).
+  { prefix: "/dashboard/calendar",     roles: ["owner", "manager", "office_staff", "driver"] },
   { prefix: "/dashboard/reservations", roles: ["owner", "manager", "office_staff"] },
   { prefix: "/dashboard/dispatch",     roles: ["owner", "manager", "office_staff", "driver"] },
   { prefix: "/dashboard/manifest",     roles: ["owner", "manager", "office_staff", "driver"] },

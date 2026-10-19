@@ -7,14 +7,15 @@ import { canViewFinancials } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
 import { useAppSettings } from "@/context/SettingsContext";
 import { createClient } from "@/lib/supabase/client";
-import { formatTime12h, formatCents, formatDateLong } from "@/lib/format";
+import { formatCents } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
 import { editAccess, reservationBalance } from "@/lib/staff-pricing";
+import { TripLegTimeline } from "@/components/admin/TripTimeline";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, XCircle,
-  Phone, Mail, Users, Calendar, Clock, MapPin, CreditCard, Banknote, Gift, FileText, Plane,
+  Phone, Mail, Users, MapPin, CreditCard, Banknote, Gift, FileText,
   Pencil, Printer, MessageSquare, History, Undo2, Lock,
 } from "lucide-react";
 
@@ -60,8 +61,8 @@ export default function ReservationDetailPage() {
       .select(
         "*, " +
         "customer:customers(id, first_name, last_name, phone, email), " +
-        "trip:trips!reservations_trip_id_fkey(id, departure_date, departure_time, status, route:routes(name, origin_label, destination_label)), " +
-        "return_trip:trips!reservations_return_trip_id_fkey(id, departure_date, departure_time, route:routes(name)), " +
+        "trip:trips!reservations_trip_id_fkey(id, departure_date, departure_time, status, route:routes(name, origin_key, origin_label, destination_label, duration_minutes)), " +
+        "return_trip:trips!reservations_return_trip_id_fkey(id, departure_date, departure_time, route:routes(name, origin_key, duration_minutes)), " +
         "reservation_passengers(id, name, is_primary, is_boarded, is_no_show), " +
         "payments(id, method, status, amount_cents, refund_amount_cents, notes, reservation_change_id, created_at), " +
         "reservation_flights(id, leg, direction, airline, flight_number, terminal, flight_date, flight_time)"
@@ -372,69 +373,39 @@ export default function ReservationDetailPage() {
           <MapPin className="w-4 h-4 text-[#FCC300]" />
           <h2 className="text-white font-semibold">Trip</h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { icon: MapPin, label: "Route", value: trip?.route?.name ?? "—" },
-            { icon: Calendar, label: "Date", value: trip ? formatDateLong(trip.departure_date) : "—" },
-            { icon: Clock, label: "Departure", value: trip ? formatTime12h(trip.departure_time) : "—" },
-            { icon: Users, label: "Seats", value: `${seatCount} (${resv.adults} adult${resv.adults !== 1 ? "s" : ""}${resv.children ? `, ${resv.children} child${resv.children !== 1 ? "ren" : ""}` : ""})` },
-          ].map((f) => {
-            const Icon = f.icon;
-            return (
-              <div key={f.label} className="bg-white/3 rounded-xl p-3">
-                <div className="flex items-center gap-1.5 text-[#A1A1AA] text-xs mb-1">
-                  <Icon className="w-3 h-3 text-[#FCC300]" />{f.label}
-                </div>
-                <div className="text-white text-sm font-medium">{f.value}</div>
-              </div>
-            );
-          })}
+        <div className="flex flex-wrap gap-2 mb-4 text-sm">
+          <span className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-white">
+            <Users className="w-3.5 h-3.5 text-[#FCC300]" />
+            {seatCount} seat{seatCount !== 1 ? "s" : ""} · {resv.adults} adult{resv.adults !== 1 ? "s" : ""}
+            {resv.children ? `, ${resv.children} child${resv.children !== 1 ? "ren" : ""}` : ""}
+          </span>
+          <span className="bg-white/5 rounded-full px-3 py-1 text-white">{resv.return_trip ? "Round trip" : "One way"}</span>
+          {resv.pets > 0 && <span className="bg-white/5 rounded-full px-3 py-1 text-white">{resv.pets} pet{resv.pets !== 1 ? "s" : ""}</span>}
+          {resv.extra_bags > 0 && <span className="bg-white/5 rounded-full px-3 py-1 text-white">{resv.extra_bags} extra bag{resv.extra_bags !== 1 ? "s" : ""}</span>}
         </div>
-        {(resv.pets > 0 || resv.extra_bags > 0) && (
-          <div className="flex gap-4 mt-3 text-[#A1A1AA] text-sm">
-            {resv.pets > 0 && <span>{resv.pets} pet{resv.pets !== 1 ? "s" : ""}</span>}
-            {resv.extra_bags > 0 && <span>{resv.extra_bags} extra bag{resv.extra_bags !== 1 ? "s" : ""}</span>}
-          </div>
-        )}
-        {resv.return_trip && (
-          <div className="mt-3 text-[#A1A1AA] text-sm">
-            Return: {resv.return_trip.route?.name} · {formatDateLong(resv.return_trip.departure_date)} · {formatTime12h(resv.return_trip.departure_time)}
-          </div>
-        )}
-        {(resv.reservation_flights ?? []).length > 0 && (
-          <div className="mt-4 space-y-2">
-            {[...resv.reservation_flights]
-              .sort((a: any, b: any) => (a.leg === "outbound" ? -1 : 1) - (b.leg === "outbound" ? -1 : 1))
-              .map((f: any) => (
-                <div key={f.id} className="flex items-start gap-2 bg-white/3 rounded-xl p-3 text-sm">
-                  <Plane className="w-4 h-4 text-[#FCC300] flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-white font-medium">
-                      {f.airline} {f.flight_number}
-                      <span className="text-[#A1A1AA] font-normal">
-                        {" "}· {resv.return_trip ? (f.leg === "outbound" ? "Outbound" : "Return") + " · " : ""}
-                        {f.direction === "departing" ? "Departs ATL" : "Lands at ATL"}
-                      </span>
-                    </div>
-                    <div className="text-[#A1A1AA] text-xs mt-0.5">
-                      {formatDateLong(f.flight_date)} · {formatTime12h(f.flight_time.slice(0, 5))} · {f.terminal}
-                    </div>
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
-        {resv.trip_id && (
-          <div className="mt-4">
-            <Link href={`/dashboard/manifest?tripId=${resv.trip_id}`} className="text-[#FCC300] hover:text-[#FFD54A] text-sm font-medium transition-colors">
-              View trip manifest →
-            </Link>
-            {resv.return_trip_id && (
-              <Link href={`/dashboard/manifest?tripId=${resv.return_trip_id}`} className="ml-4 text-[#FCC300] hover:text-[#FFD54A] text-sm font-medium transition-colors">
-                View return manifest →
-              </Link>
+        {trip ? (
+          <div className={`grid gap-4 ${resv.return_trip ? "lg:grid-cols-2" : ""}`}>
+            <TripLegTimeline
+              label={resv.return_trip ? "Outbound" : "Trip"}
+              trip={trip}
+              flight={(resv.reservation_flights ?? []).find((f: any) => f.leg === "outbound") ?? null}
+              routeMinutes={settings.schedule.toAtl.durationMinutes}
+              arriveEarlyMinutes={settings.arriveEarlyMinutes}
+              voltAddress={settings.business.address}
+            />
+            {resv.return_trip && (
+              <TripLegTimeline
+                label="Return"
+                trip={resv.return_trip}
+                flight={(resv.reservation_flights ?? []).find((f: any) => f.leg === "return") ?? null}
+                routeMinutes={settings.schedule.fromAtl.durationMinutes}
+                arriveEarlyMinutes={settings.arriveEarlyMinutes}
+                voltAddress={settings.business.address}
+              />
             )}
           </div>
+        ) : (
+          <p className="text-[#A1A1AA] text-sm">No trip on this reservation.</p>
         )}
       </div>
 
