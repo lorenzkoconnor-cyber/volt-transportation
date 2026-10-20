@@ -14,6 +14,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { getStripeServer } from "@/lib/stripe/server";
+import { cancelTerminalCheckout, getTerminalCheckout, isRealSquarePayment, refundSquarePayment } from "@/lib/square/server";
 import { captureHold, voidHold } from "@/lib/stripe/holds";
 import { isSimulatedPaymentId } from "@/lib/checkout";
 import { formatCents } from "@/lib/format";
@@ -85,7 +86,7 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
   // 2. Money.
   const { data: payments } = await sb
     .from("payments")
-    .select("id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, created_at")
+    .select("id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, square_payment_id, square_checkout_id, created_at")
     .eq("reservation_id", reservationId);
   const all = payments ?? [];
   const stripe = getStripeServer();
@@ -100,6 +101,18 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
     if (realCard(p) && stripe) {
       await stripe.paymentIntents.cancel(p.stripe_payment_intent_id).catch(() => null);
     }
+    // Stop a Square Terminal that's still showing this cart. If the customer
+    // already tapped, the money is in — treat it as paid so it's refunded below.
+    if (p.square_checkout_id) {
+      const state = await cancelTerminalCheckout(p.square_checkout_id)
+        .catch(() => getTerminalCheckout(p.square_checkout_id)).catch(() => null);
+      if (state?.status === "COMPLETED") {
+        await sb.from("payments").update({ status: "paid", captured_at: now(), square_payment_id: state.paymentId })
+          .eq("id", p.id).eq("status", "pending");
+        Object.assign(p, { status: "paid", square_payment_id: state.paymentId });
+        continue;
+      }
+    }
     await sb.from("payments").update({ status: "voided", notes: "Reservation cancelled before payment." }).eq("id", p.id).eq("status", "pending");
   }
 
@@ -113,6 +126,15 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
       // Can't hand cash back over the internet.
       out.cashOwedCents += r.amountCents;
       continue;
+    }
+    if (isRealSquarePayment(p)) {
+      try {
+        await refundSquarePayment(p.square_payment_id, r.amountCents, `Cancellation ${reservationId}`,
+          `volt-cancel-refund-${p.id}-${p.refund_amount_cents}-${r.amountCents}`);
+      } catch (err) {
+        out.problems.push(`Square refund of ${formatCents(r.amountCents)} failed: ${err instanceof Error ? err.message : "unknown error"}. Refund it from Payments.`);
+        continue;
+      }
     }
     if (realCard(p)) {
       if (!stripe) {

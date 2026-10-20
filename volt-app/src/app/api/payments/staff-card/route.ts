@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getStripeServer } from "@/lib/stripe/server";
 import { createAdminDb, isSimulatedPaymentId } from "@/lib/checkout";
+import { getTerminalCheckout } from "@/lib/square/server";
 
 // POST /api/payments/staff-card
 // Staff take a card over the phone / at the counter for a pending card payment
@@ -40,13 +41,20 @@ export async function POST(request: NextRequest) {
 
     const { data: payment } = await sb
       .from("payments")
-      .select("id, method, status, amount_cents, stripe_payment_intent_id, reservation:reservations(id, confirmation_number, status, total_cents, customer:customers(first_name, last_name, phone))")
+      .select("id, method, status, amount_cents, stripe_payment_intent_id, square_checkout_id, reservation:reservations(id, confirmation_number, status, total_cents, customer:customers(first_name, last_name, phone))")
       .eq("id", paymentId)
       .single();
-    if (!payment || payment.method !== "stripe") {
+    if (!payment || (payment.method !== "stripe" && payment.method !== "square")) {
       return NextResponse.json({ error: "Card payment not found." }, { status: 404 });
     }
     if (payment.status === "paid") return NextResponse.json({ ok: true, alreadyPaid: true });
+    // Never take the same payment twice: a Square Terminal may still be waiting for a tap.
+    if (payment.square_checkout_id && action === "intent") {
+      const state = await getTerminalCheckout(payment.square_checkout_id).catch(() => null);
+      if (state && state.status !== "CANCELED") {
+        return NextResponse.json({ error: "This payment is on the Square Terminal — cancel it there first." }, { status: 409 });
+      }
+    }
     if (payment.status !== "pending") {
       return NextResponse.json({ error: `This payment is ${payment.status}.` }, { status: 400 });
     }
@@ -64,7 +72,7 @@ export async function POST(request: NextRequest) {
       // Simulated mode (no Stripe keys)
       if (!stripe) {
         const fakeId = payment.stripe_payment_intent_id ?? `pi_simulated_staff_${Date.now()}`;
-        await sb.from("payments").update({ stripe_payment_intent_id: fakeId }).eq("id", payment.id);
+        await sb.from("payments").update({ stripe_payment_intent_id: fakeId, method: "stripe", square_checkout_id: null }).eq("id", payment.id);
         return NextResponse.json({ clientSecret: `${fakeId}_secret_simulated`, simulated: true });
       }
 
@@ -87,8 +95,8 @@ export async function POST(request: NextRequest) {
         },
         { idempotencyKey: `volt-staff-card-${payment.id}-${payment.amount_cents}` },
       );
-      if (pi.id !== payment.stripe_payment_intent_id) {
-        await sb.from("payments").update({ stripe_payment_intent_id: pi.id }).eq("id", payment.id);
+      if (pi.id !== payment.stripe_payment_intent_id || payment.method !== "stripe") {
+        await sb.from("payments").update({ stripe_payment_intent_id: pi.id, method: "stripe", square_checkout_id: null }).eq("id", payment.id);
       }
       return NextResponse.json({ clientSecret: pi.client_secret, simulated: false });
     }

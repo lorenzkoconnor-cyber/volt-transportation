@@ -11,12 +11,13 @@ import { formatCents, easternToday } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
+import { SquareTerminalPayment } from "@/components/admin/SquareTerminalPayment";
 import { editAccess, reservationBalance } from "@/lib/staff-pricing";
 import { TripLegTimeline } from "@/components/admin/TripTimeline";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, XCircle,
   Phone, Mail, Users, MapPin, CreditCard, Banknote, Gift, FileText,
-  Pencil, Printer, MessageSquare, History, Undo2, Lock, Trash2,
+  Pencil, Printer, MessageSquare, History, Undo2, Lock, Trash2, Nfc,
 } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -27,7 +28,8 @@ const STATUS_STYLES: Record<string, string> = {
   no_show:   "bg-orange-500/15 text-orange-400",
 };
 
-const PAY_ICONS = { stripe: CreditCard, cash: Banknote, comp: Gift } as const;
+const PAY_ICONS = { stripe: CreditCard, square: Nfc, cash: Banknote, comp: Gift } as const;
+const PAY_LABELS: Record<string, string> = { stripe: "Card", square: "Square Terminal" };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -50,6 +52,7 @@ export default function ReservationDetailPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [waiveFee, setWaiveFee] = useState(false);
   const [chargingId, setChargingId] = useState<string | null>(null);   // card payment being taken
+  const [chargingWith, setChargingWith] = useState<"stripe" | "square">("stripe");
   const cardRef = useRef<StaffCardHandle>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [notice, setNotice] = useState("");
@@ -512,7 +515,7 @@ export default function ReservationDetailPage() {
                     <Icon className="w-4 h-4 text-[#FCC300]" />
                     <div>
                       <div className="text-white text-sm font-medium capitalize">
-                        {p.method === "stripe" ? "Card" : p.method}
+                        {PAY_LABELS[p.method] ?? p.method}
                         {showMoney && ` · ${formatCents(p.amount_cents)}`}
                       </div>
                       {p.notes && <div className="text-[#A1A1AA] text-xs">{p.notes}</div>}
@@ -530,12 +533,23 @@ export default function ReservationDetailPage() {
                       : p.status === "voided" ? "bg-[#A1A1AA]/15 text-[#A1A1AA]"
                       : "bg-red-500/15 text-red-400"
                     }`}>{p.status === "authorized" ? "on hold" : p.status}</span>
-                    {p.status === "pending" && p.method === "stripe" && resv.status !== "cancelled" && chargingId !== p.id && (
-                      <Button size="sm" disabled={busy}
-                        onClick={() => { setError(""); setChargingId(p.id); }}
-                        className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-xs font-semibold">
-                        <CreditCard className="w-3.5 h-3.5 mr-1" /> Charge Card
-                      </Button>
+                    {p.status === "pending" && resv.status !== "cancelled" && chargingId !== p.id && (
+                      <>
+                        {p.amount_cents >= 100 && (
+                          <Button size="sm" disabled={busy}
+                            onClick={() => { setError(""); setChargingWith("square"); setChargingId(p.id); }}
+                            className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-xs font-semibold">
+                            <Nfc className="w-3.5 h-3.5 mr-1" /> Send to Square
+                          </Button>
+                        )}
+                        {(p.method === "stripe" || p.method === "square") && (
+                          <Button size="sm" variant="outline" disabled={busy}
+                            onClick={() => { setError(""); setChargingWith("stripe"); setChargingId(p.id); }}
+                            className="border-white/15 text-white hover:bg-white/5 text-xs">
+                            <CreditCard className="w-3.5 h-3.5 mr-1" /> Charge Card
+                          </Button>
+                        )}
+                      </>
                     )}
                     {p.status === "pending" && (
                       <Button size="sm" variant="outline" disabled={busy}
@@ -548,11 +562,14 @@ export default function ReservationDetailPage() {
                 </div>
                 {chargingId === p.id && (
                   <div className="space-y-2">
-                    <StaffCardPayment ref={cardRef} amountCents={p.amount_cents} />
+                    {chargingWith === "square"
+                      ? <SquareTerminalPayment ref={cardRef} amountCents={p.amount_cents} />
+                      : <StaffCardPayment ref={cardRef} amountCents={p.amount_cents} />}
                     <div className="flex items-center gap-2">
                       <Button size="sm" disabled={busy} onClick={() => chargeCard(p.id)}
                         className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-xs font-semibold">
-                        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `Charge ${formatCents(p.amount_cents)}`}
+                        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : chargingWith === "square" ? `Send ${formatCents(p.amount_cents)} to Terminal` : `Charge ${formatCents(p.amount_cents)}`}
                       </Button>
                       <Button size="sm" variant="outline" disabled={busy} onClick={() => setChargingId(null)}
                         className="border-white/15 text-white hover:bg-white/5 text-xs">

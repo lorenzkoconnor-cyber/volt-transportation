@@ -4,8 +4,9 @@ import { createStaffReservation, normalizePayment, normalizeStaffInput, requireS
 // POST /api/reservations/staff — Team Portal "New Reservation".
 // Body: trip/party/passenger/flight choices (same shape as checkout) plus
 // { customer, discount, termsAgreed, payment }. Prices are computed here.
-// → { id, confirmationNumber, cardPaymentId } — when cardPaymentId is set the
-//   browser charges that pending card payment next (/api/payments/staff-card).
+// → { id, confirmationNumber, cardPaymentId, cardMethod } — when cardPaymentId is set the
+//   browser charges that pending card payment next (/api/payments/staff-card,
+//   or /api/payments/square-terminal when cardMethod is "square").
 export async function POST(request: NextRequest) {
   const ctx = await requireStaff();
   if (ctx instanceof NextResponse) return ctx;

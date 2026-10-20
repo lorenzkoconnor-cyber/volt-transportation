@@ -19,6 +19,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getStripeServer } from "@/lib/stripe/server";
+import { cancelTerminalCheckout, getTerminalCheckout, isRealSquarePayment, refundSquarePayment } from "@/lib/square/server";
 import {
   buildFlightRows, createAdminDb, findCustomer, isSimulatedPaymentId, normalizePayload, type CheckoutPayload,
 } from "@/lib/checkout";
@@ -75,12 +76,27 @@ export interface StaffInput {
   termsAgreed: boolean;
 }
 
-export type PayMethod = "cash" | "stripe" | "split" | "comp";
+// "stripe" = card typed in (phone / counter), "square" = tapped on the Square Terminal.
+export type PayMethod = "cash" | "stripe" | "square" | "split" | "comp";
+export type CardMethod = "stripe" | "square";
 export interface StaffPayment {
   method: PayMethod;
   collectNow: boolean;      // cash received / card charged on this screen
   splitCashCents: number;   // split only
+  splitRest: CardMethod;    // split only: where the non-cash part goes
 }
+
+/** Which card processor a payment choice uses (null = no card). */
+export function cardMethodOf(payment: StaffPayment): CardMethod | null {
+  if (payment.method === "stripe" || payment.method === "square") return payment.method;
+  if (payment.method === "split") return payment.splitRest;
+  return null;
+}
+
+/** Smallest card charge each processor accepts. */
+export const CARD_MIN_CENTS: Record<CardMethod, number> = { stripe: 50, square: 100 };
+const cardMinError = (m: CardMethod) =>
+  m === "square" ? "Square card payments must be at least $1.00" : "Card charges must be at least $0.50";
 
 const str = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -117,11 +133,12 @@ export function normalizeStaffInput(body: any): StaffInput | { error: string } {
 }
 
 export function normalizePayment(p: any): StaffPayment {
-  const method: PayMethod = ["cash", "stripe", "split", "comp"].includes(p?.method) ? p.method : "cash";
+  const method: PayMethod = ["cash", "stripe", "square", "split", "comp"].includes(p?.method) ? p.method : "cash";
   return {
     method,
     collectNow: p?.collectNow !== false,
     splitCashCents: Math.max(0, Math.round(Number(p?.splitCashCents) || 0)),
+    splitRest: p?.splitRest === "stripe" ? "stripe" : "square",
   };
 }
 
@@ -272,7 +289,7 @@ async function messageCustomer(sb: Db, reservationId: string, send: (info: any) 
 // ═════════════════════════════════════════════════════════════════════════════
 export async function createStaffReservation(
   ctx: StaffContext, input: StaffInput, payment: StaffPayment,
-): Promise<{ id: string; confirmationNumber: string; cardPaymentId: string | null } | { error: string; status?: number }> {
+): Promise<{ id: string; confirmationNumber: string; cardPaymentId: string | null; cardMethod: CardMethod | null } | { error: string; status?: number }> {
   const { sb, employee } = ctx;
   const { payload } = input;
   if (!input.termsAgreed) return { error: "Confirm the customer agreed to the Terms & Conditions." };
@@ -297,22 +314,26 @@ export async function createStaffReservation(
   if ("error" in discount) return discount;
   const totalCents = subtotalCents - discount.discountCents;
 
-  // Payment rows — a split is one cash row + one card row. Card rows start
-  // pending and turn paid once the card is charged.
+  // Payment rows — a split is one cash row + one card row (Stripe or the
+  // Square Terminal). Card rows start pending and turn paid once charged.
   const pay = payment.method;
   if (pay === "split" && (payment.splitCashCents <= 0 || payment.splitCashCents >= totalCents)) {
     return { error: "For a split payment, enter a cash amount between $0 and the total." };
   }
-  const cardCents = pay === "split" ? totalCents - payment.splitCashCents : pay === "stripe" ? totalCents : 0;
+  const cardMethod = cardMethodOf(payment);
+  const cardCents = pay === "split" ? totalCents - payment.splitCashCents : cardMethod ? totalCents : 0;
   const chargeCardNow = cardCents > 0 && (pay === "split" || payment.collectNow);
-  if (chargeCardNow && cardCents < 50) return { error: "Card charges must be at least $0.50 — take the rest in cash or mark it Comp." };
+  if (cardMethod && chargeCardNow && cardCents < CARD_MIN_CENTS[cardMethod]) {
+    return { error: `${cardMinError(cardMethod)} — take the rest in cash or mark it Comp.` };
+  }
+  const cardPart = cardMethod === "square" ? "Square Terminal part" : "card part";
   const paymentRows =
     comp || totalCents === 0 ? [{ method: "comp", status: "paid", amount_cents: 0, notes: comp ? "Complimentary booking" : discount.label }]
     : pay === "split" ? [
         { method: "cash", status: "paid", amount_cents: payment.splitCashCents, notes: "Split payment — cash part" },
-        { method: "stripe", status: "pending", amount_cents: cardCents, notes: "Split payment — card part" },
+        { method: cardMethod, status: "pending", amount_cents: cardCents, notes: `Split payment — ${cardPart}` },
       ]
-    : pay === "stripe" ? [{ method: "stripe", status: "pending", amount_cents: totalCents, notes: chargeCardNow ? null : "To be collected" }]
+    : cardMethod ? [{ method: cardMethod, status: "pending", amount_cents: totalCents, notes: chargeCardNow ? null : "To be collected" }]
     : [{ method: "cash", status: payment.collectNow ? "paid" : "pending", amount_cents: totalCents, notes: payment.collectNow ? null : "To be collected" }];
 
   // Customer — reuse a matching record (same email + phone), else create one.
@@ -406,8 +427,8 @@ export async function createStaffReservation(
     await messageCustomer(sb, reservation.id, (info) => notifyConfirmation(sb, info));
     await alertIfShortNotice(sb, reservation.id);
 
-    const cardRow = chargeCardNow ? (payments ?? []).find((p: any) => p.method === "stripe") : null;
-    return { id: reservation.id, confirmationNumber, cardPaymentId: cardRow?.id ?? null };
+    const cardRow = chargeCardNow ? (payments ?? []).find((p: any) => p.method === cardMethod) : null;
+    return { id: reservation.id, confirmationNumber, cardPaymentId: cardRow?.id ?? null, cardMethod: cardRow ? cardMethod : null };
   } catch (err) {
     if (reservationId) {
       await sb.from("reservation_passengers").delete().eq("reservation_id", reservationId);
@@ -453,7 +474,7 @@ const EDIT_SELECT =
   `return_trip:trips!reservations_return_trip_id_fkey(${TRIP_FIELDS}), ` +
   "reservation_passengers(id, name, is_primary), " +
   "reservation_flights(leg, direction, airline, flight_number, terminal, flight_date, flight_time, trip_id), " +
-  "payments(id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, reservation_change_id, created_at), " +
+  "payments(id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, square_payment_id, square_checkout_id, reservation_change_id, created_at), " +
   "discount_code:discount_codes!reservations_discount_code_id_fkey(id, code, discount_type, value)";
 
 export async function loadReservation(sb: Db, id: string): Promise<any | null> {
@@ -584,6 +605,24 @@ async function abandonUnpaidChanges(sb: Db, reservationId: string) {
     .eq("reservation_id", reservationId)
     .eq("status", "awaiting_payment");
   for (const c of stale ?? []) {
+    // A Terminal may still be showing this change's cart — stop it first. If the
+    // customer already tapped, the change is paid: apply it instead.
+    const { data: onTerminal } = await sb.from("payments").select("id, square_checkout_id")
+      .eq("reservation_change_id", c.id).eq("status", "pending").not("square_checkout_id", "is", null);
+    let paid = false;
+    for (const p of onTerminal ?? []) {
+      const state = await cancelTerminalCheckout(p.square_checkout_id)
+        .catch(() => getTerminalCheckout(p.square_checkout_id)).catch(() => null);
+      if (state?.status === "COMPLETED") {
+        await sb.from("payments").update({ status: "paid", captured_at: new Date().toISOString(), square_payment_id: state.paymentId })
+          .eq("id", p.id).eq("status", "pending");
+        paid = true;
+      }
+    }
+    if (paid) {
+      await finishEdit(sb, c.id);
+      continue;
+    }
     await sb.from("payments").delete().eq("reservation_change_id", c.id).eq("status", "pending");
     await sb.from("reservation_changes").update({ status: "abandoned" }).eq("id", c.id).eq("status", "awaiting_payment");
   }
@@ -605,7 +644,7 @@ async function shrinkPending(sb: Db, resv: any, byCents: number) {
 
 export type ApplyResult =
   | { ok: true; applied: true; summary: string[]; refundDueCents: number }
-  | { ok: true; applied: false; changeId: string; cardPaymentId: string; cardCents: number }
+  | { ok: true; applied: false; changeId: string; cardPaymentId: string; cardCents: number; cardMethod: CardMethod }
   | { ok: false; error: string; status?: number };
 
 /**
@@ -650,7 +689,8 @@ export async function startEdit(ctx: StaffContext, resv: any, input: StaffInput,
     return { ok: false, error: `For a split payment, enter a cash amount between $0 and ${formatCents(extra)}.` };
   }
   const cardCents = extra - cashCents;
-  if (cardCents < 50) return { ok: false, error: "Card charges must be at least $0.50 — take it in cash instead." };
+  const cardMethod = cardMethodOf(payment) ?? "stripe";
+  if (cardCents < CARD_MIN_CENTS[cardMethod]) return { ok: false, error: `${cardMinError(cardMethod)} — take it in cash instead.` };
 
   const changeId = await logChange(sb, { ...base, status: "awaiting_payment" });
   if (!changeId) return { ok: false, error: "Could not record the change." };
@@ -658,17 +698,17 @@ export async function startEdit(ctx: StaffContext, resv: any, input: StaffInput,
     .from("payments")
     .insert({
       reservation_id: resv.id,
-      method: "stripe",
+      method: cardMethod,
       status: "pending",
       amount_cents: cardCents,
       refund_amount_cents: 0,
       reservation_change_id: changeId,
-      notes: cashCents ? "Reservation change — card part" : "Reservation change — card",
+      notes: `Reservation change — ${cardMethod === "square" ? "Square Terminal" : "card"}${cashCents ? " part" : ""}`,
     })
     .select("id")
     .single();
   if (error || !cardRow) return { ok: false, error: error?.message ?? "Could not start the card payment." };
-  return { ok: true, applied: false, changeId, cardPaymentId: cardRow.id, cardCents };
+  return { ok: true, applied: false, changeId, cardPaymentId: cardRow.id, cardCents, cardMethod };
 }
 
 /**
@@ -837,7 +877,7 @@ export async function refundDifference(
   }
 
   // Give it back the way it was paid: the newest card payments first, then cash.
-  const rank = (p: any) => (p.method === "stripe" ? 0 : p.method === "cash" ? 1 : 2);
+  const rank = (p: any) => (p.method === "stripe" || p.method === "square" ? 0 : p.method === "cash" ? 1 : 2);
   const candidates = (resv.payments ?? [])
     .filter((p: any) => p.status === "paid" && p.amount_cents - p.refund_amount_cents > 0)
     .sort((a: any, b: any) => rank(a) - rank(b) || (b.created_at ?? "").localeCompare(a.created_at ?? ""));
@@ -865,6 +905,16 @@ export async function refundDifference(
         break;
       }
     }
+    if (isRealSquarePayment(p)) {
+      try {
+        await refundSquarePayment(p.square_payment_id, take, `Reservation change ${resv.confirmation_number}`,
+          `volt-edit-refund-${p.id}-${p.refund_amount_cents}-${take}`);
+      } catch (err) {
+        if (refunded === 0) return { ok: false, error: err instanceof Error ? err.message : "Square refund failed." };
+        lines.push(`Square refund of ${formatCents(take)} failed — try again.`);
+        break;
+      }
+    }
     const total = p.refund_amount_cents + take;
     await sb.from("payments").update({
       refund_amount_cents: total,
@@ -872,7 +922,7 @@ export async function refundDifference(
       refunded_at: new Date().toISOString(),
       refunded_by_employee_id: employee.id,
     }).eq("id", p.id);
-    lines.push(p.method === "stripe" ? `${formatCents(take)} refunded to the card` : p.method === "cash" ? `${formatCents(take)} cash handed back` : `${formatCents(take)} refunded`);
+    lines.push(p.method === "stripe" || p.method === "square" ? `${formatCents(take)} refunded to the card` : p.method === "cash" ? `${formatCents(take)} cash handed back` : `${formatCents(take)} refunded`);
     refunded += take;
     left -= take;
   }

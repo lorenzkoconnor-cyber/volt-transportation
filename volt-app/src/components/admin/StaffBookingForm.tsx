@@ -15,6 +15,7 @@ import Step1Search from "@/components/booking/Step1Search";
 import Step2Departures from "@/components/booking/Step2Departures";
 import FlightFields from "@/components/booking/FlightFields";
 import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
+import { SquareTerminalPayment } from "@/components/admin/SquareTerminalPayment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,7 @@ import { staffPrice, staffDiscountLabel, type StaffDiscount, type StaffRates } f
 import { useAppSettings } from "@/context/SettingsContext";
 import { dollars, snapshotPricing, type PricingSnapshot } from "@/lib/settings";
 import {
-  AlertCircle, ArrowLeftRight, Banknote, CheckCircle2, CreditCard, Gift, Loader2, MapPin, Pencil, Plane, Plus,
+  AlertCircle, ArrowLeftRight, Banknote, CheckCircle2, CreditCard, Gift, Loader2, MapPin, Nfc, Pencil, Plane, Plus,
   ShieldCheck, SplitSquareHorizontal, Ticket, User, X,
 } from "lucide-react";
 
@@ -51,7 +52,10 @@ export interface StaffFormInitial {
 }
 
 type Phase = "trip" | "departures" | "details" | "return" | "returnDepartures";
-type PayMethod = "cash" | "stripe" | "split" | "comp";
+// "stripe" = card typed in here, "square" = tapped on the counter Square Terminal.
+type PayMethod = "cash" | "stripe" | "square" | "split" | "comp";
+type CardMethod = "stripe" | "square";
+const CARD_MIN_CENTS: Record<CardMethod, number> = { stripe: 50, square: 100 };
 
 interface Props {
   mode: "new" | "edit";
@@ -121,6 +125,7 @@ export default function StaffBookingForm({
   const [payMethod, setPayMethod] = useState<PayMethod>("cash");
   const [payNow, setPayNow] = useState(true);
   const [splitCash, setSplitCash] = useState("");
+  const [splitRest, setSplitRest] = useState<CardMethod>("square");
   const cardRef = useRef<StaffCardHandle>(null);
 
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -154,8 +159,11 @@ export default function StaffBookingForm({
   const priceChange = isEdit ? price.totalCents - oldTotalCents : price.totalCents;
   const due = isEdit ? Math.max(0, quote?.priceChangeCents ?? priceChange) : price.totalCents;
   const splitCashCents = Math.round((parseFloat(splitCash) || 0) * 100);
-  const cardCents = payMethod === "split" ? due - splitCashCents : payMethod === "stripe" ? due : 0;
-  const chargeCardNow = cardCents > 0 && (payMethod === "split" || (payMethod === "stripe" && (isEdit || payNow)));
+  const cardMethod: CardMethod | null =
+    payMethod === "stripe" || payMethod === "square" ? payMethod : payMethod === "split" ? splitRest : null;
+  const onTerminal = cardMethod === "square";
+  const cardCents = payMethod === "split" ? due - splitCashCents : cardMethod ? due : 0;
+  const chargeCardNow = cardCents > 0 && (payMethod === "split" || (!!cardMethod && (isEdit || payNow)));
 
   const applyCode = async () => {
     setCodeError("");
@@ -190,7 +198,7 @@ export default function StaffBookingForm({
     discount: activeDiscount,
     termsAgreed,
     smsConsent,
-    payment: { method: payMethod, collectNow: payNow, splitCashCents },
+    payment: { method: payMethod, collectNow: payNow, splitCashCents, splitRest },
   });
 
   // Checks shared by both modes before anything is sent.
@@ -209,8 +217,10 @@ export default function StaffBookingForm({
     if (payMethod === "split" && (splitCashCents <= 0 || splitCashCents >= due)) {
       return `For a split payment, enter a cash amount between $0 and ${formatCents(due)}.`;
     }
-    if (chargeCardNow) {
-      if (cardCents < 50) return "Card charges must be at least $0.50 — take the rest in cash.";
+    if (chargeCardNow && cardMethod) {
+      if (cardCents < CARD_MIN_CENTS[cardMethod]) {
+        return `${onTerminal ? "Square card payments must be at least $1.00" : "Card charges must be at least $0.50"} — take the rest in cash.`;
+      }
       return cardRef.current?.validate() ?? null;
     }
     return null;
@@ -225,10 +235,12 @@ export default function StaffBookingForm({
       await cardRef.current!.charge(pc.cardPaymentId);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "The card was declined.";
+      const what = onTerminal ? "the Square Terminal payment" : "the card";
+      const retry = onTerminal ? "Send to Terminal Again" : "Retry Card";
       setError(
         pc.changeId
-          ? `The card didn't go through: ${msg} Nothing has been changed yet — fix the card and press Retry Card.`
-          : `Reservation ${pc.label} is saved, but the card didn't go through: ${msg} Fix the card and press Retry Card, or charge it later from the reservation page.`,
+          ? `${what[0].toUpperCase()}${what.slice(1)} didn't go through: ${msg} Nothing has been changed yet — press ${retry} to try again.`
+          : `Reservation ${pc.label} is saved, but ${what} didn't go through: ${msg} Press ${retry}, or collect it later from the reservation page.`,
       );
       setSaving(false);
       return;
@@ -658,10 +670,11 @@ export default function StaffBookingForm({
         {(!isEdit || priceChange > 0) && (
           <>
             {isEdit && <p className="text-[#A1A1AA] text-sm">The extra charge must be paid before the change is made.</p>}
-            <div className={`grid gap-2 ${isEdit ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"}`}>
+            <div className={`grid gap-2 ${isEdit ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-5"}`}>
               {([
                 ["cash", "Cash", Banknote],
                 ["stripe", "Card", CreditCard],
+                ["square", "Square", Nfc],
                 ["split", "Split", SplitSquareHorizontal],
                 ...(isEdit ? [] : [["comp", "Comp (Free)", Gift]] as const),
               ] as const).map(([key, label, Icon]) => (
@@ -680,19 +693,37 @@ export default function StaffBookingForm({
             {!isComp && due > 0 && (
               <fieldset disabled={locked || saving}>
                 {payMethod === "split" ? (
-                  <div className="max-w-xs">
-                    <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Cash received ($) — the rest goes on the card</Label>
-                    <Input type="number" min={0} step="0.01" max={due / 100} value={splitCash} placeholder="0.00"
-                      onChange={(e) => setSplitCash(e.target.value)} className={inputCls} />
-                    <p className="text-[#A1A1AA] text-xs mt-1.5">
-                      Cash {formatCents(Math.max(0, splitCashCents))} · Card {formatCents(Math.max(0, cardCents))}
+                  <div className="space-y-3">
+                    <div className="max-w-xs">
+                      <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Cash received ($)</Label>
+                      <Input type="number" min={0} step="0.01" max={due / 100} value={splitCash} placeholder="0.00"
+                        onChange={(e) => setSplitCash(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Rest on</Label>
+                      <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1 gap-1">
+                        {([["square", "Square Terminal", Nfc], ["stripe", "Card", CreditCard]] as const).map(([key, label, Icon]) => (
+                          <button key={key} type="button" onClick={() => setSplitRest(key)}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                              splitRest === key ? "bg-[#FCC300] text-[#0A0A0A]" : "text-[#A1A1AA] hover:text-white"
+                            }`}>
+                            <Icon className="w-3.5 h-3.5" />{label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-[#A1A1AA] text-xs">
+                      Cash {formatCents(Math.max(0, splitCashCents))} · {onTerminal ? "Square" : "Card"} {formatCents(Math.max(0, cardCents))}
+                      {onTerminal && " — the Terminal shows the full cart with the cash as \"Paid in cash\"."}
                     </p>
                   </div>
                 ) : !isEdit ? (
                   <label className="flex items-center gap-2.5 cursor-pointer">
                     <input type="checkbox" checked={payNow} onChange={(e) => setPayNow(e.target.checked)} className="w-4 h-4 accent-[#FCC300]" />
                     <span className="text-white text-sm">
-                      {payMethod === "stripe" ? "Charge card now (uncheck to collect later)" : "Payment collected (cash received)"}
+                      {payMethod === "stripe" ? "Charge card now (uncheck to collect later)"
+                        : payMethod === "square" ? "Send to the Square Terminal now (uncheck to collect later)"
+                        : "Payment collected (cash received)"}
                     </span>
                   </label>
                 ) : payMethod === "cash" ? (
@@ -701,7 +732,9 @@ export default function StaffBookingForm({
               </fieldset>
             )}
 
-            {chargeCardNow && <StaffCardPayment ref={cardRef} amountCents={cardCents} />}
+            {chargeCardNow && (onTerminal
+              ? <SquareTerminalPayment ref={cardRef} amountCents={cardCents} />
+              : <StaffCardPayment ref={cardRef} amountCents={cardCents} />)}
           </>
         )}
       </div>
@@ -737,9 +770,10 @@ export default function StaffBookingForm({
             <Button type="button" disabled={saving} onClick={applyEdit}
               className="flex-1 bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-12 rounded-xl disabled:opacity-60">
               {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Updating…</>
-                : pendingCard ? <><CreditCard className="w-4 h-4 mr-2" />Retry Card · {formatCents(cardCents)}</>
+                : pendingCard ? <>{onTerminal ? <Nfc className="w-4 h-4 mr-2" /> : <CreditCard className="w-4 h-4 mr-2" />}
+                    {onTerminal ? "Send to Terminal Again" : "Retry Card"} · {formatCents(cardCents)}</>
                 : <><CheckCircle2 className="w-4 h-4 mr-2" />
-                    {due > 0 ? `${chargeCardNow ? `Charge ${formatCents(cardCents)} & ` : ""}Update Reservation` : "Update Reservation"}
+                    {due > 0 ? `${chargeCardNow ? `${onTerminal ? "Send" : "Charge"} ${formatCents(cardCents)}${onTerminal ? " to Terminal" : ""} & ` : ""}Update Reservation` : "Update Reservation"}
                   </>}
             </Button>
             {!pendingCard && (
@@ -759,15 +793,20 @@ export default function StaffBookingForm({
         <Button type="button" disabled={saving} onClick={submitNew}
           className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold h-12 rounded-xl disabled:opacity-60">
           {saving
-            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{pendingCard ? "Charging card…" : "Creating reservation…"}</>
+            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {pendingCard ? (onTerminal ? "Waiting for the Terminal…" : "Charging card…") : "Creating reservation…"}</>
             : pendingCard
-            ? <><CreditCard className="w-4 h-4 mr-2" />Retry Card · {formatCents(cardCents)}</>
-            : <><CheckCircle2 className="w-4 h-4 mr-2" />{chargeCardNow ? `Create Reservation & Charge ${formatCents(cardCents)}` : "Create Reservation"}</>}
+            ? <>{onTerminal ? <Nfc className="w-4 h-4 mr-2" /> : <CreditCard className="w-4 h-4 mr-2" />}
+                {onTerminal ? "Send to Terminal Again" : "Retry Card"} · {formatCents(cardCents)}</>
+            : <><CheckCircle2 className="w-4 h-4 mr-2" />
+                {chargeCardNow
+                  ? `Create Reservation & ${onTerminal ? `Send ${formatCents(cardCents)} to Terminal` : `Charge ${formatCents(cardCents)}`}`
+                  : "Create Reservation"}</>}
         </Button>
       )}
       {pendingCard && (
         <Link href={`/dashboard/reservations/${pendingCard.reservationId}`} className="block text-center text-[#A1A1AA] hover:text-white text-sm transition-colors">
-          {pendingCard.changeId ? "Cancel — leave the reservation unchanged →" : `Charge the card later — open reservation ${pendingCard.label} →`}
+          {pendingCard.changeId ? "Cancel — leave the reservation unchanged →" : `Collect payment later — open reservation ${pendingCard.label} →`}
         </Link>
       )}
     </div>

@@ -39,7 +39,8 @@ export interface CancellationPlan {
   feeFromHoldsCents: number;   // fee to be captured from holds (if the capture succeeds)
 }
 
-const rank = (p: PlanPayment) => (p.method === "stripe" ? 0 : p.method === "cash" ? 1 : 2);
+// Cards (Stripe or Square Terminal) first, then cash.
+const rank = (p: PlanPayment) => (p.method === "stripe" || p.method === "square" ? 0 : p.method === "cash" ? 1 : 2);
 const net = (p: PlanPayment) => p.amount_cents - p.refund_amount_cents;
 
 export function planCancellation(payments: PlanPayment[], feeCents: number, online: boolean): CancellationPlan {

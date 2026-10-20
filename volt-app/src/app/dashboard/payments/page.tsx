@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCents } from "@/lib/format";
 import {
   CreditCard, Banknote, RotateCcw, Search, TrendingUp, Gift,
-  Loader2, AlertCircle, X,
+  Loader2, AlertCircle, X, Nfc,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import StatCard from "@/components/admin/StatCard";
 
 const METHOD_STYLES: Record<string, string> = {
   stripe:  "bg-blue-500/15 text-blue-400",
+  square:  "bg-purple-500/15 text-purple-300",
   cash:    "bg-green-500/15 text-green-400",
   comp:    "bg-[#A1A1AA]/15 text-[#A1A1AA]",
 };
@@ -27,6 +28,8 @@ const STATUS_STYLES: Record<string, string> = {
   voided:   "bg-[#A1A1AA]/15 text-[#A1A1AA]",   // hold released, never charged
 };
 const STATUS_LABELS: Record<string, string> = { authorized: "on hold" };
+const METHOD_LABELS: Record<string, string> = { stripe: "card", square: "square" };
+const METHOD_ICONS: Record<string, React.ComponentType<{ className?: string }>> = { stripe: CreditCard, square: Nfc, comp: Gift };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -75,6 +78,7 @@ export default function PaymentsPage() {
   const paidCents    = payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
   const refundCents  = payments.reduce((s, p) => s + p.refund_amount_cents, 0);
   const stripeCents  = payments.filter(p => p.method === "stripe" && p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
+  const squareCents  = payments.filter(p => p.method === "square" && p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
   const cashCents    = payments.filter(p => p.method === "cash" && p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
 
   const openRefund = (p: any) => {
@@ -119,9 +123,10 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Total Collected"  value={loading ? "…" : formatCents(paidCents)} icon={TrendingUp} accent />
-        <StatCard label="Card Payments"    value={loading ? "…" : formatCents(stripeCents)} icon={CreditCard} />
+        <StatCard label="Card (Stripe)"    value={loading ? "…" : formatCents(stripeCents)} icon={CreditCard} />
+        <StatCard label="Square Terminal"  value={loading ? "…" : formatCents(squareCents)} icon={Nfc} />
         <StatCard label="Cash Payments"    value={loading ? "…" : formatCents(cashCents)} icon={Banknote} />
         <StatCard label="Refunds Issued"   value={loading ? "…" : formatCents(refundCents)} icon={RotateCcw} />
       </div>
@@ -178,8 +183,8 @@ export default function PaymentsPage() {
                       </div>
                       <div className="col-span-2 flex justify-center">
                         <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${METHOD_STYLES[p.method] ?? ""}`}>
-                          {p.method === "stripe" ? <CreditCard className="w-3 h-3" /> : p.method === "comp" ? <Gift className="w-3 h-3" /> : <Banknote className="w-3 h-3" />}
-                          {p.method === "stripe" ? "card" : p.method}
+                          {(() => { const Icon = METHOD_ICONS[p.method] ?? Banknote; return <Icon className="w-3 h-3" />; })()}
+                          {METHOD_LABELS[p.method] ?? p.method}
                         </span>
                       </div>
                       <div className="col-span-1 text-right">
@@ -216,7 +221,7 @@ export default function PaymentsPage() {
               <div>
                 <h2 className="text-white font-bold text-lg">{refundTarget.status === "authorized" ? "Release Card Hold" : "Issue Refund"}</h2>
                 <p className="text-[#A1A1AA] text-xs mt-0.5">
-                  {refundTarget.reservation?.confirmation_number} · {formatCents(refundTarget.amount_cents)} {refundTarget.method === "stripe" ? "card" : refundTarget.method} payment
+                  {refundTarget.reservation?.confirmation_number} · {formatCents(refundTarget.amount_cents)} {refundTarget.method === "square" ? "Square Terminal" : METHOD_LABELS[refundTarget.method] ?? refundTarget.method} payment
                 </p>
               </div>
               <button onClick={() => setRefundTarget(null)} className="text-[#A1A1AA] hover:text-white transition-colors">
@@ -244,9 +249,9 @@ export default function PaymentsPage() {
                   the hold frees the full amount; partial releases aren&apos;t possible. To charge the rider instead,
                   settle it from the Verifications page.
                 </p>
-              ) : refundTarget.method === "stripe" ? (
+              ) : refundTarget.method === "stripe" || refundTarget.method === "square" ? (
                 <p className="text-[#A1A1AA] text-xs">
-                  The card will be refunded through Stripe. It usually appears on the customer&apos;s statement within 5–10 business days.
+                  The card will be refunded through {refundTarget.method === "square" ? "Square" : "Stripe"}. It usually appears on the customer&apos;s statement within 5–10 business days.
                 </p>
               ) : (
                 <p className="text-[#A1A1AA] text-xs">

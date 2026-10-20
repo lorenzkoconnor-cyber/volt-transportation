@@ -12,6 +12,7 @@ import { FieldsCard, inputClass } from "@/components/admin/settings/shared";
 import { ScheduleCard, BlackoutsCard } from "@/components/admin/settings/ScheduleCards";
 import { BannerCard } from "@/components/admin/settings/WebsiteCards";
 import { TemplatesCard, HealthCard, HistoryCard } from "@/components/admin/settings/MessageCards";
+import { SquareTerminalsCard } from "@/components/admin/settings/PaymentCards";
 import { formatDuration, displayTime12h } from "@/lib/booking";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -20,6 +21,7 @@ const TABS = [
   { key: "pricing", label: "Prices & Rules" },
   { key: "schedule", label: "Schedule & Service" },
   { key: "messages", label: "Messages" },
+  { key: "payments", label: "Payments" },
   { key: "website", label: "Website & Contact" },
   { key: "alerts", label: "Staff Alerts" },
   { key: "history", label: "History" },
@@ -157,6 +159,7 @@ export default function SettingsPage() {
             </>
           )}
 
+          {tab === "payments" && <SquareTerminalsCard />}
           {tab === "alerts" && <StaffAlertsCard />}
           {tab === "history" && <HistoryCard history={data.history} />}
         </div>

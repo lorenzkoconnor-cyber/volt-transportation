@@ -39,6 +39,18 @@ export function checkEnvironment(): { ready: boolean; services: ServiceStatus[] 
         "5. Copy webhook signing secret to .env.local: STRIPE_WEBHOOK_SECRET",
     },
     {
+      name: "Square Terminal",
+      configured:
+        (process.env.SQUARE_ACCESS_TOKEN ?? "").length > 20 &&
+        !!process.env.SQUARE_LOCATION_ID,
+      instructions:
+        "1. Create an app at developer.squareup.com\n" +
+        "2. Add to .env.local: SQUARE_ENVIRONMENT, SQUARE_ACCESS_TOKEN, SQUARE_LOCATION_ID\n" +
+        "3. Add webhook: https://volt-transportation.com/api/payments/square-webhook\n" +
+        "   Events: terminal.checkout.updated, refund.updated → SQUARE_WEBHOOK_SIGNATURE_KEY\n" +
+        "4. Pair the Terminal in Dashboard → Settings → Payments",
+    },
+    {
       name: "Twilio (SMS)",
       configured:
         !!process.env.TWILIO_ACCOUNT_SID &&

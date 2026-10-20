@@ -4,6 +4,7 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 import { getStripeServer, isStripeConfigured } from "@/lib/stripe/server";
 import { voidHold } from "@/lib/stripe/holds";
+import { isRealSquarePayment, refundSquarePayment } from "@/lib/square/server";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function adminClient(): any {
@@ -94,6 +95,13 @@ export async function POST(request: NextRequest) {
       await stripe.refunds.create({ payment_intent: pi, amount: refundCents });
     }
 
+    // Real Square refund when this was tapped on the Square Terminal
+    const isRealSquareCharge = !wasHold && isRealSquarePayment(payment);
+    if (isRealSquareCharge) {
+      await refundSquarePayment(payment.square_payment_id, refundCents, "Refunded by Volt staff",
+        `volt-refund-${payment.id}-${payment.refund_amount_cents}-${refundCents}`);
+    }
+
     const totalRefunded = payment.refund_amount_cents + refundCents;
     const isFullRefund = totalRefunded >= payment.amount_cents;
     const { error: updErr } = await admin
@@ -143,6 +151,7 @@ export async function POST(request: NextRequest) {
       new_data: {
         refund_cents: refundCents,
         stripe: !!isRealStripeCharge,
+        square: isRealSquareCharge,
         full_refund: isFullRefund,
         reservation_cancelled: reservationCancelled,
       },

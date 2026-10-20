@@ -11,7 +11,7 @@ export type Json =
 
 export type EmployeeRole = "owner" | "manager" | "office_staff" | "driver";
 export type ReservationStatus = "pending" | "confirmed" | "cancelled" | "no_show" | "completed";
-export type PaymentMethod = "stripe" | "cash" | "comp";
+export type PaymentMethod = "stripe" | "square" | "cash" | "comp";
 export type PaymentStatus = "pending" | "authorized" | "paid" | "refunded" | "failed" | "voided";
 export type VehicleStatus = "active" | "maintenance" | "retired";
 export type NotificationType = "sms" | "email";
@@ -213,6 +213,9 @@ export interface Database {
           authorization_expires_at?: string | null;  // card holds (status 'authorized')
           captured_at?: string | null;
           captured_by_employee_id?: string | null;
+          square_order_id?: string | null;     // Square Terminal: itemized cart
+          square_checkout_id?: string | null;  // Square Terminal: checkout sent to the device
+          square_payment_id?: string | null;   // Square Terminal: the charge (refunds use it)
           created_at: string;
           updated_at: string;
         };

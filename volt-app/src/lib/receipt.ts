@@ -37,7 +37,7 @@ export interface ReceiptData {
   notes: string | null;
 }
 
-const METHOD_LABEL: Record<string, string> = { stripe: "Card", cash: "Cash", comp: "Complimentary" };
+const METHOD_LABEL: Record<string, string> = { stripe: "Card", square: "Card (Square Terminal)", cash: "Cash", comp: "Complimentary" };
 
 export async function loadReceipt(token: string): Promise<ReceiptData | null> {
   if (!/^[0-9a-f-]{36}$/i.test(token)) return null;
