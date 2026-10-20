@@ -149,7 +149,8 @@ export function FieldsCard({
                 </>
               ) : (
                 <input
-                  type={f.kind === "email" ? "email" : f.kind === "phone" ? "tel" : "text"}
+                  type={f.kind === "email" ? "email" : f.kind === "phone" ? "tel" : f.kind === "url" ? "url" : "text"}
+                  placeholder={f.kind === "url" ? "https://…" : undefined}
                   maxLength={f.maxLength} value={v ?? ""} onChange={(e) => set(r.column, e.target.value)}
                   className={`${wideInputClass} max-w-md`}
                 />

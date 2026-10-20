@@ -2,7 +2,8 @@
 // One list drives the Settings form, the server's validation in /api/settings,
 // and the wording of the change history ("Adult fare: $59.00 → $65.00").
 
-export type FieldKind = "money" | "int" | "bool" | "text" | "email" | "phone";
+// "url": an optional https:// link — blank clears it.
+export type FieldKind = "money" | "int" | "bool" | "text" | "email" | "phone" | "url";
 
 export interface FieldDef {
   column: string;
@@ -43,6 +44,9 @@ export const SETTINGS_FIELDS: FieldDef[] = [
   { column: "business_street", label: "Street address", kind: "text", maxLength: 120 },
   { column: "business_city_line", label: "City, state & ZIP", kind: "text", maxLength: 80 },
   { column: "business_hours", label: "Business hours", kind: "text", maxLength: 80 },
+  // Reviews
+  { column: "review_requests_enabled", label: "Review request emails on", kind: "bool" },
+  { column: "google_review_url", label: "Google review link", kind: "url", maxLength: 300 },
   // Flight matching (existing)
   { column: "depart_min_buffer_minutes", label: "Flying out: at least (min before flight)", kind: "int", min: 0, max: 720 },
   { column: "depart_max_buffer_minutes", label: "Flying out: at most (min before flight)", kind: "int", min: 0, max: 720 },
@@ -86,6 +90,12 @@ export function parseField(f: FieldDef, raw: unknown): { value: unknown } | { er
     case "email": {
       const v = String(raw ?? "").trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || v.length > (f.maxLength ?? 200)) return { error: `${f.label} isn't a valid email address.` };
+      return { value: v };
+    }
+    case "url": {
+      const v = String(raw ?? "").trim();
+      if (!v) return { value: null };
+      if (!/^https:\/\/\S+$/.test(v) || v.length > (f.maxLength ?? 300)) return { error: `${f.label} must be a full link starting with https://` };
       return { value: v };
     }
     case "phone": {

@@ -207,6 +207,32 @@
   .sr-init { opacity: 1; transform: none; transition: none; }
 }
 
+/* ── Reviews carousel ──────────────────────────────────────────────
+   The track holds the cards twice; sliding it by half loops seamlessly.
+   Pauses on hover/focus; with reduced motion it becomes a swipeable row. */
+.marquee {
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: volt-marquee var(--marquee-duration, 60s) linear infinite;
+}
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes volt-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; mask-image: none; -webkit-mask-image: none; }
+  .marquee-track { animation: none; }
+  .marquee-track [aria-hidden="true"] { display: none; }
+}
+
 /* Volt arrow cursor. Unlayered so it wins over Tailwind cursor-* utilities.
    Text fields keep the I-beam and disabled controls keep not-allowed. */
 html,

@@ -8,6 +8,7 @@ import { runAlertScans, scanStaffTripReminders } from "@/lib/notifications/alert
 import { enforceBlackouts } from "@/lib/blackouts";
 import { reminderMessage } from "@/lib/reservation-messages";
 import { loadAppSettings } from "@/lib/settings-server";
+import { queueReviewRequests } from "@/lib/reviews-server";
 
 // POST /api/cron/reminders — the background worker. Called every 10 minutes by
 // Supabase pg_cron (migration 019) with "Authorization: Bearer <CRON_SECRET>".
@@ -20,7 +21,9 @@ import { loadAppSettings } from "@/lib/settings-server";
 //   2. Retries queued texts/emails that failed earlier (src/lib/notifications/queue.ts).
 //   3. Runs the staff-alert scans (src/lib/notifications/alerts.ts).
 //   4. Applies active blackouts to newly generated departures.
-//   5. Records a heartbeat (system_status 'worker') for Settings → Message Health.
+//   5. Emails review requests 2 hours after a rider's first completed leg
+//      (src/lib/reviews-server.ts; one per booking).
+//   6. Records a heartbeat (system_status 'worker') for Settings → Message Health.
 
 function authorized(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET ?? "";
@@ -47,7 +50,12 @@ export async function POST(request: NextRequest) {
     return "error";
   });
 
-  const result = { reminders, staffReminders, queue, alerts, blackouts };
+  const reviews = await queueReviewRequests(sb).catch((err) => {
+    console.error("[cron] review requests", err);
+    return "error";
+  });
+
+  const result = { reminders, staffReminders, queue, alerts, blackouts, reviews };
   await sb.from("system_status").upsert({ key: "worker", value: result, updated_at: new Date().toISOString() });
   return NextResponse.json(result);
 }

@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  Settings, Loader2, DollarSign, CalendarClock, Tag, UserCog, Plane, Clock, Building2, BellRing, Bus,
+  Settings, Loader2, DollarSign, CalendarClock, Tag, UserCog, Plane, Clock, Building2, BellRing, Bus, Star,
 } from "lucide-react";
 import StaffAlertsCard from "@/components/admin/StaffAlertsCard";
 import { FieldsCard, inputClass } from "@/components/admin/settings/shared";
@@ -139,6 +139,15 @@ export default function SettingsPage() {
                   { column: "reminder_first_hours", title: "Send the first reminder", suffix: "hours before departure" },
                   { column: "reminder_second_enabled", title: "Second reminder" },
                   { column: "reminder_second_hours", title: "Send the second reminder", suffix: "hours before departure" },
+                ]} />
+              <FieldsCard icon={Star} title="Reviews" settings={s} onSaved={load}
+                description="Customers are emailed a review link 2 hours after their first trip leg arrives (once per booking). Reviews show on the homepage; manage them under Dashboard → Reviews. Edit the email's wording below (Review request)."
+                rows={[
+                  { column: "review_requests_enabled", title: "Send review request emails" },
+                  {
+                    column: "google_review_url", title: "Google review link",
+                    help: "Shown after a customer submits a review (\"Post on Google\"). Get it from Google: search Volt Transportation while signed in to your Business Profile → Ask for reviews → copy the link. Leave blank to hide the button.",
+                  },
                 ]} />
               <TemplatesCard overrides={data.templates} onSaved={load} />
             </>

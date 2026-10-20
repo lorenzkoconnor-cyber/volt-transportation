@@ -51,6 +51,8 @@ export interface AppSettings {
   discountCodeValidDays: number;
   defaultVanCapacity: number;
   reminders: { firstEnabled: boolean; firstHours: number; secondEnabled: boolean; secondHours: number };
+  // Review request emails after a trip, and where "Also post on Google" goes.
+  reviews: { requestsEnabled: boolean; googleUrl: string | null };
   // Daily departures each way (routes table).
   schedule: { toAtl: RouteSchedule; fromAtl: RouteSchedule };
   announcement: Announcement | null;
@@ -81,6 +83,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   discountCodeValidDays: 3,
   defaultVanCapacity: 8,
   reminders: { firstEnabled: true, firstHours: 24, secondEnabled: true, secondHours: 2 },
+  reviews: { requestsEnabled: true, googleUrl: null },
   schedule: {
     toAtl: { first: "04:00", last: "20:00", intervalMinutes: 120, durationMinutes: 120 },
     fromAtl: { first: "06:00", last: "22:00", intervalMinutes: 120, durationMinutes: 120 },
@@ -139,6 +142,10 @@ export function settingsFromRow(row: any, announcement: Announcement | null = nu
       firstHours: num(row.reminder_first_hours, 24),
       secondEnabled: bool(row.reminder_second_enabled, true),
       secondHours: num(row.reminder_second_hours, 2),
+    },
+    reviews: {
+      requestsEnabled: bool(row.review_requests_enabled, true),
+      googleUrl: typeof row.google_review_url === "string" && row.google_review_url.startsWith("https://") ? row.google_review_url : null,
     },
     schedule,
     announcement,

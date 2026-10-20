@@ -71,10 +71,12 @@ export function TemplatesCard({ overrides, onSaved }: { overrides: TemplateOverr
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="space-y-3">
-          <label className="block space-y-1">
-            <span className="text-[#A1A1AA] text-xs">Text message ({text.sms.length} characters)</span>
-            <textarea rows={7} value={text.sms} onChange={(e) => setText((p) => ({ ...p, sms: e.target.value }))} className={areaClass} />
-          </label>
+          {info.hasSms !== false && (
+            <label className="block space-y-1">
+              <span className="text-[#A1A1AA] text-xs">Text message ({text.sms.length} characters)</span>
+              <textarea rows={7} value={text.sms} onChange={(e) => setText((p) => ({ ...p, sms: e.target.value }))} className={areaClass} />
+            </label>
+          )}
           {info.hasEmail && (
             <>
               <label className="block space-y-1">
@@ -82,7 +84,7 @@ export function TemplatesCard({ overrides, onSaved }: { overrides: TemplateOverr
                 <input value={text.emailSubject} onChange={(e) => setText((p) => ({ ...p, emailSubject: e.target.value }))} className={areaClass} />
               </label>
               <label className="block space-y-1">
-                <span className="text-[#A1A1AA] text-xs">Email body (a receipt button is added automatically)</span>
+                <span className="text-[#A1A1AA] text-xs">Email body (a &ldquo;{info.button ?? "View receipt"}&rdquo; button is added automatically)</span>
                 <textarea rows={6} value={text.emailBody} onChange={(e) => setText((p) => ({ ...p, emailBody: e.target.value }))} className={areaClass} />
               </label>
             </>
@@ -96,7 +98,9 @@ export function TemplatesCard({ overrides, onSaved }: { overrides: TemplateOverr
         </div>
         <div className="space-y-3">
           <div className="text-[#A1A1AA] text-xs">Preview (sample booking)</div>
-          <pre className="whitespace-pre-wrap break-words font-sans text-sm text-[#D4D4D8] bg-white/5 rounded-xl p-4">{renderTemplate(text.sms, sample)}</pre>
+          {info.hasSms !== false && (
+            <pre className="whitespace-pre-wrap break-words font-sans text-sm text-[#D4D4D8] bg-white/5 rounded-xl p-4">{renderTemplate(text.sms, sample)}</pre>
+          )}
           {info.hasEmail && (
             <div className="bg-white rounded-xl p-4 text-[#18181b] text-sm space-y-2">
               <div className="font-semibold">{renderTemplate(text.emailSubject, sample)}</div>

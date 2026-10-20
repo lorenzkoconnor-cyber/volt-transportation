@@ -4,7 +4,7 @@
 // Dashboard → Settings → Message Wording (stored in message_templates); an
 // empty override means "use the default".
 
-export type TemplateKey = "confirmation" | "reminder_first" | "reminder_second" | "updated" | "cancelled" | "receipt";
+export type TemplateKey = "confirmation" | "reminder_first" | "reminder_second" | "updated" | "cancelled" | "receipt" | "review_request";
 
 export interface TemplateText {
   sms: string;
@@ -17,6 +17,8 @@ export interface TemplateInfo {
   label: string;
   description: string;
   hasEmail: boolean;
+  hasSms?: boolean;      // false = email only (default true)
+  button?: string;       // the email's button (default "View receipt")
   placeholders: { name: string; help: string }[];
   sample: Record<string, string>;   // used for previews and "send me a test"
 }
@@ -115,6 +117,16 @@ export const TEMPLATES: TemplateInfo[] = [
     placeholders: [...COMMON, { name: "receipt_link", help: "Link to the receipt" }],
     sample: { ...SAMPLE_COMMON, receipt_link: "https://volt-transportation.com/receipt/…" },
   },
+  {
+    key: "review_request",
+    label: "Review request",
+    description: "Emailed 2 hours after a customer's first completed trip leg (turn it off under Settings → Reviews). Email only.",
+    hasEmail: true,
+    hasSms: false,
+    button: "Leave a review",
+    placeholders: COMMON,
+    sample: SAMPLE_COMMON,
+  },
 ];
 
 export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateText> = {
@@ -173,6 +185,14 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateText> = {
     sms: "Volt Transportation: Hi {name}, here is your receipt for {confirmation}:\n{receipt_link}",
     emailSubject: "Your Volt receipt — {confirmation}",
     emailBody: "Hi {name},\n\nThank you for riding with Volt Transportation. Your receipt for {confirmation} is linked below.",
+  },
+  review_request: {
+    sms: "",
+    emailSubject: "How was your Volt ride, {name}?",
+    emailBody:
+      "Hi {name},\n\nThanks for riding with Volt Transportation! We'd love to hear how your trip went.\n\n" +
+      "It takes less than a minute, and your review helps other travelers find a reliable ride to and from the airport.\n\n" +
+      "Questions or a problem with your trip? Reply to this email or call us at {phone}.",
   },
 };
 

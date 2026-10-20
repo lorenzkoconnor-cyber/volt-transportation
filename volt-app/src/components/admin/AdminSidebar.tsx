@@ -21,6 +21,7 @@ import {
   Settings,
   Inbox,
   CalendarRange,
+  Star,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -45,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/payments",    label: "Payments",      icon: CreditCard,      roles: ["owner","manager"] },
   { href: "/dashboard/verifications", label: "Verifications", icon: ShieldCheck,   roles: ["owner","manager"] },
   { href: "/dashboard/discount-codes", label: "Discount Codes", icon: Ticket,     roles: ["owner","manager"] },
+  { href: "/dashboard/reviews",     label: "Reviews",       icon: Star,            roles: ["owner","manager"] },
   { href: "/dashboard/reports",     label: "Reports",       icon: BarChart3,       roles: ["owner","manager"] },
   { href: "/dashboard/employees",   label: "Employees",     icon: UserCog,         roles: ["owner"] },
   { href: "/dashboard/settings",    label: "Settings",      icon: Settings,        roles: ["owner","manager"] },
