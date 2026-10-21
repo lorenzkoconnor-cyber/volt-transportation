@@ -88,6 +88,9 @@ export default function ReviewForm({ token, form }: { token: string; form: Form 
             </div>
           </div>
         )}
+        <a href={form.tipUrl} className="inline-block text-[#FCC300] hover:text-[#FFD54A] text-sm font-medium">
+          Want to thank your driver? Leave a tip →
+        </a>
       </div>
     );
   }

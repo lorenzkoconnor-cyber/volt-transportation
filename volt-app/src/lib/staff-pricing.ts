@@ -31,8 +31,18 @@ export interface StaffCounts {
 export interface StaffPrice {
   subtotalCents: number;
   discountCents: number;
-  totalCents: number;
+  doorCents: number;   // door pickup + drop-off fees (never discounted)
+  tipCents: number;
+  totalCents: number;  // subtotal − discount + door + tip
 }
+
+// Door-to-door service picked in the Team Portal: what's charged for it.
+export interface StaffExtras {
+  pickupFeeCents: number;
+  dropoffFeeCents: number;
+  tipCents: number;
+}
+export const NO_EXTRAS: StaffExtras = { pickupFeeCents: 0, dropoffFeeCents: 0, tipCents: 0 };
 
 export interface StaffRates {
   pricing: { adult: number; child: number; pet: number; extraBag: number };
@@ -63,11 +73,15 @@ export function staffDiscountCents(subtotalCents: number, d: StaffDiscount, rate
   }
 }
 
-/** `comp` = the whole booking is free (Comp payment). */
-export function staffPrice(c: StaffCounts, d: StaffDiscount, comp = false, rates: StaffRates = DEFAULT_RATES): StaffPrice {
+/** `comp` = the whole booking is free (Comp payment) — fare and door fees; no tip. */
+export function staffPrice(
+  c: StaffCounts, d: StaffDiscount, comp = false, rates: StaffRates = DEFAULT_RATES, extras: StaffExtras = NO_EXTRAS,
+): StaffPrice {
   const subtotalCents = staffSubtotalCents(c, rates);
-  const discountCents = comp ? subtotalCents : staffDiscountCents(subtotalCents, d, rates);
-  return { subtotalCents, discountCents, totalCents: subtotalCents - discountCents };
+  const doorCents = extras.pickupFeeCents + extras.dropoffFeeCents;
+  const tipCents = comp ? 0 : extras.tipCents;
+  const discountCents = comp ? subtotalCents + doorCents : staffDiscountCents(subtotalCents, d, rates);
+  return { subtotalCents, discountCents, doorCents, tipCents, totalCents: subtotalCents - discountCents + doorCents + tipCents };
 }
 
 // ── Edit windows ──────────────────────────────────────────────────────────────

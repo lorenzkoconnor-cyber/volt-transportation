@@ -20,6 +20,8 @@ export const SETTINGS_FIELDS: FieldDef[] = [
   { column: "price_child_cents", label: "Child fare", kind: "money", min: 0, max: 1000 },
   { column: "price_pet_cents", label: "Pet fee", kind: "money", min: 0, max: 1000 },
   { column: "price_extra_bag_cents", label: "Extra bag fee", kind: "money", min: 0, max: 1000 },
+  { column: "door_pickup_fee_cents", label: "Door pickup fee", kind: "money", min: 0, max: 1000 },
+  { column: "door_dropoff_fee_cents", label: "Door drop-off fee", kind: "money", min: 0, max: 1000 },
   // Booking rules
   { column: "online_booking_cutoff_minutes", label: "Online booking cutoff (minutes)", kind: "int", min: 0, max: 1440 },
   { column: "short_notice_hours", label: "Short-notice window (hours)", kind: "int", min: 0, max: 72 },

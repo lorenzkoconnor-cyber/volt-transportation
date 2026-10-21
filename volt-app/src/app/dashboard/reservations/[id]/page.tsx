@@ -69,7 +69,7 @@ export default function ReservationDetailPage() {
         "trip:trips!reservations_trip_id_fkey(id, departure_date, departure_time, status, route:routes(name, origin_key, origin_label, destination_label, duration_minutes)), " +
         "return_trip:trips!reservations_return_trip_id_fkey(id, departure_date, departure_time, route:routes(name, origin_key, duration_minutes)), " +
         "reservation_passengers(id, name, is_primary, is_boarded, is_no_show), " +
-        "payments(id, method, status, amount_cents, refund_amount_cents, notes, reservation_change_id, created_at), " +
+        "payments(id, method, status, amount_cents, refund_amount_cents, notes, reservation_change_id, is_tip, created_at), " +
         "reservation_flights(id, leg, direction, airline, flight_number, terminal, flight_date, flight_time)"
       )
       .eq("id", id)
@@ -495,6 +495,14 @@ export default function ReservationDetailPage() {
                 <span className="text-green-400">−{formatCents(resv.discount_cents)}</span>
               </div>
             )}
+            {([["Door pickup", resv.pickup_fee_cents], ["Door drop-off", resv.dropoff_fee_cents], ["Tip", resv.tip_cents]] as const)
+              .filter(([, c]) => c > 0)
+              .map(([label, c]) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-[#A1A1AA]">{label}</span>
+                  <span className="text-white">{formatCents(c)}</span>
+                </div>
+              ))}
             <div className="flex justify-between font-bold border-t border-white/10 pt-2">
               <span className="text-white">Total</span>
               <span className="text-[#FCC300]">{formatCents(resv.total_cents)}</span>
@@ -515,7 +523,7 @@ export default function ReservationDetailPage() {
                     <Icon className="w-4 h-4 text-[#FCC300]" />
                     <div>
                       <div className="text-white text-sm font-medium capitalize">
-                        {PAY_LABELS[p.method] ?? p.method}
+                        {PAY_LABELS[p.method] ?? p.method}{p.is_tip ? " — tip" : ""}
                         {showMoney && ` · ${formatCents(p.amount_cents)}`}
                       </div>
                       {p.notes && <div className="text-[#A1A1AA] text-xs">{p.notes}</div>}
@@ -589,6 +597,23 @@ export default function ReservationDetailPage() {
           </p>
         )}
       </div>
+
+      {/* Door-to-door service — every role sees the addresses */}
+      {(resv.pickup_address || resv.dropoff_address || resv.is_ride_along) && (
+        <div className="glass rounded-2xl p-6 space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            <MapPin className="w-4 h-4 text-[#FCC300]" />
+            <h2 className="text-white font-semibold">{resv.pickup_address || resv.dropoff_address ? "Door-to-Door Service" : "Ride-Along"}</h2>
+          </div>
+          {resv.is_ride_along && <p className="text-[#A1A1AA] text-sm">Booked on the spot with the ride-along QR code.</p>}
+          {resv.pickup_address && (
+            <p className="text-sm"><span className="text-[#A1A1AA]">Pick up at </span><span className="text-white">{resv.pickup_address}</span></p>
+          )}
+          {resv.dropoff_address && (
+            <p className="text-sm"><span className="text-[#A1A1AA]">Drop off at </span><span className="text-white">{resv.dropoff_address}</span></p>
+          )}
+        </div>
+      )}
 
       {/* Notes */}
       <div className="glass rounded-2xl p-6">

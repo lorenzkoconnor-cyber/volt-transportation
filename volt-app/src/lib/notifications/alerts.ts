@@ -85,7 +85,7 @@ async function loadReservationSummary(sb: Db, reservationId: string) {
   const { data: r } = await sb
     .from("reservations")
     .select(
-      "id, confirmation_number, adults, children, pets, is_round_trip, created_by_employee_id, special_notes, " +
+      "id, confirmation_number, adults, children, pets, is_round_trip, created_by_employee_id, is_ride_along, special_notes, " +
       "customer:customers(first_name, last_name, phone), " +
       "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, route:routes(origin_label, destination_label))",
     )
@@ -123,7 +123,7 @@ export async function alertIfShortNotice(sb: Db, reservationId: string): Promise
     await raiseStaffAlert(sb, "short_notice_booking", {
       key: `reservation:${reservationId}`,
       subject: `Short-notice booking — leaves in ${when}`,
-      text: `${r.created_by_employee_id ? "Staff" : "Online"} booking:\n${describe(r)}`,
+      text: `${r.is_ride_along ? "Ride-along" : r.created_by_employee_id ? "Staff" : "Online"} booking:\n${describe(r)}`,
       link: `/dashboard/reservations/${reservationId}`,
     });
   } catch (err) {

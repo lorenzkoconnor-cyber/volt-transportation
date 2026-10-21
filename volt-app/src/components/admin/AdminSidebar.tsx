@@ -22,6 +22,7 @@ import {
   Inbox,
   CalendarRange,
   Star,
+  QrCode,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/calendar",    label: "Calendar",      icon: CalendarRange,   roles: ["owner","manager","office_staff","driver"] },
   { href: "/dashboard/reservations",label: "Reservations",  icon: CalendarDays,    roles: ["owner","manager","office_staff"] },
   { href: "/dashboard/dispatch",    label: "Dispatch",      icon: Truck,           roles: ["owner","manager","office_staff","driver"] },
+  { href: "/dashboard/ride-along",  label: "Ride-Along",    icon: QrCode,          roles: ["owner","manager","office_staff","driver"] },
   { href: "/dashboard/messages",    label: "Messages",      icon: Inbox,           roles: ["owner","manager","office_staff"] },
   { href: "/dashboard/vehicles",    label: "Vehicles",      icon: Car,             roles: ["owner","manager"] },
   { href: "/dashboard/drivers",     label: "Drivers",       icon: Bus,             roles: ["owner","manager"] },

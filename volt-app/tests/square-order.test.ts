@@ -96,3 +96,16 @@ test("refuses to charge more than the booking costs", () => {
 test("refuses a zero charge", () => {
   assert.equal(buildSquareOrder(resv(), charge(0)).ok, false);
 });
+
+test("door pickup, drop-off and a tip are their own lines; discount stays off the fare", () => {
+  // 5900 fare − 1000 military + 5000 + 5000 door + 1000 tip = 15900
+  const r = resv({
+    discountCents: 1000, discountLabel: "Military Discount",
+    pickupFeeCents: 5000, dropoffFeeCents: 5000, tipCents: 1000, totalCents: 15900,
+  });
+  const o = buildSquareOrder(r, charge(15900));
+  assert.ok(o.ok);
+  assert.deepEqual(o.lines.slice(1).map((l) => [l.name, l.unitCents]), [["Door pickup", 5000], ["Door drop-off", 5000], ["Tip", 1000]]);
+  assert.deepEqual(o.discounts, [{ name: "Military Discount", cents: 1000 }]);
+  assert.equal(o.totalCents, 15900);
+});

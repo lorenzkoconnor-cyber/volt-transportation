@@ -130,6 +130,8 @@ const DEFAULT_BUSINESS: EmailBusiness = {
 /** Wrap plain text (paragraphs split on blank lines) in Volt's email layout. */
 export function emailHtml(
   title: string, text: string, button?: { label: string; url: string }, business: EmailBusiness = DEFAULT_BUSINESS,
+  // A second, quieter link under the button ("Tip your driver").
+  secondary?: { text: string; label: string; url: string },
 ): string {
   const paragraphs = text
     .split(/\n{2,}/)
@@ -138,13 +140,16 @@ export function emailHtml(
   const cta = button
     ? `<p style="margin:22px 0 6px"><a href="${escapeHtml(button.url)}" style="background:#FCC300;color:#0A0A0A;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px;display:inline-block">${escapeHtml(button.label)}</a></p>`
     : "";
+  const more = secondary
+    ? `<p style="margin:14px 0 0;line-height:1.55;color:#52525b">${escapeHtml(secondary.text)} <a href="${escapeHtml(secondary.url)}" style="color:#0A0A0A;font-weight:600">${escapeHtml(secondary.label)}</a></p>`
+    : "";
   return `<!doctype html><html><body style="margin:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden">
 <tr><td style="background:#0A0A0A;padding:18px 24px;color:#FCC300;font-size:18px;font-weight:700">⚡ Volt Transportation</td></tr>
 <tr><td style="padding:24px">
 <h1 style="font-size:20px;margin:0 0 16px">${escapeHtml(title)}</h1>
-${paragraphs}${cta}
+${paragraphs}${cta}${more}
 </td></tr>
 <tr><td style="padding:16px 24px;background:#fafafa;color:#71717a;font-size:12px;line-height:1.5">
 Volt Transportation · ${escapeHtml(business.street)}, ${escapeHtml(business.cityLine)} · ${escapeHtml(business.phone)}<br>

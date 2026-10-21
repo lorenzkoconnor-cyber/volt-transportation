@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { getStripeServer } from "@/lib/stripe/server";
 import { createAdminDb, finalizeCheckout } from "@/lib/checkout";
 import { finishEdit } from "@/lib/staff-booking";
+import { recordTip } from "@/lib/tips-server";
 
 // POST /api/payments/webhook
 // Stripe sends payment events here. Signature-verified with STRIPE_WEBHOOK_SECRET.
@@ -92,6 +93,13 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // A tip paid after the trip (/tip/<token>) — record it if the page didn't.
+        if (event.type === "payment_intent.succeeded" && pi.metadata?.kind === "tip") {
+          const tip = await recordTip(pi.id);
+          if (!tip.ok) console.warn(`[webhook] tip ${pi.id} not recorded: ${tip.error}`);
+          break;
+        }
+
         const checkoutId = pi.metadata?.checkout_id;
         if (checkoutId) {
           const result = await finalizeCheckout(checkoutId, pi.id, "webhook");
@@ -147,7 +155,7 @@ export async function POST(request: NextRequest) {
 
         const { data: payment } = await sb
           .from("payments")
-          .select("id, reservation_id, status")
+          .select("id, reservation_id, status, is_tip, refund_amount_cents")
           .eq("stripe_payment_intent_id", typeof charge.payment_intent === "string" ? charge.payment_intent : "")
           .maybeSingle();
         if (!payment || payment.status === "authorized") break;
@@ -171,7 +179,15 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", payment.id);
 
-        if (isFullRefund && !editRefund && payment.reservation_id) {
+        // A tip refunded in the Stripe Dashboard: take what's new off the
+        // reservation (our own refund route already did, so its delta is 0).
+        // Refunding a tip never cancels the booking.
+        if (payment.is_tip && payment.reservation_id) {
+          const delta = refundedCents - (payment.refund_amount_cents ?? 0);
+          if (delta > 0) await sb.rpc("add_reservation_tip", { p_reservation_id: payment.reservation_id, p_cents: -delta });
+        }
+
+        if (isFullRefund && !editRefund && !payment.is_tip && payment.reservation_id) {
           const { data: cancelled } = await sb
             .from("reservations")
             .update({ status: "cancelled", cancelled_at: new Date().toISOString() })

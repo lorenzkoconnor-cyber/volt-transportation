@@ -159,7 +159,7 @@ export async function settleMilitaryBookings(
 ) {
   let query = sb
     .from("reservations")
-    .select("id, status, subtotal_cents, pricing_snapshot, payments(id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, created_at)")
+    .select("id, status, subtotal_cents, tip_cents, pickup_fee_cents, dropoff_fee_cents, pricing_snapshot, payments(id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, is_tip, created_at)")
     .eq("customer_id", customerId)
     .eq("military_discount_pending", true);
   if (reservationId) query = query.eq("id", reservationId);
@@ -175,7 +175,8 @@ export async function settleMilitaryBookings(
   };
 
   for (const r of bookings ?? []) {
-    const payments = (r.payments ?? []) as (HoldPayment & { created_at: string })[];
+    // A tip paid after the trip is its own payment — never the fare's.
+    const payments = ((r.payments ?? []) as (HoldPayment & { created_at: string; is_tip?: boolean })[]).filter((p) => !p.is_tip);
     const payment = payments.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
     // The discount amount in force when this booking was made.
     const discountCents = militaryDiscountCents(r.subtotal_cents, snapshotPricing(r.pricing_snapshot).militaryAmount);
@@ -210,7 +211,7 @@ export async function settleMilitaryBookings(
       if (settled) {
         await sb.from("reservations").update({
           discount_cents: discountCents,
-          total_cents: r.subtotal_cents - discountCents,
+          total_cents: r.subtotal_cents - discountCents + (r.tip_cents ?? 0) + (r.pickup_fee_cents ?? 0) + (r.dropoff_fee_cents ?? 0),
           military_discount_pending: false,
         }).eq("id", r.id);
       }

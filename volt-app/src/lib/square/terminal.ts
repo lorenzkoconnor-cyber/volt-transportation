@@ -27,7 +27,7 @@ const PAYMENT_SELECT =
   "id, method, status, amount_cents, reservation_change_id, stripe_payment_intent_id, " +
   "square_order_id, square_checkout_id, square_payment_id, " +
   "reservation:reservations(id, confirmation_number, status, adults, children, pets, extra_bags, is_round_trip, " +
-  "subtotal_cents, discount_cents, total_cents, is_military, pricing_snapshot, " +
+  "subtotal_cents, discount_cents, total_cents, tip_cents, pickup_fee_cents, dropoff_fee_cents, is_military, pricing_snapshot, " +
   `trip:trips!reservations_trip_id_fkey(${LEG_FIELDS}), return_trip:trips!reservations_return_trip_id_fkey(${LEG_FIELDS}), ` +
   "discount_code:discount_codes!reservations_discount_code_id_fkey(code))";
 
@@ -76,6 +76,9 @@ async function buildOrderFor(sb: Db, p: any) {
     isRoundTrip: !!r.is_round_trip,
     subtotalCents: r.subtotal_cents,
     discountCents: r.discount_cents ?? 0,
+    pickupFeeCents: r.pickup_fee_cents ?? 0,
+    dropoffFeeCents: r.dropoff_fee_cents ?? 0,
+    tipCents: r.tip_cents ?? 0,
     totalCents: r.total_cents,
     discountLabel: r.is_military ? "Military Discount"
       : r.discount_code?.code ? `Discount code ${formatCode(r.discount_code.code)}`

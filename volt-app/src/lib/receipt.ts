@@ -29,12 +29,21 @@ export interface ReceiptData {
   lines: { label: string; cents: number }[];
   subtotalCents: number;
   discount: { label: string; cents: number } | null;
+  extras: { label: string; cents: number }[];   // door service + tip, after the discount
   totalCents: number;
   payments: { label: string; date: string; cents: number; status: string; refundedCents: number }[];
   paidCents: number;
   balanceDueCents: number;
   refundDueCents: number;
   notes: string | null;
+}
+
+function extrasOf(r: any): { label: string; cents: number }[] {
+  return [
+    r.pickup_fee_cents > 0 && { label: `Door pickup${r.pickup_address ? ` — ${r.pickup_address}` : ""}`, cents: r.pickup_fee_cents },
+    r.dropoff_fee_cents > 0 && { label: `Door drop-off${r.dropoff_address ? ` — ${r.dropoff_address}` : ""}`, cents: r.dropoff_fee_cents },
+    r.tip_cents > 0 && { label: "Tip", cents: r.tip_cents },
+  ].filter(Boolean) as { label: string; cents: number }[];
 }
 
 const METHOD_LABEL: Record<string, string> = { stripe: "Card", square: "Card (Square Terminal)", cash: "Cash", comp: "Complimentary" };
@@ -50,7 +59,7 @@ export async function loadReceipt(token: string): Promise<ReceiptData | null> {
       "return_trip:trips!reservations_return_trip_id_fkey(id, departure_date, departure_time, route:routes(origin_label, destination_label)), " +
       "reservation_passengers(name, is_primary, created_at), " +
       "reservation_flights(leg, direction, airline, flight_number, terminal, flight_date, flight_time), " +
-      "payments(method, status, amount_cents, refund_amount_cents, reservation_change_id, created_at, captured_at), " +
+      "payments(method, status, amount_cents, refund_amount_cents, reservation_change_id, is_tip, created_at, captured_at), " +
       "discount_code:discount_codes!reservations_discount_code_id_fkey(code, discount_type, value)",
     )
     .eq("receipt_token", token)
@@ -104,7 +113,7 @@ export async function loadReceipt(token: string): Promise<ReceiptData | null> {
     .filter((p: any) => ["paid", "authorized", "refunded"].includes(p.status) && (p.amount_cents > 0 || p.method === "comp"))
     .sort((a: any, b: any) => (a.created_at ?? "").localeCompare(b.created_at ?? ""))
     .map((p: any) => ({
-      label: `${METHOD_LABEL[p.method] ?? p.method}${p.reservation_change_id ? " — change" : ""}${p.status === "authorized" ? " (on hold)" : ""}`,
+      label: `${METHOD_LABEL[p.method] ?? p.method}${p.is_tip ? " — tip" : ""}${p.reservation_change_id ? " — change" : ""}${p.status === "authorized" ? " (on hold)" : ""}`,
       date: p.captured_at ?? p.created_at,
       cents: p.amount_cents,
       status: p.status,
@@ -132,6 +141,7 @@ export async function loadReceipt(token: string): Promise<ReceiptData | null> {
     lines,
     subtotalCents: r.subtotal_cents,
     discount: r.discount_cents > 0 ? { label: discountLabel, cents: r.discount_cents } : null,
+    extras: extrasOf(r),
     totalCents: r.total_cents,
     payments,
     paidCents: balance.collectedCents,

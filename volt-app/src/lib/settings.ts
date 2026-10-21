@@ -45,6 +45,8 @@ export interface AppSettings {
   arriveEarlyMinutes: number;
   onlineCutoffMinutes: number;
   cancellationFeeCents: number;
+  // Team Portal door-to-door service: flat fee for a pickup / drop-off at an address.
+  doorService: { pickupCents: number; dropoffCents: number };
   shortNoticeHours: number;
   editCutoffHours: number;
   returnEditCutoffHours: number;
@@ -77,6 +79,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   arriveEarlyMinutes: 20,
   onlineCutoffMinutes: 120,
   cancellationFeeCents: 1500,
+  doorService: { pickupCents: 5000, dropoffCents: 5000 },
   shortNoticeHours: 6,
   editCutoffHours: 24,
   returnEditCutoffHours: 2,
@@ -132,6 +135,10 @@ export function settingsFromRow(row: any, announcement: Announcement | null = nu
     arriveEarlyMinutes: num(row.arrive_early_minutes, d.arriveEarlyMinutes),
     onlineCutoffMinutes: num(row.online_booking_cutoff_minutes, d.onlineCutoffMinutes),
     cancellationFeeCents: num(row.cancellation_fee_cents, d.cancellationFeeCents),
+    doorService: {
+      pickupCents: num(row.door_pickup_fee_cents, d.doorService.pickupCents),
+      dropoffCents: num(row.door_dropoff_fee_cents, d.doorService.dropoffCents),
+    },
     shortNoticeHours: num(row.short_notice_hours, d.shortNoticeHours),
     editCutoffHours: num(row.staff_edit_cutoff_hours, d.editCutoffHours),
     returnEditCutoffHours: num(row.return_edit_cutoff_hours, d.returnEditCutoffHours),

@@ -87,7 +87,7 @@ export default function ReportsPage() {
       const [resvRes, tripsRes] = await Promise.all([
         sb.from("reservations")
           .select(
-            "adults, children, total_cents, status, " +
+            "adults, children, total_cents, tip_cents, pickup_fee_cents, dropoff_fee_cents, status, " +
             "trip:trips!reservations_trip_id_fkey!inner(id, departure_date, route_id)"
           )
           .gte("trip.departure_date", start)
@@ -109,18 +109,20 @@ export default function ReportsPage() {
 
   const { daily, routeStats, totals } = useMemo(() => {
     // Group by day
-    const dayMap = new Map<string, { revenue: number; passengers: number; tripIds: Set<string> }>();
+    const dayMap = new Map<string, { revenue: number; tips: number; door: number; passengers: number; tripIds: Set<string> }>();
     reservations.forEach((r) => {
       const d = r.trip.departure_date;
-      const entry = dayMap.get(d) ?? { revenue: 0, passengers: 0, tripIds: new Set() };
+      const entry = dayMap.get(d) ?? { revenue: 0, tips: 0, door: 0, passengers: 0, tripIds: new Set() };
       entry.revenue += r.total_cents;
+      entry.tips += r.tip_cents ?? 0;
+      entry.door += (r.pickup_fee_cents ?? 0) + (r.dropoff_fee_cents ?? 0);
       entry.passengers += (r.adults ?? 0) + (r.children ?? 0);
       entry.tripIds.add(r.trip.id);
       dayMap.set(d, entry);
     });
     const daily = [...dayMap.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, v]) => ({ date, revenue: v.revenue, passengers: v.passengers, trips: v.tripIds.size }));
+      .map(([date, v]) => ({ date, revenue: v.revenue, tips: v.tips, door: v.door, passengers: v.passengers, trips: v.tripIds.size }));
 
     // Group trips by route
     const routeMap = new Map<string, { name: string; trips: number; passengers: number; capacity: number; revenue: number }>();
@@ -139,6 +141,8 @@ export default function ReportsPage() {
 
     const totals = {
       revenue: daily.reduce((s, d) => s + d.revenue, 0),
+      tips: daily.reduce((s, d) => s + d.tips, 0),
+      door: daily.reduce((s, d) => s + d.door, 0),
       passengers: daily.reduce((s, d) => s + d.passengers, 0),
       trips: daily.reduce((s, d) => s + d.trips, 0),
       occupancy: routeStats.reduce((s, r) => s + r.capacity, 0) > 0
@@ -150,11 +154,12 @@ export default function ReportsPage() {
   }, [reservations, trips]);
 
   const exportCsv = () => {
-    const header = "Date,Trips,Passengers,Revenue (USD)";
+    const header = "Date,Trips,Passengers,Revenue (USD),Tips (USD),Door Service (USD)";
+    const usd = (c: number) => (c / 100).toFixed(2);
     const body = daily
-      .map((d) => `${d.date},${d.trips},${d.passengers},${(d.revenue / 100).toFixed(2)}`)
+      .map((d) => `${d.date},${d.trips},${d.passengers},${usd(d.revenue)},${usd(d.tips)},${usd(d.door)}`)
       .join("\n");
-    const totalsRow = `Totals,${totals.trips},${totals.passengers},${(totals.revenue / 100).toFixed(2)}`;
+    const totalsRow = `Totals,${totals.trips},${totals.passengers},${usd(totals.revenue)},${usd(totals.tips)},${usd(totals.door)}`;
     const csv = [header, body, totalsRow].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -197,7 +202,7 @@ export default function ReportsPage() {
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Revenue"    value={loading ? "…" : formatCents(totals.revenue)} sub={`${formatCents(Math.round(totals.revenue / activeDays))}/day avg`} icon={DollarSign} accent />
+        <StatCard label="Total Revenue"    value={loading ? "…" : formatCents(totals.revenue)} sub={`${formatCents(Math.round(totals.revenue / activeDays))}/day avg${totals.tips ? ` · incl. ${formatCents(totals.tips)} tips` : ""}${totals.door ? ` · ${formatCents(totals.door)} door service` : ""}`} icon={DollarSign} accent />
         <StatCard label="Total Passengers" value={loading ? "…" : totals.passengers} sub="Both directions" icon={Users} />
         <StatCard label="Booked Trips"     value={loading ? "…" : totals.trips}      sub="With passengers" icon={Truck} />
         <StatCard label="Avg Occupancy"    value={loading ? "…" : `${totals.occupancy}%`} sub="Of booked trips" icon={TrendingUp} />

@@ -22,6 +22,11 @@ export function reviewUrl(token: string): string {
   return `${appUrl()}/review/${token}`;
 }
 
+// "Tip your driver" after the trip — same token (src/lib/tips-server.ts).
+export function tipUrl(token: string): string {
+  return `${appUrl()}/tip/${token}`;
+}
+
 // ── Review request emails (cron) ─────────────────────────────────────────────
 export async function queueReviewRequests(sb: Db): Promise<Record<string, number | string>> {
   const settings = await loadAppSettings();
@@ -40,12 +45,15 @@ export async function queueReviewRequests(sb: Db): Promise<Record<string, number
     const m = await renderMessage(sb, "review_request", { name: r.first_name, confirmation: r.confirmation_number });
     if (!m.emailSubject || !m.emailBody) continue;
     const link = reviewUrl(r.review_token);
+    const tip = tipUrl(r.review_token);
+    const tipText = "Want to thank your driver?";
     const [res] = await enqueue(sb, [{
       channel: "email",
       to: r.email,
       subject: m.emailSubject,
-      text: `${m.emailBody}\n\nLeave a review: ${link}`,
-      html: emailHtml(m.emailSubject, m.emailBody, { label: "Leave a review", url: link }, settings.business),
+      text: `${m.emailBody}\n\nLeave a review: ${link}\n\n${tipText} Leave a tip: ${tip}`,
+      html: emailHtml(m.emailSubject, m.emailBody, { label: "Leave a review", url: link }, settings.business,
+        { text: tipText, label: "Leave a tip", url: tip }),
       reservationId: r.reservation_id,
       kind: "review_request",
       dedupeKey: `review_request:${r.reservation_id}`,
@@ -60,6 +68,7 @@ export async function queueReviewRequests(sb: Db): Promise<Record<string, number
 // ── The review page ───────────────────────────────────────────────────────────
 export interface ReviewForm {
   firstName: string;
+  tipUrl: string;
   defaultName: string;
   tripLabel: string;
   googleUrl: string | null;
@@ -96,6 +105,7 @@ export async function loadReviewForm(token: string): Promise<ReviewForm | null> 
   ]);
   return {
     firstName: r.customer?.first_name ?? "",
+    tipUrl: `/tip/${token}`,
     defaultName: defaultDisplayName(r.customer?.first_name ?? "", r.customer?.last_name ?? ""),
     tripLabel: tripLabelFor(r),
     googleUrl: settings.reviews.googleUrl,

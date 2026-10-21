@@ -87,6 +87,10 @@ export default function SettingsPage() {
                   { column: "price_child_cents", title: "Child (ages 2–12)", suffix: "per seat" },
                   { column: "price_pet_cents", title: "Pet", suffix: "per pet" },
                   { column: "price_extra_bag_cents", title: "Extra bag", suffix: "per bag" },
+                  { column: "door_pickup_fee_cents", title: "Door pickup", step: 1,
+                    help: "Team Portal only: picking a rider up at their address.", suffix: "per reservation" },
+                  { column: "door_dropoff_fee_cents", title: "Door drop-off", step: 1,
+                    help: "Team Portal only: dropping a rider off at their address.", suffix: "per reservation" },
                 ]} />
               <FieldsCard icon={CalendarClock} title="Booking Rules" settings={s} onSaved={load}
                 description="All times are Eastern. Staff can always book and cancel from the Team Portal."

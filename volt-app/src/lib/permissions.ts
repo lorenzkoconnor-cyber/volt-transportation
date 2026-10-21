@@ -17,6 +17,7 @@ const ROUTE_ACCESS: { prefix: string; roles: EmployeeRole[] }[] = [
   { prefix: "/dashboard/reservations", roles: ["owner", "manager", "office_staff"] },
   { prefix: "/dashboard/dispatch",     roles: ["owner", "manager", "office_staff", "driver"] },
   { prefix: "/dashboard/manifest",     roles: ["owner", "manager", "office_staff", "driver"] },
+  { prefix: "/dashboard/ride-along",   roles: ["owner", "manager", "office_staff", "driver"] },
   { prefix: "/dashboard/messages",     roles: ["owner", "manager", "office_staff"] },
   { prefix: "/dashboard/vehicles",     roles: ["owner", "manager"] },
   { prefix: "/dashboard/drivers",      roles: ["owner", "manager"] },

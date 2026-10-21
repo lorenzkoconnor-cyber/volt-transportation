@@ -93,6 +93,15 @@ function toInitial(r: any): { initial: StaffFormInitial; held: Record<string, nu
       additional: passengers.filter((p: any) => !p.is_primary).map((p: any) => p.name),
       notes: r.special_notes ?? "",
       discount,
+      door: {
+        pickup: !!r.pickup_address,
+        pickupAddress: r.pickup_address ?? "",
+        dropoff: !!r.dropoff_address,
+        dropoffAddress: r.dropoff_address ?? "",
+        pickupFeeCents: r.pickup_fee_cents ?? 0,
+        dropoffFeeCents: r.dropoff_fee_cents ?? 0,
+      },
+      tipCents: r.tip_cents ?? 0,
     },
   };
 }

@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
         .select("id, departure_time, total_capacity, seats_booked, status")
         .eq("route_id", route.id)
         .eq("departure_date", date)
-        .eq("status", "scheduled")
+        // A van that's boarding hasn't left yet — staff can still put riders on it.
+        .in("status", ["scheduled", "boarding"])
         .order("departure_time"),
       supabase.from("booking_settings").select("*").maybeSingle(),
     ]);
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
         seatsLeft,
         totalSeats: trip.total_capacity,
         departed: departsIn <= 0,
-        closed: departsIn < cutoffMinutes * 60_000,
+        closed: departsIn < cutoffMinutes * 60_000 || trip.status === "boarding",
       };
     });
 

@@ -5,6 +5,8 @@
 //   Adult ticket (Outbound)   2 × $59     Columbus → ATL · Oct 22
 //   Adult ticket (Return)     2 × $59     ATL → Columbus · Oct 25
 //   Extra bag (Outbound)      1 × $15
+//   Door pickup               1 × $50     (Team Portal door service)
+//   Tip                       1 × $10
 //   − Military Discount               −$10
 //   − Paid in cash                    −$20   (split: the cash part)
 //   = amount charged on the Terminal
@@ -24,7 +26,10 @@ export interface OrderReservation {
   isRoundTrip: boolean;
   subtotalCents: number;
   discountCents: number;
-  totalCents: number;
+  pickupFeeCents?: number;
+  dropoffFeeCents?: number;
+  tipCents?: number;
+  totalCents: number;            // subtotal − discount + door fees + tip
   discountLabel: string | null;  // "Military Discount", "Discount code SPRING10", …
   pricing: OrderPricing;         // the booking's own prices (pricing_snapshot)
   outboundLabel: string;         // "Columbus → ATL · Oct 22, 8:00 AM"
@@ -75,6 +80,9 @@ export function buildSquareOrder(r: OrderReservation, charge: OrderCharge): Buil
         name: "Volt shuttle fare", quantity: 1, unitCents: r.subtotalCents,
         variation: r.isRoundTrip ? "Round trip" : "One way", note: partySummary(r),
       }];
+    }
+    for (const [name, c] of [["Door pickup", r.pickupFeeCents], ["Door drop-off", r.dropoffFeeCents], ["Tip", r.tipCents]] as const) {
+      if (c && c > 0) lines.push({ name, quantity: 1, unitCents: c, variation: r.confirmationNumber });
     }
     if (r.discountCents > 0) discounts.push({ name: r.discountLabel || "Discount", cents: r.discountCents });
     coveredCents = r.totalCents;

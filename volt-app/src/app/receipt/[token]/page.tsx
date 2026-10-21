@@ -137,6 +137,9 @@ export default async function ReceiptPage({
               {r.discount && (
                 <tr><td className="py-1">{r.discount.label}</td><td className="py-1 text-right">−{formatCents(r.discount.cents)}</td></tr>
               )}
+              {r.extras.map((l) => (
+                <tr key={l.label}><td className="py-1">{l.label}</td><td className="py-1 text-right">{formatCents(l.cents)}</td></tr>
+              ))}
               <tr className="border-t-2 border-[#111] font-bold text-base">
                 <td className="pt-2">Total</td><td className="pt-2 text-right">{formatCents(r.totalCents)}</td>
               </tr>

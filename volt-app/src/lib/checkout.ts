@@ -24,6 +24,7 @@ import { loadMessageInfo, notifyConfirmation } from "@/lib/reservation-messages"
 import { alertIfShortNotice } from "@/lib/notifications/alerts";
 import { generateConfirmationNumber, militaryDiscountCents } from "@/lib/booking";
 import { DEFAULT_SETTINGS, militaryAmount, type AppSettings } from "@/lib/settings";
+import { normalizeTipCents } from "@/lib/tips";
 import {
   CODE_ERRORS, codeDiscountCents, codeLabel, codeState, formatCode, normalizeCode,
   type DiscountCodeTerms,
@@ -61,6 +62,7 @@ export interface CheckoutPayload {
   specialNotes: string;
   flights: unknown[];
   smsConsent: boolean;   // optional "text me about this booking" opt-in
+  tipCents: number;      // optional tip, added on top of the fare
 }
 
 const count = (v: unknown, min: number) => Math.max(min, Math.min(20, Math.floor(Number(v) || 0)));
@@ -85,6 +87,7 @@ export function normalizePayload(body: Record<string, unknown>): CheckoutPayload
     specialNotes: text(body.specialNotes, 1000),
     flights: Array.isArray(body.flights) ? body.flights.slice(0, 2) : [],
     smsConsent: body.smsConsent === true || p.smsConsent === true,
+    tipCents: normalizeTipCents(body.tipCents),
   };
   if (!payload.tripId || !payload.primaryPassenger.name || !payload.primaryPassenger.phone) return null;
   return payload;
@@ -149,7 +152,8 @@ export async function findCustomer(
 export interface CheckoutPrice {
   subtotalCents: number;
   discountCents: number;
-  totalCents: number;
+  tipCents: number;
+  totalCents: number;   // subtotal − discount + tip
   captureMethod: "automatic" | "manual";
   isMilitary: boolean;
   militaryDiscountPending: boolean;
@@ -164,6 +168,8 @@ export interface CheckoutPrice {
 //   • verification pending         → full fare AUTHORIZED only; captured minus the
 //                                    discount on approval or in full on denial
 //   • discount not requested, or the program is switched off → full fare
+// The rider's tip is added on top of whatever the fare comes to (and is held
+// along with the fare while a Military Discount is pending).
 export function priceCheckout(
   payload: CheckoutPayload,
   militaryRequested: boolean,
@@ -176,19 +182,20 @@ export function priceCheckout(
     payload.adults * P.adult + payload.children * P.child +
     payload.pets * P.pet + payload.extraBags * P.extraBag;
   const subtotalCents = Math.round(oneWayDollars * (payload.isRoundTrip ? 2 : 1) * 100);
+  const tipCents = payload.tipCents;
   const full: CheckoutPrice = {
-    subtotalCents, discountCents: 0, totalCents: subtotalCents,
+    subtotalCents, discountCents: 0, tipCents, totalCents: subtotalCents + tipCents,
     captureMethod: "automatic", isMilitary: false, militaryDiscountPending: false,
   };
 
   if (code) {
     const discountCents = codeDiscountCents(subtotalCents, code);
-    return { ...full, discountCents, totalCents: subtotalCents - discountCents };
+    return { ...full, discountCents, totalCents: subtotalCents - discountCents + tipCents };
   }
   if (!militaryRequested || !settings.military.enabled) return full;
   if (militaryStatus === "approved") {
     const discountCents = militaryDiscountCents(subtotalCents, militaryAmount(settings));
-    return { ...full, discountCents, totalCents: subtotalCents - discountCents, isMilitary: true };
+    return { ...full, discountCents, totalCents: subtotalCents - discountCents + tipCents, isMilitary: true };
   }
   if (militaryStatus === "pending") {
     return { ...full, captureMethod: "manual", isMilitary: true, militaryDiscountPending: true };
@@ -412,6 +419,9 @@ export async function finalizeCheckout(
   let outboundHeld = false;
   let returnHeld = false;
   let reservationId: string | null = null;
+  const { data: rideAlong } = checkout.ride_along_id
+    ? await sb.from("ride_along_sessions").select("id, created_by_employee_id").eq("id", checkout.ride_along_id).maybeSingle()
+    : { data: null };
 
   try {
     // 1. Customer — find or create now that the booking is actually paid.
@@ -473,8 +483,11 @@ export async function finalizeCheckout(
         special_notes: payload.specialNotes || null,
         subtotal_cents: checkout.subtotal_cents,
         discount_cents: checkout.discount_cents,
+        tip_cents: checkout.tip_cents ?? 0,
         total_cents: checkout.total_cents,
         is_military: checkout.is_military,
+        is_ride_along: !!checkout.ride_along_id,
+        created_by_employee_id: rideAlong?.created_by_employee_id ?? null,
         military_discount_pending: checkout.military_discount_pending,
         discount_code_id: checkout.discount_code_id ?? null,
         pricing_snapshot: checkout.pricing_snapshot ?? null,
@@ -492,7 +505,8 @@ export async function finalizeCheckout(
 
     // 4. Payment record — linked to the reservation AND the PaymentIntent.
     const authorized = verified.pi?.status === "requires_capture";
-    const codeNote = codeRow ? `Discount code ${describeCode(codeRow)}.` : null;
+    const tipNote = checkout.tip_cents > 0 ? `Includes a $${(checkout.tip_cents / 100).toFixed(2)} tip.` : null;
+    const codeNote = [codeRow ? `Discount code ${describeCode(codeRow)}.` : null, tipNote].filter(Boolean).join(" ") || null;
     const { error: payError } = await sb.from("payments").insert({
       reservation_id: reservation.id,
       method: free ? "comp" : "stripe",
@@ -504,7 +518,7 @@ export async function finalizeCheckout(
       authorization_expires_at: verified.captureBefore,
       captured_at: authorized ? null : new Date().toISOString(),
       notes: authorized
-        ? "Card authorized for the full fare — Military Discount verification pending."
+        ? ["Card authorized for the full fare — Military Discount verification pending.", tipNote].filter(Boolean).join(" ")
         : free ? `Free booking — ${codeNote}` : codeNote,
     });
     if (payError) throw payError;
@@ -533,6 +547,10 @@ export async function finalizeCheckout(
     await sb.from("booking_checkouts").update(done).eq("id", checkoutId);
     if (codeRow) {
       await sb.from("discount_codes").update({ used_reservation_id: reservation.id }).eq("id", codeRow.id);
+    }
+    // One QR can book several parties while it's open; it points at the latest.
+    if (rideAlong) {
+      await sb.from("ride_along_sessions").update({ reservation_id: reservation.id }).eq("id", rideAlong.id);
     }
 
     // ── Everything below is best-effort: the booking is already confirmed. ──

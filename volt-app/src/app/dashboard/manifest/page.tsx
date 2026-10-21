@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatDateLong } from "@/lib/format";
 import {
   ArrowLeft, Phone, CheckCircle2, XCircle, UserX, MapPin,
-  MessageSquare, Loader2, AlertCircle, Plane, ChevronRight,
+  MessageSquare, Loader2, AlertCircle, Plane, ChevronRight, Home, QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { canAccessRoute } from "@/lib/permissions";
@@ -27,6 +27,10 @@ interface Passenger {
   reservationId: string;
   isReturnLeg: boolean;   // riding this trip as the return half of a round trip
   flight: string;   // lead passenger only — "DL 1234 · lands 2:15 PM · Domestic – South"
+  // Door-to-door service, lead passenger only: pickup on the first leg, drop-off on the last.
+  pickupAddress: string;
+  dropoffAddress: string;
+  rideAlong: boolean;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -65,7 +69,8 @@ function ManifestContent() {
       sb.from("reservation_passengers")
         .select(
           "id, name, is_primary, is_boarded, is_no_show, return_is_boarded, return_is_no_show, " +
-          "reservation:reservations!inner(id, confirmation_number, special_notes, status, trip_id, return_trip_id, " +
+          "reservation:reservations!inner(id, confirmation_number, special_notes, status, trip_id, return_trip_id, is_round_trip, " +
+          "pickup_address, dropoff_address, is_ride_along, " +
           "customer:customers(phone))"
         )
         // Outbound riders AND round-trip riders coming back on this trip.
@@ -100,6 +105,9 @@ function ManifestContent() {
           confirmation: p.reservation?.confirmation_number ?? "",
           reservationId: p.reservation?.id ?? "",
           flight: p.is_primary ? (flightByReservation.get(p.reservation?.id) ?? "") : "",
+          pickupAddress: p.is_primary && !isReturnLeg ? (p.reservation?.pickup_address ?? "") : "",
+          dropoffAddress: p.is_primary && (isReturnLeg || !p.reservation?.is_round_trip) ? (p.reservation?.dropoff_address ?? "") : "",
+          rideAlong: !!p.reservation?.is_ride_along,
         };
       })
     );
@@ -301,6 +309,19 @@ function ManifestContent() {
                           <MessageSquare className="w-3 h-3" />{p.notes}
                         </span>
                       )}
+                      {p.pickupAddress && (
+                        <a href={`https://maps.google.com/?q=${encodeURIComponent(p.pickupAddress)}`} target="_blank" rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[#FCC300] hover:underline">
+                          <Home className="w-3 h-3" />Pick up at {p.pickupAddress}
+                        </a>
+                      )}
+                      {p.dropoffAddress && (
+                        <a href={`https://maps.google.com/?q=${encodeURIComponent(p.dropoffAddress)}`} target="_blank" rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-[#FCC300] hover:underline">
+                          <Home className="w-3 h-3" />Drop off at {p.dropoffAddress}
+                        </a>
+                      )}
+                      {p.rideAlong && p.isPrimary && <span className="text-green-400">Ride-along</span>}
                     </div>
                   </div>
                 </div>
@@ -334,6 +355,18 @@ function ManifestContent() {
           </div>
         )}
       </div>
+
+      {/* Ride-along: someone without a reservation wants a seat on this van */}
+      {(trip.status === "scheduled" || trip.status === "boarding") && (
+        <Link href={`/dashboard/ride-along?tripId=${trip.id}`}
+          className="glass rounded-xl p-5 flex items-center justify-between gap-3 hover:border-[#FCC300]/40 transition-colors">
+          <div>
+            <div className="text-white font-semibold">Add a ride-along</div>
+            <div className="text-[#A1A1AA] text-sm">Show a QR code — the rider picks their party and pays on their phone.</div>
+          </div>
+          <QrCode className="w-6 h-6 text-[#FCC300] flex-shrink-0" />
+        </Link>
+      )}
 
       {/* Trip status actions */}
       <div className="glass rounded-xl p-5 flex items-center justify-between flex-wrap gap-3">

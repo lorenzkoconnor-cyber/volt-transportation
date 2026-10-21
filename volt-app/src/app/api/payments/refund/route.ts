@@ -120,7 +120,11 @@ export async function POST(request: NextRequest) {
     // A FULL refund cancels the reservation and frees its seats. Partial refunds
     // leave the booking active (price adjustment / add-on refund).
     let reservationCancelled = false;
-    if (isFullRefund && payment.reservation_id) {
+    // Refunding a tip takes it off the reservation's total and never cancels it.
+    if (payment.is_tip && payment.reservation_id && !wasHold) {
+      await admin.rpc("add_reservation_tip", { p_reservation_id: payment.reservation_id, p_cents: -refundCents });
+    }
+    if (isFullRefund && !payment.is_tip && payment.reservation_id) {
       // Flip to cancelled only if it isn't already — the returned rows tell us
       // whether WE performed the cancellation, so seats are freed exactly once
       // even if Stripe's charge.refunded webhook runs the same logic.

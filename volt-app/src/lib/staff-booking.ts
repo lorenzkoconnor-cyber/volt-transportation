@@ -46,8 +46,8 @@ export interface StaffContext {
   employee: { id: string; role: string; name: string };
 }
 
-/** Signed-in owner / manager / office staff, or an error response. */
-export async function requireStaff(): Promise<StaffContext | NextResponse> {
+/** Signed-in owner / manager / office staff (or `roles`), or an error response. */
+export async function requireStaff(roles: string[] = STAFF_ROLES): Promise<StaffContext | NextResponse> {
   const authed = await createServerClient();
   const { data: { user } } = await authed.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
@@ -58,7 +58,7 @@ export async function requireStaff(): Promise<StaffContext | NextResponse> {
     .eq("user_id", user.id)
     .eq("is_active", true)
     .maybeSingle();
-  if (!employee || !STAFF_ROLES.includes(employee.role)) {
+  if (!employee || !roles.includes(employee.role)) {
     return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
   return {
@@ -74,6 +74,16 @@ export interface StaffInput {
   customer: { firstName: string; lastName: string; phone: string; email: string };
   discount: StaffDiscount;
   termsAgreed: boolean;
+  door: DoorService;
+}
+
+// Door-to-door service: pick the rider up at / drop them off at an address
+// (flat fee each — Settings → Prices). Addresses go to the driver's manifest.
+export interface DoorService {
+  pickup: boolean;
+  pickupAddress: string;
+  dropoff: boolean;
+  dropoffAddress: string;
 }
 
 // "stripe" = card typed in (phone / counter), "square" = tapped on the Square Terminal.
@@ -129,7 +139,24 @@ export function normalizeStaffInput(body: any): StaffInput | { error: string } {
   });
   if (!payload) return { error: "Pick a departure." };
   if (body?.isRoundTrip && !payload.returnTripId) return { error: "Pick a return departure for the round trip." };
-  return { payload, customer, discount: normalizeDiscount(body?.discount), termsAgreed: !!body?.termsAgreed };
+  const d = body?.door ?? {};
+  const door: DoorService = {
+    pickup: !!d.pickup,
+    pickupAddress: d.pickup ? str(d.pickupAddress, 300) : "",
+    dropoff: !!d.dropoff,
+    dropoffAddress: d.dropoff ? str(d.dropoffAddress, 300) : "",
+  };
+  if (door.pickup && door.pickupAddress.length < 5) return { error: "Enter the pickup address." };
+  if (door.dropoff && door.dropoffAddress.length < 5) return { error: "Enter the drop-off address." };
+  return { payload, customer, discount: normalizeDiscount(body?.discount), termsAgreed: !!body?.termsAgreed, door };
+}
+
+/** Door fees for this booking: an edit keeps the fee already charged for a service it still has. */
+function doorFees(door: DoorService, live: { pickupCents: number; dropoffCents: number }, resv?: any) {
+  return {
+    pickupFeeCents: door.pickup ? (resv?.pickup_fee_cents > 0 ? resv.pickup_fee_cents : live.pickupCents) : 0,
+    dropoffFeeCents: door.dropoff ? (resv?.dropoff_fee_cents > 0 ? resv.dropoff_fee_cents : live.dropoffCents) : 0,
+  };
 }
 
 export function normalizePayment(p: any): StaffPayment {
@@ -154,7 +181,8 @@ async function loadLegTrips(sb: Db, payload: CheckoutPayload, allowedExisting: s
   const { data: trips } = await sb.from("trips").select(TRIP_FIELDS).in("id", ids);
   const out = trips?.find((t: any) => t.id === payload.tripId);
   if (!out) return { error: "That departure no longer exists." };
-  const usable = (t: any) => t.status === "scheduled" || allowedExisting.includes(t.id);
+  // Staff can book right up until the van leaves — including while it's boarding.
+  const usable = (t: any) => t.status === "scheduled" || t.status === "boarding" || allowedExisting.includes(t.id);
   if (!usable(out)) return { error: "That departure is no longer taking bookings." };
   const now = Date.now();
   const departs = (t: any) => easternInstant(t.departure_date, t.departure_time.slice(0, 5));
@@ -308,11 +336,15 @@ export async function createStaffReservation(
   const rates: StaffRates = { pricing: settings.pricing, militaryAmount: settings.military.amount };
   const comp = payment.method === "comp";
   const subtotalCents = staffSubtotalCents(payload, rates);
+  const { pickupFeeCents, dropoffFeeCents } = doorFees(input.door, settings.doorService);
+  const doorCents = pickupFeeCents + dropoffFeeCents;
+  // Comp covers the fare and the door fees; there's no tip on a free ride.
+  const tipCents = comp ? 0 : payload.tipCents;
   const discount = comp
-    ? { discountCents: subtotalCents, codeRow: null, isMilitary: false, label: "Complimentary" }
+    ? { discountCents: subtotalCents + doorCents, codeRow: null, isMilitary: false, label: "Complimentary" }
     : await resolveDiscount(sb, input.discount, subtotalCents, null, rates);
   if ("error" in discount) return discount;
-  const totalCents = subtotalCents - discount.discountCents;
+  const totalCents = subtotalCents - discount.discountCents + doorCents + tipCents;
 
   // Payment rows — a split is one cash row + one card row (Stripe or the
   // Square Terminal). Card rows start pending and turn paid once charged.
@@ -375,6 +407,11 @@ export async function createStaffReservation(
         special_notes: payload.specialNotes || null,
         subtotal_cents: subtotalCents,
         discount_cents: discount.discountCents,
+        pickup_fee_cents: pickupFeeCents,
+        dropoff_fee_cents: dropoffFeeCents,
+        pickup_address: input.door.pickup ? input.door.pickupAddress : null,
+        dropoff_address: input.door.dropoff ? input.door.dropoffAddress : null,
+        tip_cents: tipCents,
         total_cents: totalCents,
         is_military: discount.isMilitary,
         discount_code_id: discount.codeRow?.id ?? null,
@@ -419,6 +456,9 @@ export async function createStaffReservation(
         payload.smsConsent ? "Customer agreed to receive booking texts" : "Customer did not opt in to texts",
         ...(discount.isMilitary ? ["Military Discount — ID checked in person"] : []),
         ...(discount.codeRow ? [`Discount code ${formatCode(discount.codeRow.code)}`] : []),
+        ...(input.door.pickup ? [`Door pickup at ${input.door.pickupAddress} (${formatCents(pickupFeeCents)})`] : []),
+        ...(input.door.dropoff ? [`Door drop-off at ${input.door.dropoffAddress} (${formatCents(dropoffFeeCents)})`] : []),
+        ...(tipCents > 0 ? [`Tip ${formatCents(tipCents)}`] : []),
       ],
       new_data: { total_cents: totalCents, payment: pay },
       applied_at: new Date().toISOString(),
@@ -494,6 +534,8 @@ export interface EditPlan {
   legs: LegTrips;
   subtotalCents: number;
   discount: ResolvedDiscount;
+  pickupFeeCents: number;
+  dropoffFeeCents: number;
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -525,7 +567,9 @@ export async function planEdit(sb: Db, resv: any, input: StaffInput, role: strin
   const subtotalCents = staffSubtotalCents(payload, rates);
   const discount = await resolveDiscount(sb, input.discount, subtotalCents, resv.discount_code_id ?? null, rates);
   if ("error" in discount) return discount;
-  const newTotalCents = subtotalCents - discount.discountCents;
+  // Door service can be added or removed; the tip already on the booking stays.
+  const { pickupFeeCents, dropoffFeeCents } = doorFees(input.door, settings.doorService, resv);
+  const newTotalCents = subtotalCents - discount.discountCents + pickupFeeCents + dropoffFeeCents + (resv.tip_cents ?? 0);
   const priceChangeCents = newTotalCents - resv.total_cents;
 
   // The outbound has left — only the return leg (plus contact details, names
@@ -580,6 +624,13 @@ export async function planEdit(sb: Db, resv: any, input: StaffInput, role: strin
   if (oldDiscountKey !== newDiscountKey) {
     s.push(discount.discountCents > 0 ? `Discount: ${discount.label || "custom"} (−${formatCents(discount.discountCents)})` : "Discount removed");
   }
+  const doorLine = (label: string, had: string | null, on: boolean, address: string, fee: number) => {
+    if (!had && on) s.push(`${label} added: ${address} (${formatCents(fee)})`);
+    else if (had && !on) s.push(`${label} removed`);
+    else if (had && on && had !== address) s.push(`${label} address: ${address}`);
+  };
+  doorLine("Door pickup", resv.pickup_address ?? null, input.door.pickup, input.door.pickupAddress, pickupFeeCents);
+  doorLine("Door drop-off", resv.dropoff_address ?? null, input.door.dropoff, input.door.dropoffAddress, dropoffFeeCents);
   if (priceChangeCents !== 0) s.push(`Price: ${formatCents(resv.total_cents)} → ${formatCents(newTotalCents)}`);
 
   const balance = reservationBalance(newTotalCents, resv.payments ?? []);
@@ -593,6 +644,8 @@ export async function planEdit(sb: Db, resv: any, input: StaffInput, role: strin
     legs,
     subtotalCents,
     discount,
+    pickupFeeCents,
+    dropoffFeeCents,
   };
 }
 
@@ -800,6 +853,10 @@ export async function finishEdit(sb: Db, changeId: string, cashRows: Record<stri
       special_notes: payload.specialNotes || null,
       subtotal_cents: plan.subtotalCents,
       discount_cents: plan.discount.discountCents,
+      pickup_fee_cents: plan.pickupFeeCents,
+      dropoff_fee_cents: plan.dropoffFeeCents,
+      pickup_address: input.door.pickup ? input.door.pickupAddress : null,
+      dropoff_address: input.door.dropoff ? input.door.dropoffAddress : null,
       total_cents: plan.newTotalCents,
       is_military: plan.discount.isMilitary,
       military_discount_pending: plan.discount.isMilitary ? resv.military_discount_pending : false,
@@ -844,8 +901,8 @@ function serializeInput(input: StaffInput) {
     tripId: p.tripId, returnTripId: p.returnTripId, isRoundTrip: p.isRoundTrip,
     adults: p.adults, children: p.children, pets: p.pets, extraBags: p.extraBags,
     additionalPassengers: p.additionalPassengers, specialNotes: p.specialNotes, flights: p.flights,
-    smsConsent: p.smsConsent,
-    customer: input.customer, discount: input.discount, termsAgreed: input.termsAgreed,
+    smsConsent: p.smsConsent, tipCents: p.tipCents,
+    customer: input.customer, discount: input.discount, termsAgreed: input.termsAgreed, door: input.door,
   };
 }
 
@@ -854,6 +911,8 @@ function snapshot(r: any) {
     trip_id: r.trip_id, return_trip_id: r.return_trip_id, is_round_trip: r.is_round_trip,
     adults: r.adults, children: r.children, pets: r.pets, extra_bags: r.extra_bags,
     subtotal_cents: r.subtotal_cents, discount_cents: r.discount_cents, total_cents: r.total_cents,
+    pickup_fee_cents: r.pickup_fee_cents, dropoff_fee_cents: r.dropoff_fee_cents, tip_cents: r.tip_cents,
+    pickup_address: r.pickup_address, dropoff_address: r.dropoff_address,
     special_notes: r.special_notes, discount_code_id: r.discount_code_id, is_military: r.is_military,
     customer: r.customer, passengers: (r.reservation_passengers ?? []).map((p: any) => p.name),
     flights: r.reservation_flights,

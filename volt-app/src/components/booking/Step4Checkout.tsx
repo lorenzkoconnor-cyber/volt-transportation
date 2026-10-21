@@ -37,12 +37,14 @@ import { codeDiscountCents, codeLabel, type DiscountCodeTerms } from "@/lib/disc
 import { trackBeginCheckout, trackPurchase, type TripItem } from "@/lib/analytics";
 import { useAuth } from "@/context/AuthContext";
 import { useAppSettings } from "@/context/SettingsContext";
+import TipPicker from "./TipPicker";
 import Link from "next/link";
 
 export interface MilitaryResult {
   applied: boolean;   // discount taken off this booking now (verified account)
   pending: boolean;   // card held for the full fare; captured at 90% once approved
   code?: AppliedCode | null;   // a one-time discount code was used instead
+  tipCents?: number;           // tip added at checkout
 }
 
 export interface AppliedCode extends DiscountCodeTerms {
@@ -73,6 +75,7 @@ function TripSummary({
   hold,
   discountedIfApproved,
   discountLabel,
+  tipCents,
 }: {
   search: BookingSearch;
   outbound: DepartureSlot;
@@ -82,6 +85,7 @@ function TripSummary({
   hold: boolean;
   discountedIfApproved: number;
   discountLabel: string;
+  tipCents: number;
 }) {
   const MILITARY_OFF = `$${money(useAppSettings().military.amount)}`;
   const { lines, discountCents, total } = breakdown;
@@ -125,6 +129,12 @@ function TripSummary({
           <div className="flex justify-between text-sm">
             <span className="text-green-400">{discountLabel}</span>
             <span className="text-green-400">−${money(discountCents / 100)}</span>
+          </div>
+        )}
+        {tipCents > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-[#A1A1AA]">Tip</span>
+            <span className="text-white">${money(tipCents / 100)}</span>
           </div>
         )}
         <div className="flex justify-between font-bold border-t border-white/10 pt-2 mt-2">
@@ -800,12 +810,14 @@ export default function Step4Checkout({
   // One-time discount code — replaces the Military Discount when applied.
   const [appliedCode, setAppliedCode] = useState<AppliedCode | null>(null);
   const [codeError, setCodeError] = useState("");
+  const [tipCents, setTipCents] = useState(0);
 
   // The military discount only reduces THIS booking's price for verified
   // accounts. Riders awaiting verification get a card HOLD for the full fare.
   const discountActive = militaryApproved && !appliedCode;
   const hold = !appliedCode && !militaryApproved && (militaryPending || militaryChecked);
-  const breakdown = useMemo(() => {
+  // The fare (after any discount); the tip is added on top below.
+  const fare = useMemo(() => {
     if (!appliedCode) return calcPrice(search, { ...priceOpts, militaryDiscount: discountActive });
     const base = calcPrice(search, priceOpts);
     const discountCents = codeDiscountCents(base.subtotalCents, appliedCode);
@@ -813,6 +825,10 @@ export default function Step4Checkout({
     return { ...base, discountCents, discount: discountCents / 100, totalCents, total: totalCents / 100 };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, discountActive, appliedCode, settings]);
+  const breakdown = useMemo(
+    () => ({ ...fare, totalCents: fare.totalCents + tipCents, total: (fare.totalCents + tipCents) / 100 }),
+    [fare, tipCents],
+  );
   const free = !!appliedCode && breakdown.totalCents === 0;
 
   // Google Analytics: route + fare only, never rider details.
@@ -834,9 +850,9 @@ export default function Step4Checkout({
   const codeSmallerThanMilitary = !!appliedCode && militaryApproved &&
     breakdown.discountCents < calcPrice(search, { ...priceOpts, militaryDiscount: true }).discountCents;
   const discountedIfApproved = useMemo(
-    () => calcPrice(search, { ...priceOpts, militaryDiscount: true }).total,
+    () => calcPrice(search, { ...priceOpts, militaryDiscount: true }).total + tipCents / 100,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [search, settings],
+    [search, settings, tipCents],
   );
 
   // Someone ticking the box must pick a category + upload before paying.
@@ -899,7 +915,7 @@ export default function Step4Checkout({
 
     const militaryDiscountRequested = !appliedCode && (militaryApproved || militaryPending || militaryChecked);
     const discountCode = appliedCode?.code ?? null;
-    const key = JSON.stringify({ militaryDiscountRequested, discountCode, customer: customer?.id ?? null });
+    const key = JSON.stringify({ militaryDiscountRequested, discountCode, tipCents, customer: customer?.id ?? null });
     if (intentRef.current?.key === key) return intentRef.current.intent;
 
     const res = await fetch("/api/payments/create-intent", {
@@ -919,6 +935,7 @@ export default function Step4Checkout({
         flights: bookingFlights(search, outbound, returnSlot),
         militaryDiscountRequested,
         discountCode,
+        tipCents,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -952,6 +969,7 @@ export default function Step4Checkout({
           onNext(data.confirmationNumber, {
             ...(data.military ?? { applied: discountActive, pending: hold }),
             code: appliedCode ? { ...appliedCode, discountCents: breakdown.discountCents } : null,
+            tipCents,
           });
           return;
         }
@@ -1013,6 +1031,7 @@ export default function Step4Checkout({
         search={search} outbound={outbound} returnSlot={returnSlot} primary={primary}
         breakdown={breakdown} hold={hold} discountedIfApproved={discountedIfApproved}
         discountLabel={discountLabel}
+        tipCents={tipCents}
       />
 
       {!appliedCode && militaryOn && <MilitaryDiscountSection
@@ -1035,6 +1054,8 @@ export default function Step4Checkout({
         disabled={submitting}
         smallerThanMilitary={codeSmallerThanMilitary}
       />
+
+      <TipPicker valueCents={tipCents} onChange={setTipCents} disabled={busy} />
 
       {free && (
         <FreeBookingForm

@@ -16,6 +16,7 @@ import Step2Departures from "@/components/booking/Step2Departures";
 import FlightFields from "@/components/booking/FlightFields";
 import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
 import { SquareTerminalPayment } from "@/components/admin/SquareTerminalPayment";
+import TipPicker from "@/components/booking/TipPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +31,7 @@ import { staffPrice, staffDiscountLabel, type StaffDiscount, type StaffRates } f
 import { useAppSettings } from "@/context/SettingsContext";
 import { dollars, snapshotPricing, type PricingSnapshot } from "@/lib/settings";
 import {
-  AlertCircle, ArrowLeftRight, Banknote, CheckCircle2, CreditCard, Gift, Loader2, MapPin, Nfc, Pencil, Plane, Plus,
+  AlertCircle, ArrowLeftRight, Banknote, CheckCircle2, CreditCard, Gift, Home, Loader2, MapPin, Nfc, Pencil, Plane, Plus,
   ShieldCheck, SplitSquareHorizontal, Ticket, User, X,
 } from "lucide-react";
 
@@ -49,6 +50,18 @@ export interface StaffFormInitial {
   additional: string[];
   notes: string;
   discount: StaffDiscount;
+  // Edit: the booking's door service (fees it was charged) and tip.
+  door?: StaffDoor;
+  tipCents?: number;
+}
+
+export interface StaffDoor {
+  pickup: boolean;
+  pickupAddress: string;
+  dropoff: boolean;
+  dropoffAddress: string;
+  pickupFeeCents?: number;
+  dropoffFeeCents?: number;
 }
 
 type Phase = "trip" | "departures" | "details" | "return" | "returnDepartures";
@@ -120,6 +133,19 @@ export default function StaffBookingForm({
   const [manualValue, setManualValue] = useState(initial.discount.kind === "manual" ? String(initial.discount.value) : "");
   const [discountTab, setDiscountTab] = useState<StaffDiscount["kind"]>(initial.discount.kind);
 
+  const [door, setDoor] = useState<StaffDoor>(
+    initial.door ?? { pickup: false, pickupAddress: "", dropoff: false, dropoffAddress: "" },
+  );
+  const [sameAddress, setSameAddress] = useState(
+    !!initial.door?.pickup && !!initial.door?.dropoff && initial.door.pickupAddress === initial.door.dropoffAddress,
+  );
+  const dropoffAddress = door.pickup && sameAddress ? door.pickupAddress : door.dropoffAddress;
+  // An edit keeps the fee the booking was charged for a service it still has.
+  const pickupFee = door.pickup ? (initial.door?.pickupFeeCents || settings.doorService.pickupCents) : 0;
+  const dropoffFee = door.dropoff ? (initial.door?.dropoffFeeCents || settings.doorService.dropoffCents) : 0;
+  // New bookings: staff may add a tip. Edits keep the tip already on the booking.
+  const [tipCents, setTipCents] = useState(0);
+
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [smsConsent, setSmsConsent] = useState(false);
   const [payMethod, setPayMethod] = useState<PayMethod>("cash");
@@ -155,6 +181,7 @@ export default function StaffBookingForm({
     activeDiscount,
     isComp,
     rates,
+    { pickupFeeCents: pickupFee, dropoffFeeCents: dropoffFee, tipCents: isEdit ? initial.tipCents ?? 0 : tipCents },
   );
   const priceChange = isEdit ? price.totalCents - oldTotalCents : price.totalCents;
   const due = isEdit ? Math.max(0, quote?.priceChangeCents ?? priceChange) : price.totalCents;
@@ -196,6 +223,8 @@ export default function StaffBookingForm({
       email: customer.email.trim(),
     },
     discount: activeDiscount,
+    door: { ...door, dropoffAddress: dropoffAddress.trim(), pickupAddress: door.pickupAddress.trim() },
+    tipCents: isEdit ? 0 : tipCents,
     termsAgreed,
     smsConsent,
     payment: { method: payMethod, collectNow: payNow, splitCashCents, splitRest },
@@ -208,6 +237,8 @@ export default function StaffBookingForm({
     if (!customer.firstName.trim() || !customer.lastName.trim()) return "Enter the customer's first and last name.";
     if (customer.phone.replace(/\D/g, "").length < 10) return "Enter a 10-digit phone number.";
     if (discountTab === "code" && discount.kind !== "code") return "Apply the discount code, or choose a different discount.";
+    if (door.pickup && door.pickupAddress.trim().length < 5) return "Enter the pickup address.";
+    if (door.dropoff && dropoffAddress.trim().length < 5) return "Enter the drop-off address.";
     if (!isEdit && !termsAgreed) return "Confirm the customer agreed to the Terms & Conditions.";
     return null;
   };
@@ -512,6 +543,58 @@ export default function StaffBookingForm({
           </div>
         </div>
 
+        {/* Door-to-door service */}
+        {!returnOnly && (
+          <div className="glass rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Home className="w-4 h-4 text-[#FCC300]" />
+              <h2 className="text-white font-semibold">Door-to-Door Service</h2>
+              <span className="text-[#A1A1AA] text-xs">(optional)</span>
+            </div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={door.pickup} className="w-4 h-4 mt-0.5 accent-[#FCC300] flex-shrink-0"
+                onChange={(e) => { setDoor((d) => ({ ...d, pickup: e.target.checked })); touch(); }} />
+              <span className="text-white text-sm">
+                Pick up at an address <span className="text-[#FCC300]">+{formatCents(door.pickup ? pickupFee : settings.doorService.pickupCents)}</span>
+                <span className="text-[#A1A1AA] text-xs block">We collect the customer at their address instead of the Volt office.</span>
+              </span>
+            </label>
+            {door.pickup && (
+              <div className="pl-7">
+                <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Pickup address *</Label>
+                <Input value={door.pickupAddress} placeholder="Street, city, ZIP" className={inputCls}
+                  onChange={(e) => { setDoor((d) => ({ ...d, pickupAddress: e.target.value })); touch(); }} />
+              </div>
+            )}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={door.dropoff} className="w-4 h-4 mt-0.5 accent-[#FCC300] flex-shrink-0"
+                onChange={(e) => { setDoor((d) => ({ ...d, dropoff: e.target.checked })); touch(); }} />
+              <span className="text-white text-sm">
+                Drop off at an address <span className="text-[#FCC300]">+{formatCents(door.dropoff ? dropoffFee : settings.doorService.dropoffCents)}</span>
+                <span className="text-[#A1A1AA] text-xs block">We take the customer to their address instead of the Volt office.</span>
+              </span>
+            </label>
+            {door.dropoff && (
+              <div className="pl-7 space-y-2">
+                {door.pickup && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={sameAddress} className="w-4 h-4 accent-[#FCC300]"
+                      onChange={(e) => { setSameAddress(e.target.checked); touch(); }} />
+                    <span className="text-white text-sm">Same as the pickup address</span>
+                  </label>
+                )}
+                {!(door.pickup && sameAddress) && (
+                  <div>
+                    <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Drop-off address *</Label>
+                    <Input value={door.dropoffAddress} placeholder="Street, city, ZIP" className={inputCls}
+                      onChange={(e) => { setDoor((d) => ({ ...d, dropoffAddress: e.target.value })); touch(); }} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Discount */}
         {!isComp && !returnOnly && (
           <div className="glass rounded-2xl p-6 space-y-4">
@@ -627,6 +710,14 @@ export default function StaffBookingForm({
       <div className="glass rounded-2xl p-6 space-y-4">
         <h2 className="text-white font-semibold">{isEdit ? "Price & Payment" : "Payment"}</h2>
 
+        {!isEdit && !isComp && (
+          <div className="bg-white/3 rounded-xl p-4">
+            <TipPicker bare valueCents={tipCents} disabled={locked || saving}
+              onChange={(c) => { setTipCents(c); touch(); }}
+              title="Tip (optional)" description="Ask if the customer would like to add a tip for their driver." />
+          </div>
+        )}
+
         <div className="bg-white/3 rounded-xl p-4 space-y-1.5">
           {lines.map(([label, cents]) => (
             <div key={label} className="flex justify-between text-sm">
@@ -634,10 +725,28 @@ export default function StaffBookingForm({
               <span className="text-white">{formatCents(cents)}</span>
             </div>
           ))}
+          {pickupFee > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-[#A1A1AA]">Door pickup</span>
+              <span className="text-white">{formatCents(pickupFee)}</span>
+            </div>
+          )}
+          {dropoffFee > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-[#A1A1AA]">Door drop-off</span>
+              <span className="text-white">{formatCents(dropoffFee)}</span>
+            </div>
+          )}
           {price.discountCents > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-[#A1A1AA]">{isComp ? "Complimentary" : discountLabel}</span>
               <span className="text-green-400">−{formatCents(price.discountCents)}</span>
+            </div>
+          )}
+          {price.tipCents > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-[#A1A1AA]">Tip</span>
+              <span className="text-white">{formatCents(price.tipCents)}</span>
             </div>
           )}
           <div className="flex justify-between font-bold border-t border-white/10 pt-2 mt-1">

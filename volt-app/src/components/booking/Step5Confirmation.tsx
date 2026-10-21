@@ -50,7 +50,8 @@ export default function Step5Confirmation({
   });
   const { lines } = priced;
   const discountCents = military.code ? military.code.discountCents ?? 0 : priced.discountCents;
-  const total = (priced.subtotalCents - discountCents) / 100;
+  const tipCents = military.tipCents ?? 0;
+  const total = (priced.subtotalCents - discountCents + tipCents) / 100;
   const discountLabel = military.code
     ? `Discount Code ${military.code.code} (${codeLabel(military.code)})`
     : "Military Discount";
@@ -83,7 +84,8 @@ export default function Step5Confirmation({
       .join("") +
       (discountCents > 0
         ? `<tr><td style="color:#059669">${esc(discountLabel)}</td><td style="text-align:right;color:#059669">−$${money(discountCents / 100)}</td></tr>`
-        : "");
+        : "") +
+      (tipCents > 0 ? `<tr><td>Tip</td><td style="text-align:right">$${money(tipCents / 100)}</td></tr>` : "");
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Volt Receipt ${confirmationNumber}</title>
       <style>
         body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:40px auto;padding:0 24px;color:#111}
@@ -198,6 +200,12 @@ export default function Step5Confirmation({
           <div className="flex items-center justify-between text-sm">
             <span className="text-green-400">{discountLabel}</span>
             <span className="text-green-400">−${money(discountCents / 100)}</span>
+          </div>
+        )}
+        {tipCents > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-[#A1A1AA]">Tip</span>
+            <span className="text-white">${money(tipCents / 100)}</span>
           </div>
         )}
         <div className="border-t border-white/10 pt-4 flex items-center justify-between">
