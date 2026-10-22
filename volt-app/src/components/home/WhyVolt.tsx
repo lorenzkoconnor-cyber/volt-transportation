@@ -50,9 +50,9 @@ export default function WhyVolt() {
               alt="Volt Transportation storefront in Columbus, Georgia"
               fill
               sizes="(max-width: 1280px) 100vw, 1280px"
-              className="object-cover"
+              className="object-cover brightness-[0.9] saturate-[0.9]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/50 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/50 via-[#0A0A0A]/15 to-[#0A0A0A]/10 pointer-events-none" />
           </div>
         </ScrollReveal>
 

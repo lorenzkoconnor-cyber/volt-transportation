@@ -5,6 +5,7 @@ import HeroSection from "@/components/home/HeroSection";
 import WhyVolt from "@/components/home/WhyVolt";
 import PricingSection from "@/components/home/PricingSection";
 import ReviewsSection from "@/components/home/ReviewsSection";
+import LobbyGallery from "@/components/home/LobbyGallery";
 import FAQSection from "@/components/home/FAQSection";
 import CTASection from "@/components/home/CTASection";
 import MobileBookCTA from "@/components/ui/MobileBookCTA";
@@ -115,6 +116,7 @@ export default async function HomePage() {
         <WhyVolt />
         <PricingSection />
         <ReviewsSection />
+        <LobbyGallery />
         <FAQSection />
         <CTASection />
       </main>
