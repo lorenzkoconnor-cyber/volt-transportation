@@ -22,19 +22,19 @@ const photos = [
 export default function LobbyGallery() {
   return (
     <section className="pb-4 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-[512px] lg:max-w-[894px] mx-auto grid grid-cols-3 gap-3 sm:gap-10 lg:gap-[150px]">
+      <div className="max-w-[512px] lg:max-w-7xl mx-auto grid grid-cols-3 gap-3 sm:gap-10 lg:gap-6">
         {photos.map((photo, i) => (
           <ScrollReveal key={photo.src} delay={i * 110} direction="up">
-            <div className="glass rounded-xl overflow-hidden relative aspect-[3/4] group">
+            <div className="glass rounded-xl lg:rounded-2xl overflow-hidden relative aspect-[3/4] group">
               <Image
                 src={photo.src}
                 alt={photo.alt}
                 fill
-                sizes="(min-width: 1024px) 198px, 144px"
+                sizes="(min-width: 1024px) 33vw, 144px"
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/85 via-transparent to-transparent pointer-events-none" />
-              <span className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 text-white text-[10px] sm:text-xs font-semibold leading-tight">
+              <span className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 lg:bottom-4 lg:left-5 text-white text-[10px] sm:text-xs lg:text-sm font-semibold leading-tight">
                 {photo.label}
               </span>
             </div>
