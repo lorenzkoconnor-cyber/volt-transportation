@@ -1,4 +1,5 @@
 import { Shield, Users, Star, Zap } from "lucide-react";
+import Image from "next/image";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 
 const features = [
@@ -9,16 +10,16 @@ const features = [
       "Travel in style aboard our fleet of Ford Transit Passenger Vans — the premium choice for airport transportation.",
   },
   {
-    icon: Users,
-    title: "More Comfort",
-    description:
-      "We limit each vehicle to just 8 passengers, so you always have room to stretch out and relax.",
-  },
-  {
     icon: Shield,
     title: "Professional Drivers",
     description:
       "Our chauffeur-style drivers are background-checked, professionally trained, and focused on your safety.",
+  },
+  {
+    icon: Users,
+    title: "More Comfort",
+    description:
+      "We limit each vehicle to just 8 passengers, so you always have room to stretch out and relax.",
   },
   {
     icon: Star,
@@ -41,6 +42,20 @@ export default function WhyVolt() {
           </p>
         </ScrollReveal>
 
+        {/* Volt headquarters */}
+        <ScrollReveal direction="up" className="mb-6">
+          <div className="relative rounded-2xl overflow-hidden bg-[#171717] aspect-[16/9] sm:aspect-[21/9] glass">
+            <Image
+              src="/images/volt-storefront-wide.jpg"
+              alt="Volt Transportation storefront in Columbus, Georgia"
+              fill
+              sizes="(max-width: 1280px) 100vw, 1280px"
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/50 to-transparent pointer-events-none" />
+          </div>
+        </ScrollReveal>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, i) => {
             const Icon = feature.icon;
@@ -60,6 +75,34 @@ export default function WhyVolt() {
               </ScrollReveal>
             );
           })}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {/* TODO: replace with the photo of William, Gary and Lorenzo in front of the vans */}
+          <ScrollReveal direction="up">
+            <div className="relative rounded-2xl overflow-hidden bg-[#171717] aspect-[4/3] glass">
+              <Image
+                src="/images/volt-team-vans.jpg"
+                alt="Two Volt Transportation passenger vans"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover object-[center_40%]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/50 to-transparent pointer-events-none" />
+            </div>
+          </ScrollReveal>
+          <ScrollReveal direction="up" delay={110}>
+            <div className="relative rounded-2xl overflow-hidden bg-[#171717] aspect-[4/3] glass">
+              <Image
+                src="/images/van-interior-collage.jpg"
+                alt="Inside a Volt Transportation van, showing rows of passenger seats"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/50 to-transparent pointer-events-none" />
+            </div>
+          </ScrollReveal>
         </div>
       </div>
     </section>
