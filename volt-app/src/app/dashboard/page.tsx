@@ -10,11 +10,11 @@ import { formatTime12h, formatCents, formatDateShort, localDateString } from "@/
 import StatCard from "@/components/admin/StatCard";
 import {
   Users, DollarSign, Truck, CalendarDays,
-  ArrowRight, Clock, MapPin, CheckCircle2, AlertCircle, Loader2,
+  ArrowRight, Clock, MapPin, CheckCircle2, AlertCircle, Loader2, Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Today's Revenue / Passengers cards open the reservations on today's trips.
+// Today's Trip Revenue / Passengers cards open the reservations on today's trips.
 const TODAY_RESERVATIONS = "/dashboard/reservations?day=today";
 
 interface DashTrip {
@@ -52,6 +52,8 @@ export default function AdminDashboardPage() {
   const [recent, setRecent] = useState<DashReservation[]>([]);
   const [stats, setStats] = useState({
     revenueToday: 0,
+    collectedToday: 0,
+    paymentsToday: 0,
     passengersToday: 0,
     tripsToday: 0,
     activeVehicles: 0,
@@ -65,7 +67,11 @@ export default function AdminDashboardPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sb = supabase as any;
 
-      const [tripsRes, resvRes, recentRes, vehiclesRes] = await Promise.all([
+      const midnight = new Date();
+      midnight.setHours(0, 0, 0, 0);
+      const since = midnight.toISOString();
+
+      const [tripsRes, resvRes, recentRes, vehiclesRes, paidRes] = await Promise.all([
         // Today's trips with any bookings + their vehicle/driver assignments
         sb.from("trips")
           .select(
@@ -93,6 +99,12 @@ export default function AdminDashboardPage() {
           .order("created_at", { ascending: false })
           .limit(5),
         sb.from("vehicles").select("id").eq("status", "active"),
+        // Collected today: payments taken today, whatever the trip date.
+        // captured_at is when the money came in; cash rows may only have created_at.
+        sb.from("payments")
+          .select("amount_cents, refund_amount_cents")
+          .in("status", ["paid", "refunded"])
+          .or(`captured_at.gte.${since},and(captured_at.is.null,created_at.gte.${since})`),
       ]);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,8 +146,15 @@ export default function AdminDashboardPage() {
         paymentStatus: r.payments?.some((p: any) => p.status === "pending") ? "pending" : r.payments?.[0]?.status ?? null,
       })));
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const paidToday = (paidRes.data ?? []).filter((p: any) => p.amount_cents > 0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const collectedToday = paidToday.reduce((s: number, p: any) => s + p.amount_cents - (p.refund_amount_cents ?? 0), 0);
+
       setStats({
         revenueToday,
+        collectedToday,
+        paymentsToday: paidToday.length,
         passengersToday,
         tripsToday: (tripsRes.data ?? []).length,
         activeVehicles: (vehiclesRes.data ?? []).length,
@@ -167,11 +186,14 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stats — revenue is owner/manager only; other roles lead with trips */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 gap-4 ${showMoney ? "lg:grid-cols-3 xl:grid-cols-5" : "lg:grid-cols-4"}`}>
         {showMoney ? (
-          <StatCard label="Today's Revenue" value={loading ? "…" : formatCents(stats.revenueToday)} sub={`${stats.passengersToday} passengers`} icon={DollarSign} accent href={linkIfAllowed(TODAY_RESERVATIONS)} />
+          <StatCard label="Today's Trip Revenue" value={loading ? "…" : formatCents(stats.revenueToday)} sub={`${stats.passengersToday} passengers`} icon={DollarSign} accent href={linkIfAllowed(TODAY_RESERVATIONS)} />
         ) : (
           <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} accent href={linkIfAllowed("/dashboard/dispatch")} />
+        )}
+        {showMoney && (
+          <StatCard label="Collected Today" value={loading ? "…" : formatCents(stats.collectedToday)} sub={`${stats.paymentsToday} payment${stats.paymentsToday === 1 ? "" : "s"} · any trip date`} icon={Banknote} href={linkIfAllowed("/dashboard/payments")} />
         )}
         {showMoney && (
           <StatCard label="Today's Trips" value={loading ? "…" : stats.tripsToday} sub="With bookings" icon={Truck} href={linkIfAllowed("/dashboard/dispatch")} />

@@ -52,7 +52,7 @@ function ReservationsContent() {
   const router = useRouter();
   const pathname = usePathname();
   // ?day=today — only reservations on today's trips (what the dashboard's
-  // Today's Revenue / Passengers Today cards count).
+  // Today's Trip Revenue / Passengers Today cards count).
   const todayOnly = useSearchParams().get("day") === "today";
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
