@@ -11,7 +11,7 @@ import CTASection from "@/components/home/CTASection";
 import MobileBookCTA from "@/components/ui/MobileBookCTA";
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars, type AppSettings } from "@/lib/settings";
-import { faqItems } from "@/lib/site-copy";
+import { faqItems, GOOGLE_MAPS_URL } from "@/lib/site-copy";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { pricing } = await getAppSettings();
@@ -50,6 +50,9 @@ const jsonLdFor = (s: AppSettings) => ({
         ...cityLineParts(s.business.cityLine),
         addressCountry: "US",
       },
+      geo: { "@type": "GeoCoordinates", latitude: 32.5253523, longitude: -84.9291663 },
+      hasMap: GOOGLE_MAPS_URL,
+      sameAs: [GOOGLE_MAPS_URL],
       priceRange: "$$",
       currenciesAccepted: "USD",
     },
@@ -102,7 +105,8 @@ function cityLineParts(line: string) {
 }
 
 export default async function HomePage() {
-  const jsonLd = jsonLdFor(await getAppSettings());
+  const settings = await getAppSettings();
+  const jsonLd = jsonLdFor(settings);
   return (
     <>
       <script
@@ -113,7 +117,7 @@ export default async function HomePage() {
       <Navbar />
       <main>
         <HeroSection />
-        <WhyVolt />
+        <WhyVolt address={`${settings.business.street}, ${settings.business.cityLine}`} />
         <PricingSection />
         <ReviewsSection />
         <LobbyGallery />

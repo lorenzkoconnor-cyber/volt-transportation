@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars } from "@/lib/settings";
 
@@ -73,6 +73,13 @@ export default async function PricingSection() {
               </p>
             </div>
             )}
+            <Link
+              href="/pricing"
+              className="group flex items-center justify-between p-5 border-t border-white/8 text-white font-semibold hover:bg-white/5 transition-colors"
+            >
+              See full pricing &amp; fare policies
+              <ArrowRight className="w-4 h-4 text-[#FCC300] group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
 
           {/* What's included */}
@@ -95,15 +102,17 @@ export default async function PricingSection() {
 
             <div className="glass rounded-2xl p-6">
               <h3 className="text-white font-semibold mb-2">
-                Round Trip Savings
+                Round Trip
               </h3>
               <p className="text-[#A1A1AA] text-sm mb-4">
-                Book your return trip at the same time. Price is calculated
-                automatically at checkout.
+                Book your return trip at the same time. A round trip is two
+                one-way fares at the regular price — there&apos;s no round-trip
+                discount, just one booking for both legs.
               </p>
               <Link href="/book">
-                <Button className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold">
+                <Button className="group w-full h-12 text-base bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold shadow-lg shadow-[#FCC300]/20 hover:shadow-[#FCC300]/35 transition-all">
                   Book Your Ride
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>

@@ -77,3 +77,9 @@ export function faqItems(s: AppSettings): { question: string; answer: string }[]
     },
   ];
 }
+
+// Volt's Google Business Profile on Google Maps. Linked from the homepage
+// address button and listed in the search-engine data (hasMap / sameAs) so
+// Google can tie the website to the listing.
+export const GOOGLE_MAPS_URL =
+  "https://www.google.com/maps/place/Volt+Transportation/@32.5253568,-84.9317412,898m/data=!3m2!1e3!4b1!4m6!3m5!1s0x88f3336eda4034f7:0xc1c728a249a51711!8m2!3d32.5253523!4d-84.9291663!16s%2Fg%2F11zzq442gb";

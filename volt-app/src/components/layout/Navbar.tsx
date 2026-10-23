@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X, User, LogOut } from "lucide-react";
+import { Menu, X, User, LogOut, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import Logo from "@/components/ui/Logo";
@@ -96,10 +96,10 @@ export default function Navbar() {
             )}
             <Link href="/book">
               <Button
-                size="sm"
-                className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-bold px-6 rounded-md tracking-wide"
+                className="group h-10 bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-[15px] font-bold px-6 rounded-md tracking-wide shadow-md shadow-[#FCC300]/25 hover:shadow-[#FCC300]/40 transition-all"
               >
                 Book Now
+                <ArrowRight className="ml-1.5 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Button>
             </Link>
           </div>

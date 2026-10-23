@@ -1,6 +1,7 @@
-import { Shield, Users, Star, Zap } from "lucide-react";
+import { Shield, Users, Star, Zap, MapPin } from "lucide-react";
 import Image from "next/image";
 import ScrollReveal from "@/components/ui/ScrollReveal";
+import { GOOGLE_MAPS_URL } from "@/lib/site-copy";
 
 const features = [
   {
@@ -29,7 +30,7 @@ const features = [
   },
 ];
 
-export default function WhyVolt() {
+export default function WhyVolt({ address }: { address: string }) {
   return (
     <section id="why-volt" className="py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -50,10 +51,20 @@ export default function WhyVolt() {
               alt="Volt Transportation storefront in Columbus, Georgia"
               fill
               sizes="(max-width: 1280px) 100vw, 1280px"
-              className="object-cover brightness-[0.9] saturate-[0.9]"
+              className="object-cover brightness-[0.98] saturate-[0.96]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/50 via-[#0A0A0A]/15 to-[#0A0A0A]/10 pointer-events-none" />
           </div>
+          <a
+            href={GOOGLE_MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${address} — open Volt Transportation on Google Maps`}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#E4E4E7] px-4 py-4 text-center text-base sm:text-lg font-semibold text-[#0A0A0A] hover:bg-[#F4F4F5] transition-colors"
+          >
+            <MapPin className="w-5 h-5 shrink-0 text-[#DC2626]" aria-hidden />
+            {address}
+          </a>
         </ScrollReveal>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

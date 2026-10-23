@@ -40,10 +40,23 @@ const policiesFor = (s: AppSettings) => [
   ...(s.military.enabled
     ? [{ title: "Military Discount", desc: `Active-duty and retired military save ${dollars(s.military.amount)} on every booking — round trip or one way, any party size. Tick the box at checkout and upload your military ID. Once you're verified, it applies automatically every time.` }]
     : []),
-  { title: "Round Trip", desc: "Book both legs at once and the total is calculated automatically at checkout. No separate booking needed." },
+  { title: "Round Trip", desc: "A round trip is two one-way fares at the regular price — there's no round-trip discount. Booking both legs at once just keeps them under one confirmation." },
   {
     title: "Cancellation",
-    desc: `Cancel by 11:59 PM (Eastern) the day before your trip for a refund of your fare${s.cancellationFeeCents > 0 ? ` minus a ${dollars(s.cancellationFeeCents / 100)} cancellation fee` : ""}. Changes by phone are free.`,
+    desc: (
+      <>
+        Cancel by 11:59 PM (Eastern) the day before your trip for a refund of your fare
+        {s.cancellationFeeCents > 0 && (
+          <>
+            {" "}minus a{" "}
+            <span className="text-[#F87171] font-semibold">
+              {dollars(s.cancellationFeeCents / 100)} cancellation fee
+            </span>
+          </>
+        )}
+        . Changes by phone are free.
+      </>
+    ),
   },
 ];
 
@@ -113,7 +126,7 @@ export default async function PricingPage() {
                 <div className="mt-6 glass rounded-2xl p-6">
                   <h3 className="text-white font-bold text-lg mb-1">Round Trip</h3>
                   <p className="text-[#A1A1AA] text-sm mb-4">
-                    Toggle "Round Trip" in the booking form to add your return leg. Pricing is calculated automatically. Both trips are managed under one confirmation.
+                    Toggle &ldquo;Round Trip&rdquo; in the booking form to add your return leg. You pay two one-way fares at the regular price (there&apos;s no round-trip discount), and both trips are managed under one confirmation.
                   </p>
                   <Link href="/book">
                     <Button className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold group">
