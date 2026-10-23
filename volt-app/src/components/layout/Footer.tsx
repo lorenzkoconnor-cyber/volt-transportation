@@ -12,6 +12,7 @@ const footerLinks = {
     { href: "/contact", label: "Contact" },
   ],
   Service: [
+    { href: "/airport-shuttle-service", label: "Airport Shuttle Service" },
     { href: "/pricing", label: "Pricing" },
     { href: "/book", label: "Book a Ride" },
     { href: "/manage-reservation", label: "Manage Reservation" },

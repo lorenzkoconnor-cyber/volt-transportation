@@ -15,6 +15,7 @@ const ROUTE_ACCESS: { prefix: string; roles: EmployeeRole[] }[] = [
   // Everyone sees the calendar; only owners/managers add or change events (RLS on calendar_events).
   { prefix: "/dashboard/calendar",     roles: ["owner", "manager", "office_staff", "driver"] },
   { prefix: "/dashboard/reservations", roles: ["owner", "manager", "office_staff"] },
+  { prefix: "/dashboard/customers",    roles: ["owner", "manager"] },
   { prefix: "/dashboard/dispatch",     roles: ["owner", "manager", "office_staff", "driver"] },
   { prefix: "/dashboard/manifest",     roles: ["owner", "manager", "office_staff", "driver"] },
   { prefix: "/dashboard/ride-along",   roles: ["owner", "manager", "office_staff", "driver"] },

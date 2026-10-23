@@ -4,6 +4,7 @@ import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import MapsLink from "@/components/ui/MapsLink";
+import { GOOGLE_MAPS_URL } from "@/lib/site-copy";
 import { Button } from "@/components/ui/button";
 import { MapPin, ArrowRight, Clock, Car, Plane, Navigation } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
@@ -55,7 +56,7 @@ export default async function LocationsPage() {
                     </div>
                     <div>
                       <p className="text-[#A1A1AA] text-xs uppercase tracking-wider">Departure Point</p>
-                      <h2 className="text-white font-bold text-xl">Columbus, Georgia</h2>
+                      <h2 className="text-white font-bold text-xl">Volt Transportation</h2>
                     </div>
                   </div>
 
@@ -64,13 +65,15 @@ export default async function LocationsPage() {
                       <MapPin className="w-4 h-4 text-[#A1A1AA] flex-shrink-0 mt-0.5" />
                       <div>
                         <div className="text-white font-medium text-sm">Address</div>
-                        <MapsLink
-                          address={b.address}
+                        <a
+                          href={GOOGLE_MAPS_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="block text-[#A1A1AA] hover:text-white text-sm mt-0.5 transition-colors"
                         >
                           {b.street}<br />
                           {b.cityLine}
-                        </MapsLink>
+                        </a>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -100,18 +103,20 @@ export default async function LocationsPage() {
                 <div className="bg-[#0F0F0F] min-h-[280px] relative border-t lg:border-t-0 lg:border-l border-white/8">
                   <iframe
                     title="Map of Volt Transportation's Columbus pickup location"
-                    src={`https://www.google.com/maps?q=${encodeURIComponent(b.address)}&output=embed`}
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(`Volt Transportation, ${b.address}`)}&output=embed`}
                     className="absolute inset-0 w-full h-full border-0 [filter:invert(90%)_hue-rotate(180deg)_brightness(95%)_contrast(90%)]"
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                   />
-                  <MapsLink
-                    address={b.address}
+                  <a
+                    href={GOOGLE_MAPS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-lg bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-sm font-semibold px-4 py-2 shadow-lg transition-colors"
                   >
                     <Navigation className="w-4 h-4" />
                     Get Directions
-                  </MapsLink>
+                  </a>
                 </div>
               </div>
             </div>

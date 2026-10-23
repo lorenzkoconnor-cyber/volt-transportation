@@ -5,13 +5,14 @@ import HeroSection from "@/components/home/HeroSection";
 import WhyVolt from "@/components/home/WhyVolt";
 import PricingSection from "@/components/home/PricingSection";
 import ReviewsSection from "@/components/home/ReviewsSection";
+import SocialLinks from "@/components/home/SocialLinks";
 import LobbyGallery from "@/components/home/LobbyGallery";
 import FAQSection from "@/components/home/FAQSection";
 import CTASection from "@/components/home/CTASection";
 import MobileBookCTA from "@/components/ui/MobileBookCTA";
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars, type AppSettings } from "@/lib/settings";
-import { faqItems, GOOGLE_MAPS_URL } from "@/lib/site-copy";
+import { faqItems, GOOGLE_MAPS_URL, FACEBOOK_URL, INSTAGRAM_URL } from "@/lib/site-copy";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { pricing } = await getAppSettings();
@@ -52,7 +53,7 @@ const jsonLdFor = (s: AppSettings) => ({
       },
       geo: { "@type": "GeoCoordinates", latitude: 32.5253523, longitude: -84.9291663 },
       hasMap: GOOGLE_MAPS_URL,
-      sameAs: [GOOGLE_MAPS_URL],
+      sameAs: [GOOGLE_MAPS_URL, FACEBOOK_URL, INSTAGRAM_URL],
       priceRange: "$$",
       currenciesAccepted: "USD",
     },
@@ -120,6 +121,7 @@ export default async function HomePage() {
         <WhyVolt address={`${settings.business.street}, ${settings.business.cityLine}`} />
         <PricingSection />
         <ReviewsSection />
+        <SocialLinks />
         <LobbyGallery />
         <FAQSection />
         <CTASection />
