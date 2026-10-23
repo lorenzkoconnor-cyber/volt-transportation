@@ -1,3 +1,5 @@
+import { metaInitiateCheckout, metaPageView, metaPurchase, setMetaPixelEnabled } from "@/lib/meta-pixel";
+
 // Google Analytics 4 (Google tag). Page views are sent by hand from
 // <GoogleTag /> so staff pages are never tracked and private bits of a URL
 // (receipt tokens, emails, sign-in codes) never reach Google.
@@ -46,7 +48,9 @@ export function initGtag() {
 }
 
 // Google's own off switch: while set, the tag sends nothing at all.
+// Also switches the Meta Pixel (meta-pixel.ts) on/off for the same pages.
 export function setTrackingEnabled(enabled: boolean) {
+  setMetaPixelEnabled(enabled);
   if (typeof window === "undefined") return;
   (window as unknown as Record<string, boolean>)[`ga-disable-${GA_ID}`] = !enabled;
 }
@@ -72,6 +76,7 @@ export function trackPageView(pathname: string, search: string) {
     page_referrer: lastLocation ?? (external ? document.referrer : ""),
     page_title: document.title,
   });
+  metaPageView();
   lastLocation = location;
 }
 
@@ -93,6 +98,7 @@ function items(trip: TripItem, value: number) {
 
 export function trackBeginCheckout(trip: TripItem, value: number) {
   gtag("event", "begin_checkout", { currency: "USD", value, items: items(trip, value), riders: trip.riders });
+  metaInitiateCheckout(value, trip.riders);
 }
 
 export function trackPurchase(confirmationNumber: string, trip: TripItem, value: number) {
@@ -103,4 +109,5 @@ export function trackPurchase(confirmationNumber: string, trip: TripItem, value:
     items: items(trip, value),
     riders: trip.riders,
   });
+  metaPurchase(confirmationNumber, value, trip.riders);
 }
