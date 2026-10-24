@@ -122,7 +122,7 @@ export default function Step1Search({ initial, onChange, onNext }: Props) {
       </div>
 
       {/* Route */}
-      <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:gap-2">
         <div className="flex-1 min-w-0">
           <Label className="text-[#A1A1AA] text-xs mb-2 block">From</Label>
           <Select value={search.from} onValueChange={handleFrom}>
@@ -144,7 +144,7 @@ export default function Step1Search({ initial, onChange, onNext }: Props) {
           type="button"
           onClick={swapLocations}
           aria-label="Switch directions"
-          className="self-center sm:self-auto sm:mb-[1px] flex-shrink-0 w-10 h-10 sm:h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
+          className="self-center mt-4 -mb-2 sm:mt-0 sm:self-auto sm:mb-[1px] flex-shrink-0 w-9 h-9 sm:w-10 sm:h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
         >
           <ArrowLeftRight className="w-4 h-4 rotate-90 sm:rotate-0" />
         </button>

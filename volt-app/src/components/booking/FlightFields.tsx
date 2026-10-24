@@ -45,7 +45,7 @@ export default function FlightFields({ title, direction, flight, minDate, onChan
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label className="text-[#A1A1AA] text-xs mb-2 block">Flight Date</Label>
           <input
@@ -71,7 +71,7 @@ export default function FlightFields({ title, direction, flight, minDate, onChan
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label className="text-[#A1A1AA] text-xs mb-2 block">Airline</Label>
           <AirlinePicker value={flight.airline} onChange={setAirline} />
