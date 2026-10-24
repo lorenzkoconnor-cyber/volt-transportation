@@ -13,13 +13,6 @@
   --font-heading: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 
-  /* Site-wide type scale: small labels 15px, dropdown/secondary 16px,
-     body 18px, section headings 26px */
-  --text-xs: 0.9375rem;
-  --text-sm: 1rem;
-  --text-base: 1.125rem;
-  --text-2xl: 1.625rem;
-
   /* Volt brand colors */
   --color-volt-black: #0A0A0A;
   --color-volt-graphite: #171717;
@@ -113,7 +106,6 @@
     @apply bg-background text-foreground antialiased;
     background-color: #0A0A0A;
     color: #FFFFFF;
-    font-size: 1.125rem;
   }
   html {
     @apply font-sans;

@@ -158,7 +158,7 @@ export default function HeroSection() {
 
             <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
               {/* From / To */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative">
+              <div className="grid grid-cols-2 gap-3 relative">
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">From</Label>
                   <Select value={from} onValueChange={handleFrom}>
@@ -177,9 +177,9 @@ export default function HeroSection() {
 
                 {/* Swap button — visible on all sizes */}
                 <button type="button" onClick={swapLocations}
-                  className="absolute left-1/2 -translate-x-1/2 top-[61px] sm:top-[26px] z-10 flex w-8 h-8 rounded-full bg-[#171717] border border-white/10 items-center justify-center text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
+                  className="absolute left-1/2 -translate-x-1/2 top-7 z-10 flex w-8 h-8 rounded-full bg-[#171717] border border-white/10 items-center justify-center text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
                   aria-label="Switch directions">
-                  <ArrowLeftRight className="w-3.5 h-3.5 rotate-90 sm:rotate-0" />
+                  <ArrowLeftRight className="w-3.5 h-3.5" />
                 </button>
 
                 <div>
