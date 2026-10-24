@@ -12,7 +12,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { ArrowRight, ArrowLeftRight, ChevronDown } from "lucide-react";
+import { ArrowRight, ArrowLeftRight } from "lucide-react";
 import { LOCATIONS } from "@/lib/booking";
 
 type LocationKey = "columbus" | "atl";
@@ -163,8 +163,7 @@ export default function HeroSection() {
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">From</Label>
                   <Select value={from} onValueChange={handleFrom}>
                     <SelectTrigger className="w-full bg-white/5 border-white/10 text-white h-12 rounded-xl text-sm">
-                      <span className="flex-1 text-left truncate">{LOCATION_LABELS[from]}</span>
-                      <ChevronDown className="w-4 h-4 text-[#A1A1AA] flex-shrink-0" />
+                      <span className="flex-1 min-w-0 text-left truncate">{LOCATION_LABELS[from]}</span>
                     </SelectTrigger>
                     <SelectContent className="bg-[#171717] border-white/10 z-50">
                       {Object.entries(LOCATIONS).map(([key, loc]) => (
@@ -187,8 +186,7 @@ export default function HeroSection() {
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">To</Label>
                   <Select value={to} onValueChange={handleTo}>
                     <SelectTrigger className="w-full bg-white/5 border-white/10 text-white h-12 rounded-xl text-sm">
-                      <span className="flex-1 text-left truncate">{LOCATION_LABELS[to]}</span>
-                      <ChevronDown className="w-4 h-4 text-[#A1A1AA] flex-shrink-0" />
+                      <span className="flex-1 min-w-0 text-left truncate">{LOCATION_LABELS[to]}</span>
                     </SelectTrigger>
                     <SelectContent className="bg-[#171717] border-white/10 z-50">
                       {Object.entries(LOCATIONS).map(([key, loc]) => (
@@ -252,7 +250,6 @@ export default function HeroSection() {
                       <Select value={String(field.value)} onValueChange={field.handler}>
                         <SelectTrigger className="w-full bg-white/5 border-white/10 text-white h-11 rounded-xl text-sm">
                           <span className="flex-1 text-left">{field.value}</span>
-                          <ChevronDown className="w-3.5 h-3.5 text-[#A1A1AA] flex-shrink-0" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#171717] border-white/10 z-50">
                           {field.opts.map((n) => (

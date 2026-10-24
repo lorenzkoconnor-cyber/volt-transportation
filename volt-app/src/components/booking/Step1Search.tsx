@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
-import { ArrowRight, ArrowLeftRight, ChevronDown } from "lucide-react";
+import { ArrowRight, ArrowLeftRight } from "lucide-react";
 import { type BookingSearch, type FlightInfo, LOCATIONS, flightDirection } from "@/lib/booking";
 import { localDateString } from "@/lib/format";
 import FlightFields from "./FlightFields";
@@ -122,13 +122,12 @@ export default function Step1Search({ initial, onChange, onNext }: Props) {
       </div>
 
       {/* Route */}
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+        <div className="flex-1 min-w-0">
           <Label className="text-[#A1A1AA] text-xs mb-2 block">From</Label>
           <Select value={search.from} onValueChange={handleFrom}>
             <SelectTrigger className="w-full bg-white/5 border-white/10 text-white h-12 rounded-xl">
-              <span className="flex-1 text-left text-sm truncate">{LOCATION_LABELS[search.from] ?? search.from}</span>
-              <ChevronDown className="w-4 h-4 text-[#A1A1AA] flex-shrink-0" />
+              <span className="flex-1 min-w-0 text-left text-sm truncate">{LOCATION_LABELS[search.from] ?? search.from}</span>
             </SelectTrigger>
             <SelectContent className="bg-[#171717] border-white/10">
               {Object.entries(LOCATIONS).map(([key, loc]) => (
@@ -145,17 +144,16 @@ export default function Step1Search({ initial, onChange, onNext }: Props) {
           type="button"
           onClick={swapLocations}
           aria-label="Switch directions"
-          className="mb-[1px] flex-shrink-0 w-10 h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
+          className="self-center sm:self-auto sm:mb-[1px] flex-shrink-0 w-10 h-10 sm:h-12 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-[#A1A1AA] hover:text-[#FCC300] hover:border-[#FCC300]/50 transition-colors"
         >
-          <ArrowLeftRight className="w-4 h-4" />
+          <ArrowLeftRight className="w-4 h-4 rotate-90 sm:rotate-0" />
         </button>
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <Label className="text-[#A1A1AA] text-xs mb-2 block">To</Label>
           <Select value={search.to} onValueChange={handleTo}>
             <SelectTrigger className="w-full bg-white/5 border-white/10 text-white h-12 rounded-xl">
-              <span className="flex-1 text-left text-sm truncate">{LOCATION_LABELS[search.to] ?? search.to}</span>
-              <ChevronDown className="w-4 h-4 text-[#A1A1AA] flex-shrink-0" />
+              <span className="flex-1 min-w-0 text-left text-sm truncate">{LOCATION_LABELS[search.to] ?? search.to}</span>
             </SelectTrigger>
             <SelectContent className="bg-[#171717] border-white/10">
               {Object.entries(LOCATIONS).map(([key, loc]) => (
@@ -252,7 +250,6 @@ export default function Step1Search({ initial, onChange, onNext }: Props) {
               <Select value={String(field.value)} onValueChange={field.handler}>
                 <SelectTrigger className="w-full bg-white/5 border-white/10 text-white h-11 rounded-xl text-sm">
                   <span className="flex-1 text-left">{field.value}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-[#A1A1AA] flex-shrink-0" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#171717] border-white/10">
                   {field.opts.map((n) => (

@@ -96,7 +96,6 @@ export default function FlightFields({ title, direction, flight, minDate, onChan
             <span className={`flex-1 text-left ${flight.terminal ? "" : "text-[#A1A1AA]/60"}`}>
               {flight.terminal || "Select terminal"}
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#A1A1AA] flex-shrink-0" />
           </SelectTrigger>
           <SelectContent className="bg-[#171717] border-white/10">
             {ATL_TERMINALS.map((t) => (
