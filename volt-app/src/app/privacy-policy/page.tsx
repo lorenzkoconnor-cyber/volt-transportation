@@ -16,7 +16,7 @@ const sectionsFor = (b: { phone: string; email: string }) => [
   },
   {
     title: "How We Use Your Information",
-    body: `We use your information to process bookings and send booking confirmations, send trip reminders and updates by text message (only if you opt in), manage your account and reservations, respond to customer service requests, and improve our service and website. We do not use your information for advertising purposes or sell it to third parties.`,
+    body: `We use your information to process bookings and send booking confirmations, send trip reminders and updates by text message (only if you opt in), manage your account and reservations, respond to customer service requests, and improve our service and website. We do not use your name, email, phone number, payment details or flight information for advertising, and we do not sell your information to third parties. Website visits may be used to show you Volt ads — see "Cookies" and "Remarketing" below.`,
   },
   {
     title: "Payment Information",
@@ -51,6 +51,10 @@ const sectionsFor = (b: { phone: string; email: string }) => [
     body: `Our website uses cookies necessary for the site to function (such as session management). We also use Google Analytics, which sets cookies to help us understand how visitors find and use our website (for example, which pages are viewed and whether a booking was completed). Google Analytics does not receive your name, email, phone number, payment details or flight information. You can opt out with the Google Analytics Opt-out Browser Add-on (tools.google.com/dlpage/gaoptout) or by blocking cookies in your browser. Google's use of this data is described at policies.google.com/technologies/partner-sites. We also use the Meta Pixel, which lets Meta (Facebook and Instagram) record page views and completed bookings on our website so we can measure and improve our ads. Like Google Analytics, it does not receive your name, email, phone number, payment details or flight information. You can control ads you see from Meta in your Facebook or Instagram ad preferences, or block cookies in your browser.`,
   },
   {
+    title: "Remarketing",
+    body: `We use remarketing with Google Ads and Meta to show Volt ads to people who have visited our website, for example someone who started a booking but didn't finish it. Third-party vendors, including Google and Meta, use cookies to show these ads on other websites and apps based on your past visits to our website. Remarketing lists never include your name, email, phone number, payment details or flight information. You can opt out of Google's personalized ads at adssettings.google.com (or opt out of many third-party vendors at aboutads.info/choices), and control ads from Meta in your Facebook or Instagram ad preferences.`,
+  },
+  {
     title: "Changes to This Policy",
     body: `We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated effective date. Continued use of our services after updates constitutes acceptance of the revised policy.`,
   },
@@ -70,7 +74,7 @@ export default async function PrivacyPolicyPage() {
           <div className="max-w-3xl mx-auto">
             <div className="mb-10">
               <h1 className="text-4xl font-bold text-white mb-3">Privacy Policy</h1>
-              <p className="text-[#A1A1AA] text-sm">Effective Date: October 23, 2026</p>
+              <p className="text-[#A1A1AA] text-sm">Effective Date: October 26, 2026</p>
             </div>
 
             <div className="glass rounded-2xl divide-y divide-white/8 overflow-hidden">
