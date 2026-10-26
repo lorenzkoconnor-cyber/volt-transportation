@@ -76,9 +76,10 @@ function BookingFlow() {
     pets: Number(params.get("pets") || 0),
     extraBags: Number(params.get("extraBags") || 0),
     roundTrip: params.get("roundTrip") === "true",
-    // Flight mode is the default; the homepage passes hasFlight=false to opt out.
-    // Any dates chosen on the homepage seed the flight dates.
-    hasFlight: params.get("hasFlight") !== "false",
+    // Riders see departure times first; flight mode is opt-in (the homepage
+    // passes hasFlight=true when its toggle is on). Any dates chosen on the
+    // homepage seed the flight dates.
+    hasFlight: params.get("hasFlight") === "true",
     outboundFlight: { ...EMPTY_FLIGHT, date: params.get("date") || "" },
     returnFlight: { ...EMPTY_FLIGHT, date: params.get("returnDate") || "" },
   });
@@ -123,7 +124,7 @@ function BookingFlow() {
             <Logo className="h-8 w-auto" priority />
           </Link>
           {step < 5 && (
-            <span className="text-[#A1A1AA] text-sm">Step {step} of 4</span>
+            <span className="text-[#A1A1AA] text-sm">Step {step} of 5</span>
           )}
         </div>
       </div>

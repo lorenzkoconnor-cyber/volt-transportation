@@ -37,8 +37,8 @@ export default function HeroSection() {
   const [pets, setPets]           = useState(0);
   const [extraBags, setExtraBags] = useState(0);
   const [roundTrip, setRoundTrip] = useState(false);
-  // Most riders are catching or meeting a flight, so flight mode is the default.
-  const [hasFlight, setHasFlight] = useState(true);
+  // Riders see departure times first; flight matching is opt-in.
+  const [hasFlight, setHasFlight] = useState(false);
 
   const handleFrom = (v: string | null) => {
     if (!v) return;
