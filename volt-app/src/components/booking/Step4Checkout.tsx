@@ -35,6 +35,7 @@ import {
 import { getStripeClient } from "@/lib/stripe/client";
 import { codeDiscountCents, codeLabel, type DiscountCodeTerms } from "@/lib/discount-codes";
 import { trackBeginCheckout, trackPurchase, type TripItem } from "@/lib/analytics";
+import { readAttribution } from "@/lib/attribution";
 import { useAuth } from "@/context/AuthContext";
 import { useAppSettings } from "@/context/SettingsContext";
 import TipPicker from "./TipPicker";
@@ -936,6 +937,7 @@ export default function Step4Checkout({
         militaryDiscountRequested,
         discountCode,
         tipCents,
+        attribution: readAttribution(),
       }),
     });
     const data = await res.json().catch(() => ({}));

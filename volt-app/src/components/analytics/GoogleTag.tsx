@@ -5,6 +5,7 @@ import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { GA_ID, initGtag, isTrackedPath, setTrackingEnabled, trackPageView } from "@/lib/analytics";
 import { META_PIXEL_ID, initFbq } from "@/lib/meta-pixel";
+import { captureAttribution } from "@/lib/attribution";
 
 // Loads the Google tag once for the whole site and sends a page view on every
 // route change. On staff pages the tag is switched off with Google's own
@@ -21,6 +22,9 @@ export default function GoogleTag() {
   initFbq();
 
   useEffect(() => {
+    // Ad tags are remembered on public pages even locally (browser only), so
+    // the booking flow can be tested end to end.
+    if (isTrackedPath(pathname)) captureAttribution(pathname, window.location.search);
     if (tracked) trackPageView(pathname, window.location.search);
   }, [pathname, tracked]);
 

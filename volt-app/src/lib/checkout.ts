@@ -25,6 +25,7 @@ import { alertIfShortNotice } from "@/lib/notifications/alerts";
 import { generateConfirmationNumber, militaryDiscountCents } from "@/lib/booking";
 import { DEFAULT_SETTINGS, militaryAmount, type AppSettings } from "@/lib/settings";
 import { normalizeTipCents } from "@/lib/tips";
+import { normalizeAttribution, type Attribution } from "@/lib/attribution";
 import {
   CODE_ERRORS, codeDiscountCents, codeLabel, codeState, formatCode, normalizeCode,
   type DiscountCodeTerms,
@@ -63,6 +64,7 @@ export interface CheckoutPayload {
   flights: unknown[];
   smsConsent: boolean;   // optional "text me about this booking" opt-in
   tipCents: number;      // optional tip, added on top of the fare
+  attribution: Attribution | null; // ad/campaign that brought the rider (attribution.ts)
 }
 
 const count = (v: unknown, min: number) => Math.max(min, Math.min(20, Math.floor(Number(v) || 0)));
@@ -88,6 +90,7 @@ export function normalizePayload(body: Record<string, unknown>): CheckoutPayload
     flights: Array.isArray(body.flights) ? body.flights.slice(0, 2) : [],
     smsConsent: body.smsConsent === true || p.smsConsent === true,
     tipCents: normalizeTipCents(body.tipCents),
+    attribution: normalizeAttribution(body.attribution),
   };
   if (!payload.tripId || !payload.primaryPassenger.name || !payload.primaryPassenger.phone) return null;
   return payload;
@@ -497,6 +500,11 @@ export async function finalizeCheckout(
         sms_consent: !!payload.smsConsent,
         sms_consent_at: payload.smsConsent ? (checkout.created_at ?? new Date().toISOString()) : null,
         sms_consent_source: payload.smsConsent ? "online" : null,
+        utm_source: payload.attribution?.utmSource || null,
+        utm_medium: payload.attribution?.utmMedium || null,
+        utm_campaign: payload.attribution?.utmCampaign || null,
+        utm_content: payload.attribution?.utmContent || null,
+        landing_path: payload.attribution?.landingPath || null,
       })
       .select()
       .single();
