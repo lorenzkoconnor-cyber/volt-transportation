@@ -19,6 +19,7 @@ const footerLinks = {
     { href: "/text-alerts", label: "Text Alerts" },
     { href: "/safety-rules", label: "Safety & Rules" },
     { href: "/military", label: "Military & Giving Back" },
+    { href: "/fort-moore-graduation", label: "Fort Moore Graduation" },
   ],
   Legal: [
     { href: "/terms", label: "Terms & Conditions" },
