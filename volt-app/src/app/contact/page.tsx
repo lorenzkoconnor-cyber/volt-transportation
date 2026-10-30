@@ -7,11 +7,12 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import MapsLink from "@/components/ui/MapsLink";
 import { useAppSettings } from "@/context/SettingsContext";
+import { TEAM } from "@/lib/team";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, Clock, CheckCircle, MapPin } from "lucide-react";
+import { Phone, Mail, Clock, CheckCircle, MapPin, ArrowRight } from "lucide-react";
 
 export default function ContactPage() {
   const { business: b } = useAppSettings();
@@ -217,6 +218,28 @@ export default function ContactPage() {
                   </form>
                 )}
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Team business cards: linked from here only, not the footer. */}
+        <section className="pb-24 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">Meet the Team</h2>
+            <p className="text-[#A1A1AA] mb-8">Save our contact cards, or reach out to one of us directly.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              {TEAM.map((m) => (
+                <Link key={m.slug} href={`/team/${m.slug}`} className="glass rounded-2xl p-4 flex items-center gap-4 group hover:border-[#FCC300]/40 transition-colors">
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-[#171717] shrink-0">
+                    <Image src={m.photo.src} alt={m.photo.alt} fill sizes="64px" className="object-cover object-top" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-semibold">{m.name}</p>
+                    <p className="text-[#FCC300] text-sm">{m.title}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-[#A1A1AA] group-hover:text-white transition-colors" />
+                </Link>
+              ))}
             </div>
           </div>
         </section>

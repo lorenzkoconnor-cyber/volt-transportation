@@ -252,3 +252,88 @@ summary,
 [aria-disabled="true"] {
   cursor: not-allowed;
 }
+
+/* Team business cards (/team/<name>): the page prints a Letter sheet of ten
+   3.5" × 2" cards in Avery 8371 positions; the on-screen card is hidden. */
+.print-sheet {
+  display: none;
+}
+@media print {
+  @page {
+    size: letter;
+    margin: 0;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .screen-only {
+    display: none !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+  .print-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 3.5in);
+    grid-auto-rows: 2in;
+    padding: 0.5in 0.75in;
+    color: #0a0a0a;
+    font-family: inherit;
+  }
+  .print-card {
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.15in;
+    padding: 0.2in 0.22in 0.2in 0.28in;
+    border-left: 0.08in solid #fcc300;
+    outline: 0.5pt dashed #d4d4d8;
+    outline-offset: -0.25pt;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    overflow: hidden;
+  }
+  .print-card-logo {
+    height: 0.32in;
+    width: auto;
+    filter: brightness(0);
+    margin-bottom: 0.12in;
+  }
+  .print-card-name {
+    font-size: 14pt;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .print-card-title {
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #a37e00;
+    margin-bottom: 0.08in;
+  }
+  .print-card-line {
+    font-size: 7.5pt;
+    line-height: 1.35;
+  }
+  .print-card-qr {
+    flex-shrink: 0;
+    width: 1in;
+    text-align: center;
+    font-size: 6.5pt;
+    font-weight: 600;
+  }
+  .print-card-qr svg {
+    width: 1in;
+    height: 1in;
+    display: block;
+    margin-bottom: 0.04in;
+  }
+}

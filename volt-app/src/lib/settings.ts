@@ -75,7 +75,7 @@ function business(phone: string, email: string, street: string, cityLine: string
 export const DEFAULT_SETTINGS: AppSettings = {
   pricing: { ...PRICING },
   military: { enabled: true, amount: MILITARY_DISCOUNT_AMOUNT },
-  business: business("(706) 530-5896", "support@contactvolt.com", "3885 Miller Road, Suite C", "Columbus, GA 31909", "Daily · 4:00 AM – 12:00 AM"),
+  business: business("(706) 530-5896", "support@contactvolt.com", "3885 Miller Road, Suite C", "Columbus, GA 31909", "Mon–Sat · 4:00 AM – 12:00 AM · Sun: open for booked trips only"),
   arriveEarlyMinutes: 20,
   onlineCutoffMinutes: 120,
   cancellationFeeCents: 1500,
