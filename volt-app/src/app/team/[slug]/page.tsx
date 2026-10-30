@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getAppSettings } from "@/lib/settings-server";
 import { TEAM, teamMember, cardUrl, bookUrl, SITE_URL } from "@/lib/team";
 import PrintCardButton from "./PrintCardButton";
+import ShareCardButton from "./ShareCardButton";
 import { ArrowRight, Contact, Globe, Mail, MapPin, MessageSquare, Phone, Star } from "lucide-react";
 
 // A team member's digital business card. Reached from the Contact page or a
@@ -43,6 +44,12 @@ export default async function TeamCardPage({ params }: { params: Promise<{ slug:
   const qrSvg = await QRCode.toString(cardUrl(m, "qr"), {
     type: "svg",
     margin: 0,
+    errorCorrectionLevel: "M",
+    color: { dark: "#0A0A0A", light: "#FFFFFF" },
+  });
+  const qrPng = await QRCode.toDataURL(cardUrl(m, "qr"), {
+    width: 480,
+    margin: 1,
     errorCorrectionLevel: "M",
     color: { dark: "#0A0A0A", light: "#FFFFFF" },
   });
@@ -161,13 +168,16 @@ export default async function TeamCardPage({ params }: { params: Promise<{ slug:
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
             <div className="glass rounded-2xl p-6 flex flex-col items-center text-center">
               <h2 className="text-white font-semibold mb-1">Share this card</h2>
-              <p className="text-[#A1A1AA] text-sm mb-4">Scan to open {m.name}&rsquo;s card on your phone.</p>
-              <div
-                className="w-40 h-40 bg-white rounded-xl p-3 [&_svg]:w-full [&_svg]:h-full"
-                role="img"
-                aria-label={`QR code for ${SITE_URL}/team/${m.slug}`}
-                dangerouslySetInnerHTML={{ __html: qrSvg }}
-              />
+              <p className="text-[#A1A1AA] text-sm mb-4">
+                Scan to open {m.name}&rsquo;s card, or press and hold the code to share or save it.
+              </p>
+              {/* A real linked image (not inline SVG) so a long press on a phone
+                  brings up the share / copy link / save image menu. */}
+              <a href={cardUrl(m, "link")} className="block w-40 h-40 bg-white rounded-xl p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrPng} alt={`QR code for ${SITE_URL}/team/${m.slug}`} className="w-full h-full" />
+              </a>
+              <ShareCardButton name={m.name} url={cardUrl(m, "link")} />
               <PrintCardButton />
             </div>
             <div className="glass rounded-2xl p-6 flex flex-col items-center justify-center text-center">
