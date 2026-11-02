@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCents, formatDateShort, localDateString } from "@/lib/format";
 import { TrendingUp, Users, Truck, DollarSign, Loader2, Download, HeartHandshake, Clock } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
+import HowRidersFoundUsCard from "@/components/admin/HowRidersFoundUsCard";
 import { useAppSettings } from "@/context/SettingsContext";
 import { DONATION_PARTNER } from "@/lib/military";
 import { dollars, snapshotPricing } from "@/lib/settings";
@@ -207,6 +208,8 @@ export default function ReportsPage() {
         <StatCard label="Booked Trips"     value={loading ? "…" : totals.trips}      sub="With passengers" icon={Truck} />
         <StatCard label="Avg Occupancy"    value={loading ? "…" : `${totals.occupancy}%`} sub="Of booked trips" icon={TrendingUp} />
       </div>
+
+      <HowRidersFoundUsCard days={PERIOD_DAYS[period]} />
 
       {/* Military discount + giving back */}
       <div className="glass rounded-2xl overflow-hidden">

@@ -3,11 +3,12 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Elements,
+  ExpressCheckoutElement,
   PaymentElement,
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
-import type { Stripe, StripeElementsOptions } from "@stripe/stripe-js";
+import type { Stripe, StripeElementsOptions, StripeExpressCheckoutElementConfirmEvent } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,8 @@ import { readAttribution } from "@/lib/attribution";
 import { useAuth } from "@/context/AuthContext";
 import { useAppSettings } from "@/context/SettingsContext";
 import TipPicker from "./TipPicker";
+import HeardFromPicker from "./HeardFromPicker";
+import type { HeardFrom } from "@/lib/heard-from";
 import Link from "next/link";
 
 export interface MilitaryResult {
@@ -546,11 +549,14 @@ function StripePaymentForm({
   const [ready, setReady] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements || processing || submitting) return;
-    if (blockedReason) { setError(blockedReason); return; }
+  // Apple Pay button (Stripe Express Checkout). "always" shows it in every
+  // desktop browser too: Chrome/Edge/Firefox show a QR code to finish on an
+  // iPhone. Hidden when Stripe says Apple Pay isn't possible here.
+  const [applePayShown, setApplePayShown] = useState(false);
 
+  // Card form and Apple Pay share one path: submit → create the intent → confirm.
+  const pay = async (express?: StripeExpressCheckoutElementConfirmEvent) => {
+    if (!stripe || !elements) return;
     setError("");
     setProcessing(true);
     try {
@@ -580,12 +586,21 @@ function StripePaymentForm({
         throw new Error("Payment was not completed. Please try again.");
       }
     } catch (err) {
+      express?.paymentFailed({ reason: "fail" });
       setError(err instanceof Error ? err.message : "Your payment could not be processed.");
     }
     setProcessing(false);
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements || processing || submitting) return;
+    if (blockedReason) { setError(blockedReason); return; }
+    await pay();
+  };
+
   const busy = processing || submitting;
+  const applePayLocked = !termsAccepted || busy;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -623,6 +638,37 @@ function StripePaymentForm({
 
       <div className="glass rounded-xl p-4">
         <TermsLine checked={termsAccepted} onChange={setTermsAccepted} />
+      </div>
+
+      <div className={applePayShown ? "space-y-2" : "hidden"}>
+        <div className={applePayLocked ? "opacity-50 pointer-events-none" : undefined} aria-disabled={applePayLocked}>
+          <ExpressCheckoutElement
+            options={{
+              paymentMethods: {
+                applePay: "always", googlePay: "never", link: "never",
+                paypal: "never", amazonPay: "never", klarna: "never",
+              },
+              buttonType: { applePay: "book" },
+              buttonTheme: { applePay: "white" },
+              buttonHeight: 52,
+            }}
+            onReady={(e) => setApplePayShown(!!e.availablePaymentMethods?.applePay)}
+            onClick={(e) => {
+              if (!termsAccepted || busy) return;
+              if (blockedReason) { setError(blockedReason); return; }
+              e.resolve();
+            }}
+            onConfirm={(e) => pay(e)}
+          />
+        </div>
+        <p className="text-[#A1A1AA] text-xs text-center">
+          {termsAccepted
+            ? "On a computer, Apple Pay shows a code to scan with your iPhone."
+            : "Tick the Terms box above to pay with Apple Pay."}
+        </p>
+        <div className="flex items-center gap-3 text-[#71717A] text-xs">
+          <span className="h-px flex-1 bg-white/10" /> or pay by card <span className="h-px flex-1 bg-white/10" />
+        </div>
       </div>
 
       <TrustBadges />
@@ -812,6 +858,8 @@ export default function Step4Checkout({
   const [appliedCode, setAppliedCode] = useState<AppliedCode | null>(null);
   const [codeError, setCodeError] = useState("");
   const [tipCents, setTipCents] = useState(0);
+  const [heardFrom, setHeardFrom] = useState<HeardFrom | null>(null);
+  const [heardFromOther, setHeardFromOther] = useState("");
 
   // The military discount only reduces THIS booking's price for verified
   // accounts. Riders awaiting verification get a card HOLD for the full fare.
@@ -916,7 +964,7 @@ export default function Step4Checkout({
 
     const militaryDiscountRequested = !appliedCode && (militaryApproved || militaryPending || militaryChecked);
     const discountCode = appliedCode?.code ?? null;
-    const key = JSON.stringify({ militaryDiscountRequested, discountCode, tipCents, customer: customer?.id ?? null });
+    const key = JSON.stringify({ militaryDiscountRequested, discountCode, tipCents, heardFrom, heardFromOther, customer: customer?.id ?? null });
     if (intentRef.current?.key === key) return intentRef.current.intent;
 
     const res = await fetch("/api/payments/create-intent", {
@@ -938,6 +986,8 @@ export default function Step4Checkout({
         discountCode,
         tipCents,
         attribution: readAttribution(),
+        heardFrom,
+        heardFromOther: heardFrom === "other" ? heardFromOther : "",
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -1058,6 +1108,12 @@ export default function Step4Checkout({
       />
 
       <TipPicker valueCents={tipCents} onChange={setTipCents} disabled={busy} />
+
+      <HeardFromPicker
+        value={heardFrom} onChange={setHeardFrom}
+        otherText={heardFromOther} onOtherTextChange={setHeardFromOther}
+        disabled={busy}
+      />
 
       {free && (
         <FreeBookingForm

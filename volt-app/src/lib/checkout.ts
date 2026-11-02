@@ -26,6 +26,7 @@ import { generateConfirmationNumber, militaryDiscountCents } from "@/lib/booking
 import { DEFAULT_SETTINGS, militaryAmount, type AppSettings } from "@/lib/settings";
 import { normalizeTipCents } from "@/lib/tips";
 import { normalizeAttribution, type Attribution } from "@/lib/attribution";
+import { normalizeHeardFrom, normalizeHeardFromOther, type HeardFrom } from "@/lib/heard-from";
 import {
   CODE_ERRORS, codeDiscountCents, codeLabel, codeState, formatCode, normalizeCode,
   type DiscountCodeTerms,
@@ -65,6 +66,8 @@ export interface CheckoutPayload {
   smsConsent: boolean;   // optional "text me about this booking" opt-in
   tipCents: number;      // optional tip, added on top of the fare
   attribution: Attribution | null; // ad/campaign that brought the rider (attribution.ts)
+  heardFrom: HeardFrom | null;      // optional "How did you hear about us?" (heard-from.ts)
+  heardFromOther: string | null;    // optional typed detail when heardFrom is "other"
 }
 
 const count = (v: unknown, min: number) => Math.max(min, Math.min(20, Math.floor(Number(v) || 0)));
@@ -91,7 +94,10 @@ export function normalizePayload(body: Record<string, unknown>): CheckoutPayload
     smsConsent: body.smsConsent === true || p.smsConsent === true,
     tipCents: normalizeTipCents(body.tipCents),
     attribution: normalizeAttribution(body.attribution),
+    heardFrom: normalizeHeardFrom(body.heardFrom),
+    heardFromOther: null,
   };
+  payload.heardFromOther = normalizeHeardFromOther(payload.heardFrom, body.heardFromOther);
   if (!payload.tripId || !payload.primaryPassenger.name || !payload.primaryPassenger.phone) return null;
   return payload;
 }
@@ -505,6 +511,8 @@ export async function finalizeCheckout(
         utm_campaign: payload.attribution?.utmCampaign || null,
         utm_content: payload.attribution?.utmContent || null,
         landing_path: payload.attribution?.landingPath || null,
+        heard_from: payload.heardFrom ?? null,
+        heard_from_other: payload.heardFromOther ?? null,
       })
       .select()
       .single();

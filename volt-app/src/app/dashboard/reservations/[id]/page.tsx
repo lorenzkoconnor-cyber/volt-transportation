@@ -14,6 +14,7 @@ import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/Staff
 import { SquareTerminalPayment } from "@/components/admin/SquareTerminalPayment";
 import { editAccess, reservationBalance } from "@/lib/staff-pricing";
 import { TripLegTimeline } from "@/components/admin/TripTimeline";
+import { heardFromLabel } from "@/lib/heard-from";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, XCircle,
   Phone, Mail, Users, MapPin, CreditCard, Banknote, Gift, FileText,
@@ -396,6 +397,9 @@ export default function ReservationDetailPage() {
             ? `opted in${resv.sms_consent_source === "verbal" ? " (told staff yes)" : " (online checkout)"}`
             : "not opted in — this customer only gets emails."}
         </p>
+        {heardFromLabel(resv.heard_from) && (
+          <p className="text-[#A1A1AA] text-xs mt-1">Heard about Volt from: {heardFromLabel(resv.heard_from)}{resv.heard_from_other ? ` — “${resv.heard_from_other}”` : ""}</p>
+        )}
       </div>
 
       {/* Trip card */}
