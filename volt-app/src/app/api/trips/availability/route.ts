@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl, SUPABASE_ANON_KEY } from "@/lib/supabase/url";
 import {
-  DEFAULT_FLIGHT_TIMING, DEFAULT_ONLINE_CUTOFF_MINUTES, arrivalFor, displayTime12h,
+  DEFAULT_FLIGHT_TIMING, DEFAULT_ONLINE_CUTOFF_MINUTES, arrivalFor, displayTime12h, runsAroundTheClock,
   type FlightTimingSettings, type RouteSchedule,
 } from "@/lib/booking";
 import { easternInstant } from "@/lib/staff-pricing";
@@ -95,12 +95,15 @@ export async function GET(request: NextRequest) {
       arriveMaxWaitMinutes: settings?.arrive_max_wait_minutes ?? DEFAULT_FLIGHT_TIMING.arriveMaxWaitMinutes,
     };
 
-    // Daily service hours for this direction, e.g. "4:00 AM", "8:00 PM", 120.
+    // Daily service hours for this direction, e.g. "12:00 AM", "10:00 PM", 120, true.
     const schedule: RouteSchedule | null = route.first_departure_time && route.last_departure_time
       ? {
           firstDisplayTime: displayTime12h(route.first_departure_time),
           lastDisplayTime: displayTime12h(route.last_departure_time),
           intervalMinutes: route.departure_interval_minutes,
+          aroundTheClock: runsAroundTheClock(
+            route.first_departure_time, route.last_departure_time, route.departure_interval_minutes,
+          ),
         }
       : null;
 

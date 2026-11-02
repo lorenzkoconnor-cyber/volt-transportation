@@ -30,8 +30,8 @@ export interface Database {
           destination_label: string;       // "ATL Airport"
           destination_key: string;         // "atl"
           duration_minutes: number;        // 120
-          first_departure_time: string;    // "04:00:00" — first van of the day
-          last_departure_time: string;     // "20:00:00" — last van of the day
+          first_departure_time: string;    // "00:00:00" — first van of the day
+          last_departure_time: string;     // "22:00:00" — last van of the day
           departure_interval_minutes: number; // 120 — a van every 2 hours
           is_active: boolean;
           created_at: string;

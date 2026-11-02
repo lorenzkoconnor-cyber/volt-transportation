@@ -19,6 +19,9 @@ export const MILITARY_DISCOUNT_AMOUNT = 10;
 // Website booking closes this long before a departure unless
 // booking_settings.online_booking_cutoff_minutes says otherwise (staff can still book).
 export const DEFAULT_ONLINE_CUTOFF_MINUTES = 120;
+// Riders can cancel (for a refund minus the fee) until this long before their
+// first departure; after that it's non-refundable and they must call.
+export const CANCEL_NOTICE_HOURS = 24;
 
 // Added to a booking's notes when the rider asks for mobility assistance
 // (Step 3). Vans have no lift: riders must be able to transfer to a seat; a
@@ -128,9 +131,17 @@ export const DEFAULT_FLIGHT_TIMING: FlightTimingSettings = {
 
 // A route's daily departure schedule (routes.first/last_departure_time + interval).
 export interface RouteSchedule {
-  firstDisplayTime: string;  // "4:00 AM"
-  lastDisplayTime: string;   // "8:00 PM"
+  firstDisplayTime: string;  // "12:00 AM"
+  lastDisplayTime: string;   // "10:00 PM"
   intervalMinutes: number;   // 120
+  aroundTheClock?: boolean;  // departures run all day and night (see runsAroundTheClock)
+}
+
+// True when the daily schedule wraps the whole day — the next departure after
+// the last one is the first one again (e.g. 12:00 AM–10:00 PM every 2 hours).
+export function runsAroundTheClock(first: string, last: string, intervalMinutes: number): boolean {
+  const min = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  return min(last) + intervalMinutes === min(first) + 1440;
 }
 
 export interface DepartureSlot {

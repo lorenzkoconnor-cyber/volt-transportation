@@ -3,6 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars } from "@/lib/settings";
+import { CANCEL_NOTICE_HOURS } from "@/lib/booking";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions | Volt Transportation",
@@ -19,7 +20,7 @@ const sectionsFor = (OFF: string, b: { phone: string; email: string }): { title:
   },
   {
     title: "2. Refund Policy",
-    body: `Passengers who cancel their reservation by 11:59 PM Eastern Time the day before the scheduled departure are refunded the amount paid minus a $15 cancellation fee per reservation. Cancellations made after this deadline are non-refundable. Refunds are issued automatically to the original payment method and typically appear within 5–10 business days; cash payments are refunded in cash at our Columbus office. Online booking closes 2 hours before each departure; later bookings may be made by phone. In the event that Volt Transportation cancels a departure (due to severe weather, mechanical issues, or other circumstances), passengers will receive a full refund.`,
+    body: `Passengers who cancel their reservation at least ${CANCEL_NOTICE_HOURS} hours before the scheduled departure are refunded the amount paid minus a $15 cancellation fee per reservation. Cancellations made after this deadline are non-refundable. Refunds are issued automatically to the original payment method and typically appear within 5–10 business days; cash payments are refunded in cash at our Columbus office. Online booking closes 2 hours before each departure; later bookings may be made by phone. In the event that Volt Transportation cancels a departure (due to severe weather, mechanical issues, or other circumstances), passengers will receive a full refund.`,
   },
   {
     title: "3. No-Show Policy",
@@ -27,7 +28,7 @@ const sectionsFor = (OFF: string, b: { phone: string; email: string }): { title:
   },
   {
     title: "4. Reservation Changes",
-    body: `Passengers may modify their reservation (date, time, passenger count, or add-ons) at no charge if changes are requested by 11:59 PM the day before the scheduled trip. Changes requested after this deadline are subject to availability and may not be possible. To modify a reservation, use the Manage Reservation feature on our website or contact us directly.`,
+    body: `Passengers may modify their reservation (date, time, passenger count, or add-ons) at no charge if changes are requested at least ${CANCEL_NOTICE_HOURS} hours before the scheduled departure. Changes requested with less than ${CANCEL_NOTICE_HOURS} hours' notice are subject to availability and may not be possible. To modify a reservation, use the Manage Reservation feature on our website or contact us directly.`,
   },
   {
     title: "5. Payment Terms",

@@ -8,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import MapsLink from "@/components/ui/MapsLink";
 import { useAppSettings } from "@/context/SettingsContext";
 import { TEAM } from "@/lib/team";
+import { LOBBY_OPEN_SENTENCE } from "@/lib/site-copy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -115,8 +116,9 @@ export default function ContactPage() {
                 <div className="w-10 h-10 rounded-xl bg-[#FCC300]/15 flex items-center justify-center mb-4">
                   <Clock className="w-5 h-5 text-[#FCC300]" />
                 </div>
-                <h3 className="text-white font-semibold mb-1">Hours</h3>
+                <h3 className="text-white font-semibold mb-1">Office Hours</h3>
                 <p className="text-[#A1A1AA] text-sm">{b.hours}</p>
+                <p className="text-[#A1A1AA] text-xs mt-2">{LOBBY_OPEN_SENTENCE}</p>
               </div>
 
               <div className="glass rounded-xl p-5 border border-[#FCC300]/20">

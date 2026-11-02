@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Plane, Users, Car, Coffee, CalendarCheck, MapPin, Phone, Medal, Luggage } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars, type AppSettings } from "@/lib/settings";
-import { displayTime12h } from "@/lib/booking";
+import { departureHours } from "@/lib/site-copy";
 
 // Search landing page for families flying into ATL for a Fort Moore (formerly Fort Benning)
 // graduation — "fort moore graduation transportation", "atlanta airport to fort moore" and similar.
@@ -52,7 +52,7 @@ const faqFor = (s: AppSettings) => {
   return [
     {
       question: "How do I get from the Atlanta airport to Fort Moore for graduation?",
-      answer: `Ride Volt from Hartsfield-Jackson (ATL) to our lobby in Columbus, GA. Vans leave ATL from ${displayTime12h(fromAtl.first)} to ${displayTime12h(fromAtl.last)} every day, and the ride takes about ${hours} hours. Your driver meets you after baggage claim with a Volt sign.`,
+      answer: `Ride Volt from Hartsfield-Jackson (ATL) to our lobby in Columbus, GA. Vans leave ATL ${departureHours(fromAtl)} every day, and the ride takes about ${hours} hours. Your driver meets you after baggage claim with a Volt sign.`,
     },
     {
       question: "Where does the shuttle drop us off in Columbus?",
@@ -64,7 +64,7 @@ const faqFor = (s: AppSettings) => {
     },
     {
       question: "Can we ride back to the airport after the ceremony?",
-      answer: `Yes. Book a round trip and pick your return van to ATL. Vans leave Columbus for ATL from ${displayTime12h(toAtl.first)} to ${displayTime12h(toAtl.last)} every day, and you can wait in our lounge until boarding.`,
+      answer: `Yes. Book a round trip and pick your return van to ATL. Vans leave Columbus for ATL ${departureHours(toAtl)} every day, and you can wait in our lounge until boarding.`,
     },
     {
       question: "Should we book ahead for graduation week?",
@@ -142,7 +142,7 @@ export default async function FortMooreGraduationPage() {
             </h1>
             <p className="text-[#A1A1AA] text-lg max-w-2xl mx-auto mb-8">
               Volt picks you up at Hartsfield-Jackson Atlanta Airport (ATL) and brings you to Columbus, GA. Vans leave
-              ATL {every} from {displayTime12h(fromAtl.first)} to {displayTime12h(fromAtl.last)}, every day of the week,
+              ATL {every} {departureHours(fromAtl)}, every day of the week,
               for {dollars(s.pricing.adult)} per adult.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

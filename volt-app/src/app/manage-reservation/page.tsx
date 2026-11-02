@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatTime12h, formatDateLong, formatCents } from "@/lib/format";
 import { Search, Calendar, MapPin, Users, Clock, CheckCircle2 } from "lucide-react";
+import { CANCEL_NOTICE_HOURS } from "@/lib/booking";
 
 type Reservation = {
   confirmationNumber: string;
@@ -220,7 +221,8 @@ export default function ManageReservationPage() {
                     <div className="glass rounded-xl p-4">
                       <div className="text-white font-medium text-sm">Need to cancel?</div>
                       <div className="text-[#A1A1AA] text-xs mt-0.5">
-                        Online cancellation closed at 11:59 PM (Eastern) the day before your trip. Please call us at{" "}
+                        Cancellations need at least {CANCEL_NOTICE_HOURS} hours&apos; notice before departure, so this
+                        trip can no longer be cancelled for a refund. Please call us at{" "}
                         <a href={business.phoneHref} className="text-[#FCC300]">{business.phone}</a>.
                       </div>
                     </div>
@@ -252,7 +254,7 @@ export default function ManageReservationPage() {
                     >
                       <div className="text-red-400 font-medium text-sm">Cancel Reservation</div>
                       <div className="text-[#A1A1AA] text-xs mt-0.5">
-                        Until 11:59 PM (Eastern) the day before your trip
+                        Up to {CANCEL_NOTICE_HOURS} hours before your departure
                         {feeCents > 0 ? ` · ${formatCents(feeCents)} cancellation fee` : ""}
                       </div>
                     </button>

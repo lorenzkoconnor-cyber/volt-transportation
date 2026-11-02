@@ -4,6 +4,7 @@ import Footer from "@/components/layout/Footer";
 import { Shield } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars, type AppSettings } from "@/lib/settings";
+import { CANCEL_NOTICE_HOURS } from "@/lib/booking";
 
 export const metadata: Metadata = {
   title: "Safety & Rules | Volt Transportation Passenger Policies",
@@ -68,8 +69,8 @@ const sectionsFor = (s: AppSettings): { id?: string; title: string; items: strin
   {
     title: "Cancellation Policy",
     items: [
-      `Passengers may cancel their reservation up until 11:59 PM (Eastern) the day before the scheduled trip for a refund of the fare${s.cancellationFeeCents > 0 ? ` minus a ${dollars(s.cancellationFeeCents / 100)} cancellation fee per reservation` : ""}.`,
-      "Cancellations made after 11:59 PM the day before departure are non-refundable.",
+      `Passengers may cancel their reservation up to ${CANCEL_NOTICE_HOURS} hours before the scheduled departure for a refund of the fare${s.cancellationFeeCents > 0 ? ` minus a ${dollars(s.cancellationFeeCents / 100)} cancellation fee per reservation` : ""}.`,
+      `Cancellations made with less than ${CANCEL_NOTICE_HOURS} hours' notice before departure are non-refundable.`,
       `Online booking closes ${cutoffWords(s.onlineCutoffMinutes)} before each departure; call us at ${s.business.phone} to book a departure leaving sooner.`,
       "To cancel or modify, use the Manage Reservation page or contact us directly.",
       "No-shows forfeit their fare and are not eligible for a refund.",

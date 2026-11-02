@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/url";
 import { rateLimit } from "@/lib/rate-limit";
-import { easternToday } from "@/lib/format";
+import { CANCEL_NOTICE_HOURS } from "@/lib/booking";
+import { easternInstant } from "@/lib/staff-pricing";
 import { cancelReservation, cancellationFeeCents } from "@/lib/cancellation";
 import { loadAppSettings } from "@/lib/settings-server";
 
@@ -16,6 +17,15 @@ function adminClient(): any {
 }
 
 const digits = (s: string) => (s ?? "").replace(/\D/g, "");
+
+// Online cancellation needs at least CANCEL_NOTICE_HOURS' notice before the
+// first departure (judged in Eastern time).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function canCancelOnline(trip: any): boolean {
+  if (!trip?.departure_date || !trip?.departure_time) return false;
+  const departsAt = easternInstant(trip.departure_date, trip.departure_time.slice(0, 5));
+  return departsAt - Date.now() >= CANCEL_NOTICE_HOURS * 3_600_000;
+}
 
 // Look up a reservation by confirmation number + booking phone (guest access).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,10 +90,9 @@ export async function POST(request: NextRequest) {
       if (reservation.status === "completed" || reservation.status === "no_show") {
         return NextResponse.json({ error: "This trip has already happened." }, { status: 400 });
       }
-      // Online cancellation closes at 11:59 PM Eastern the day before the trip.
-      if (!reservation.trip?.departure_date || reservation.trip.departure_date <= easternToday()) {
+      if (!canCancelOnline(reservation.trip)) {
         return NextResponse.json(
-          { error: `Online cancellation closes at 11:59 PM (Eastern) the day before your trip. Please call us at ${(await loadAppSettings()).business.phone}.` },
+          { error: `Cancellations need at least ${CANCEL_NOTICE_HOURS} hours' notice before departure, so this trip can no longer be cancelled for a refund. Please call us at ${(await loadAppSettings()).business.phone}.` },
           { status: 400 }
         );
       }
@@ -102,7 +111,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       reservation: serialize(reservation),
       cancellationFeeCents: await cancellationFeeCents(),
-      canCancelOnline: !!reservation.trip?.departure_date && reservation.trip.departure_date > easternToday(),
+      canCancelOnline: canCancelOnline(reservation.trip),
     });
   } catch (err) {
     console.error("[booking/manage]", err);

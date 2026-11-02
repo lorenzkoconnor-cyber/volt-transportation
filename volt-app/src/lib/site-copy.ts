@@ -3,7 +3,7 @@
 // the current prices, hours, fee and contact details.
 
 import { dollars, type AppSettings, type RouteSchedule } from "@/lib/settings";
-import { displayTime12h } from "@/lib/booking";
+import { CANCEL_NOTICE_HOURS, displayTime12h, runsAroundTheClock } from "@/lib/booking";
 
 function every(minutes: number): string {
   if (minutes % 60 === 0) {
@@ -19,17 +19,38 @@ function driveTime(minutes: number): string {
   return h ? `${h} hr ${minutes % 60} min` : `${minutes} minutes`;
 }
 
-const runs = (r: RouteSchedule) =>
-  `${every(r.intervalMinutes)} from ${displayTime12h(r.first)} to ${displayTime12h(r.last)}`;
+/** Departures run all day and night, e.g. 12:00 AM–10:00 PM every 2 hours. */
+export const aroundTheClock = (r: RouteSchedule) => runsAroundTheClock(r.first, r.last, r.intervalMinutes);
 
-/** "Vans leave Volt in Columbus every 2 hours from 4:00 AM to 8:00 PM, 7 days a week, and leave ATL …" */
+/** "around the clock" or "from 4:00 AM to 8:00 PM" */
+export const departureHours = (r: RouteSchedule) =>
+  aroundTheClock(r) ? "around the clock" : `from ${displayTime12h(r.first)} to ${displayTime12h(r.last)}`;
+
+/** "24/7" or "4:00 AM–8:00 PM daily" */
+export const departureWindow = (r: RouteSchedule) =>
+  aroundTheClock(r) ? "24/7" : `${displayTime12h(r.first)}–${displayTime12h(r.last)} daily`;
+
+const runs = (r: RouteSchedule) =>
+  aroundTheClock(r)
+    ? `${every(r.intervalMinutes)}, 24 hours a day`
+    : `${every(r.intervalMinutes)} from ${displayTime12h(r.first)} to ${displayTime12h(r.last)}`;
+
+/** "Vans leave Volt in Columbus and ATL every 2 hours, 24 hours a day, 7 days a week." */
 export function scheduleSentence(s: AppSettings): string {
-  return `Vans leave Volt in Columbus ${runs(s.schedule.toAtl)}, 7 days a week, and leave ATL ${runs(s.schedule.fromAtl)}.`;
+  const { toAtl, fromAtl } = s.schedule;
+  if (aroundTheClock(toAtl) && aroundTheClock(fromAtl) && toAtl.intervalMinutes === fromAtl.intervalMinutes) {
+    return `Vans leave Volt in Columbus and ATL ${runs(toAtl)}, 7 days a week.`;
+  }
+  return `Vans leave Volt in Columbus ${runs(toAtl)}, 7 days a week, and leave ATL ${runs(fromAtl)}.`;
 }
+
+/** The lobby opens for every van, even outside office hours. */
+export const LOBBY_OPEN_SENTENCE =
+  "Outside office hours, a Volt team member opens our Columbus lobby for every scheduled departure and arrival, day or night, so you can relax inside until it's time to board.";
 
 export function cancellationSentence(s: AppSettings): string {
   const fee = s.cancellationFeeCents > 0 ? ` minus a ${dollars(s.cancellationFeeCents / 100)} cancellation fee` : "";
-  return `You can cancel up until 11:59 PM (Eastern) the day before your scheduled trip and receive a refund of your fare${fee} — online cancellations are refunded automatically. Cancellations after that time are non-refundable. To change your booking, call us; there's no change fee.`;
+  return `You can cancel up to ${CANCEL_NOTICE_HOURS} hours before your scheduled departure and receive a refund of your fare${fee} — online cancellations are refunded automatically. Cancellations with less than ${CANCEL_NOTICE_HOURS} hours' notice are non-refundable. To change your booking, call us; there's no change fee.`;
 }
 
 export function faqItems(s: AppSettings): { question: string; answer: string }[] {
@@ -51,6 +72,10 @@ export function faqItems(s: AppSettings): { question: string; answer: string }[]
     {
       question: "Can I travel with a pet?",
       answer: `Yes — pets are welcome aboard Volt for ${dollars(P.pet)} per pet. Pets must be in an appropriate carrier or crate for the duration of the trip.`,
+    },
+    {
+      question: "Is the Columbus lobby open for late-night and early-morning trips?",
+      answer: `Yes. ${LOBBY_OPEN_SENTENCE} Free parking is available on site.`,
     },
     {
       question: "How early should I arrive for pickup?",

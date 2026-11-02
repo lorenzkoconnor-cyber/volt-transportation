@@ -45,7 +45,7 @@ export const SETTINGS_FIELDS: FieldDef[] = [
   { column: "business_email", label: "Email address", kind: "email", maxLength: 120 },
   { column: "business_street", label: "Street address", kind: "text", maxLength: 120 },
   { column: "business_city_line", label: "City, state & ZIP", kind: "text", maxLength: 80 },
-  { column: "business_hours", label: "Business hours", kind: "text", maxLength: 80 },
+  { column: "business_hours", label: "Office hours", kind: "text", maxLength: 80 },
   // Reviews
   { column: "review_requests_enabled", label: "Review request emails on", kind: "bool" },
   { column: "google_review_url", label: "Google review link", kind: "url", maxLength: 300 },

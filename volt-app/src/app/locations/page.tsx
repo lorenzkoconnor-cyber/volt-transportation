@@ -4,11 +4,10 @@ import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import MapsLink from "@/components/ui/MapsLink";
-import { GOOGLE_MAPS_URL } from "@/lib/site-copy";
+import { GOOGLE_MAPS_URL, departureWindow } from "@/lib/site-copy";
 import { Button } from "@/components/ui/button";
 import { MapPin, ArrowRight, Clock, Car, Plane, Navigation } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
-import { displayTime12h } from "@/lib/booking";
 
 export const metadata: Metadata = {
   title: "Locations | Columbus GA & ATL Airport Pickup Points",
@@ -230,7 +229,7 @@ export default async function LocationsPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0A]">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl font-bold text-white mb-4">The Route</h2>
-            <p className="text-[#A1A1AA] mb-8">Columbus, GA → Hartsfield-Jackson ATL International Airport · About {drive} · Departs Volt {hoursEvery}, {displayTime12h(toAtl.first)}–{displayTime12h(toAtl.last)} daily</p>
+            <p className="text-[#A1A1AA] mb-8">Columbus, GA → Hartsfield-Jackson ATL International Airport · About {drive} · Departs Volt {hoursEvery}, {departureWindow(toAtl)}</p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <div className="glass rounded-xl px-6 py-4">
                 <div className="text-white font-bold">Columbus, GA</div>

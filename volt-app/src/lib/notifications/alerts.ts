@@ -22,7 +22,7 @@ import { appUrl } from "@/lib/reservation-messages";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
 
-export const DEFAULT_SHORT_NOTICE_HOURS = 6;
+export const DEFAULT_SHORT_NOTICE_HOURS = 36;
 const HOLD_WARN_MS = 2 * 86_400_000;
 const STUCK_PAYMENT_MS = 15 * 60_000;
 export const STAFF_TRIP_REMINDER_MS = 2 * 3_600_000;

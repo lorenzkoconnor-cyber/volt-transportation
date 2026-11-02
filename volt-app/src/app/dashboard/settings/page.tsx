@@ -166,7 +166,7 @@ export default function SettingsPage() {
                   { column: "business_email", title: "Email address" },
                   { column: "business_street", title: "Street address" },
                   { column: "business_city_line", title: "City, state & ZIP", help: "Format: Columbus, GA 31909" },
-                  { column: "business_hours", title: "Business hours", help: "As shown on the Contact page." },
+                  { column: "business_hours", title: "Office hours", help: "When the office is staffed, as shown on the Contact page. Van departures follow the Daily Schedule." },
                 ]} />
               <BannerCard announcements={data.announcements} onSaved={load} />
             </>

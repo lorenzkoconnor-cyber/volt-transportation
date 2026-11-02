@@ -116,13 +116,14 @@ export default function AboutPage() {
               <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Inside Our Columbus Terminal</h2>
               <p className="text-[#A1A1AA] max-w-xl mx-auto">
                 Check in at the front desk, then settle into a comfortable lounge while you wait for your shuttle.
+                The lobby is open for every departure and arrival, day or night.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {[
                 { label: "Front Desk", src: "/images/volt-front-desk.webp", alt: "Volt Transportation front desk with the Volt logo on the wall" },
                 { label: "Passenger Lounge", src: "/images/volt-lounge-seating.webp", alt: "Leather sofas and armchairs in the Volt Transportation passenger lounge" },
-                { label: "Open Early & Late", src: "/images/volt-entrance-night.webp", alt: "The lit Volt Transportation lobby seen through the front doors at night" },
+                { label: "Open for Every Van, Day or Night", src: "/images/volt-entrance-night.webp", alt: "The lit Volt Transportation lobby seen through the front doors at night" },
               ].map((item) => (
                 <div key={item.label} className="glass rounded-2xl overflow-hidden relative aspect-[3/4] group">
                   <Image

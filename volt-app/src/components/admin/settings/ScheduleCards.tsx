@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { CalendarClock, CalendarOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { displayTime12h } from "@/lib/booking";
+import { displayTime12h, runsAroundTheClock } from "@/lib/booking";
 import { Card, Notice, SaveButton, Toggle, inputClass, settingsPost, wideInputClass } from "./shared";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -29,7 +29,8 @@ export function ScheduleCard({ routes, onSaved }: { routes: any[]; onSaved: () =
     for (let m = toMin(r.first); m <= toMin(r.last) && times.length < 30; m += r.interval) {
       times.push(displayTime12h(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`));
     }
-    return `${times.length} departures a day: ${times.join(", ")}`;
+    const allDay = runsAroundTheClock(r.first, r.last, r.interval) ? " (around the clock, 24/7)" : "";
+    return `${times.length} departures a day${allDay}: ${times.join(", ")}`;
   };
 
   const save = async () => {
@@ -53,7 +54,7 @@ export function ScheduleCard({ routes, onSaved }: { routes: any[]; onSaved: () =
 
   return (
     <Card icon={CalendarClock} title="Daily Schedule"
-      description="When vans leave each day, 7 days a week. Saving updates every upcoming day: new times are added, empty departures that no longer fit are removed, and any departure with riders on it is kept.">
+      description="When vans leave each day, 7 days a week — for 24/7 service set First 12:00 AM and Last 10:00 PM every 120 min. Office hours (Business Info) are separate. Saving updates every upcoming day: new times are added, empty departures that no longer fit are removed, and any departure with riders on it is kept.">
       {rows.map((r) => (
         <div key={r.id} className="space-y-2">
           <div className="text-white text-sm font-medium">{ROUTE_LABEL[r.origin] ?? r.origin}</div>

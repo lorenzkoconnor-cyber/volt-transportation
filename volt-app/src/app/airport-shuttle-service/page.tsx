@@ -12,6 +12,7 @@ import {
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars, type AppSettings } from "@/lib/settings";
 import { displayTime12h } from "@/lib/booking";
+import { aroundTheClock, departureWindow } from "@/lib/site-copy";
 
 // Search landing page for people who don't know Volt yet — "airport shuttle",
 // "Columbus GA to Atlanta airport", "shuttle to ATL" and similar searches.
@@ -78,7 +79,9 @@ const faqFor = (s: AppSettings) => {
     },
     {
       question: "What times does the shuttle leave for the Atlanta airport?",
-      answer: `Volt departs Columbus for ATL ${every} from ${displayTime12h(toAtl.first)} to ${displayTime12h(toAtl.last)}, and leaves ATL for Columbus from ${displayTime12h(fromAtl.first)} to ${displayTime12h(fromAtl.last)}, every day.`,
+      answer: aroundTheClock(toAtl) && aroundTheClock(fromAtl)
+        ? `Volt departs Columbus for ATL ${every}, around the clock, and leaves ATL for Columbus ${every} too — 24 hours a day, every day.`
+        : `Volt departs Columbus for ATL ${every} from ${displayTime12h(toAtl.first)} to ${displayTime12h(toAtl.last)}, and leaves ATL for Columbus from ${displayTime12h(fromAtl.first)} to ${displayTime12h(fromAtl.last)}, every day.`,
     },
     {
       question: "Where do I catch the airport shuttle in Columbus?",
@@ -175,7 +178,7 @@ export default async function AirportShuttleServicePage() {
     ["Columbus pickup", `Volt's own lobby at ${s.business.street} with free parking`, `Their own office; downtown hotel stops are by reservation, no parking, +${dollars(COMPETITOR.hotelExtra)}`],
     ["Indoor passenger lounge", "Yes", "Not advertised"],
     ["Bottled water & luggage help", "Included", "Not advertised"],
-    ["Departures to ATL", `${every}, ${displayTime12h(toAtl.first)}–${displayTime12h(toAtl.last)} daily`, "About hourly, per its posted timetable"],
+    ["Departures to ATL", `${every}, ${departureWindow(toAtl)}`, "About hourly, per its posted timetable"],
   ];
 
   return (
@@ -350,7 +353,7 @@ export default async function AirportShuttleServicePage() {
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">Columbus airport shuttle pickup location</h2>
             <p className="text-[#A1A1AA] mb-8 flex items-center justify-center gap-2">
-              <Clock className="w-4 h-4" /> Hours: {s.business.hours}
+              <Clock className="w-4 h-4" /> Office hours: {s.business.hours} · Lobby open for every departure and arrival
             </p>
             <GoogleMapsButton address={`${s.business.street}, ${s.business.cityLine}`} />
           </div>

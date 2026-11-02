@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, Info } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
 import { dollars, type AppSettings } from "@/lib/settings";
+import { CANCEL_NOTICE_HOURS } from "@/lib/booking";
 
 // Prices, the Military Discount and the cancellation fee come from
 // Dashboard → Settings.
@@ -45,7 +46,7 @@ const policiesFor = (s: AppSettings) => [
     title: "Cancellation",
     desc: (
       <>
-        Cancel by 11:59 PM (Eastern) the day before your trip for a refund of your fare
+        Cancel at least {CANCEL_NOTICE_HOURS} hours before your departure for a refund of your fare
         {s.cancellationFeeCents > 0 && (
           <>
             {" "}minus a{" "}

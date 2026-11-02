@@ -349,8 +349,10 @@ function FlightOptions({
           <p className="text-white font-medium text-sm mb-1">No Volt departures fit this flight</p>
           {schedule && (
             <p className="text-[#A1A1AA] text-xs mb-1">
-              Vans leave {LOCATIONS[from].short} every {formatDuration(schedule.intervalMinutes, true)} from{" "}
-              {schedule.firstDisplayTime} to {schedule.lastDisplayTime}, 7 days a week.
+              Vans leave {LOCATIONS[from].short} every {formatDuration(schedule.intervalMinutes, true)}
+              {schedule.aroundTheClock
+                ? ", 24 hours a day, 7 days a week."
+                : ` from ${schedule.firstDisplayTime} to ${schedule.lastDisplayTime}, 7 days a week.`}
             </p>
           )}
           <p className="text-[#A1A1AA] text-xs">

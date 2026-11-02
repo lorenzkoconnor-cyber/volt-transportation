@@ -6,6 +6,7 @@ import { ArrowRight, Car, Clock, Luggage, MapPin, Phone, Plane } from "lucide-re
 import type { AppSettings } from "@/lib/settings";
 import { dollars } from "@/lib/settings";
 import { displayTime12h } from "@/lib/booking";
+import { aroundTheClock } from "@/lib/site-copy";
 
 // Short, phone-first page for paid social ads. Each ad lands on the page that
 // matches its image and headline, so the visitor sees the same promise they
@@ -42,7 +43,9 @@ export default function AdLanding({ copy, settings: s }: { copy: AdLandingCopy; 
     : `Every ${toAtl.intervalMinutes} minutes`;
 
   const facts = [
-    { icon: Clock, title: `${every}, 7 days a week`, desc: `Vans leave Columbus from ${displayTime12h(toAtl.first)} to ${displayTime12h(toAtl.last)}. Pick the one that fits your flight.` },
+    aroundTheClock(toAtl)
+      ? { icon: Clock, title: `${every}, 24/7`, desc: "Vans leave Columbus around the clock, 7 days a week. Pick the one that fits your flight." }
+      : { icon: Clock, title: `${every}, 7 days a week`, desc: `Vans leave Columbus from ${displayTime12h(toAtl.first)} to ${displayTime12h(toAtl.last)}. Pick the one that fits your flight.` },
     { icon: Car, title: "Free parking in Columbus", desc: `Leave your car at our lobby, ${s.business.street}, for as long as you're gone.` },
     { icon: Plane, title: "Dropped at your terminal", desc: `About ${hours} hours to Hartsfield-Jackson (ATL), and someone else drives.` },
     { icon: Luggage, title: "Luggage help, max 8 riders", desc: "Your driver loads your bags. Never more than 8 passengers per van." },

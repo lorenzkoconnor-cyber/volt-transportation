@@ -32,8 +32,8 @@ export interface Announcement {
 }
 
 export interface RouteSchedule {
-  first: string;            // "04:00"
-  last: string;             // "20:00"
+  first: string;            // "00:00"
+  last: string;             // "22:00"
   intervalMinutes: number;  // 120
   durationMinutes: number;  // drive time
 }
@@ -80,7 +80,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   onlineCutoffMinutes: 120,
   cancellationFeeCents: 1500,
   doorService: { pickupCents: 5000, dropoffCents: 5000 },
-  shortNoticeHours: 6,
+  shortNoticeHours: 36,
   editCutoffHours: 24,
   returnEditCutoffHours: 2,
   discountCodeValidDays: 3,
@@ -88,8 +88,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   reminders: { firstEnabled: true, firstHours: 24, secondEnabled: true, secondHours: 2 },
   reviews: { requestsEnabled: true, googleUrl: null },
   schedule: {
-    toAtl: { first: "04:00", last: "20:00", intervalMinutes: 120, durationMinutes: 120 },
-    fromAtl: { first: "06:00", last: "22:00", intervalMinutes: 120, durationMinutes: 120 },
+    toAtl: { first: "00:00", last: "22:00", intervalMinutes: 120, durationMinutes: 120 },
+    fromAtl: { first: "00:00", last: "22:00", intervalMinutes: 120, durationMinutes: 120 },
   },
   announcement: null,
 };
