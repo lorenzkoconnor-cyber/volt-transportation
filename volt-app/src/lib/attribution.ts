@@ -1,7 +1,8 @@
 // Which ad or campaign brought a rider to the site, so a booking can be
 // credited to it (e.g. Facebook A/B test version A vs B). Kept in this
-// browser only: saved when a visitor lands on a URL with utm_* tags, sent with
-// checkout, and stored on the reservation. Never holds anything personal.
+// browser only: saved when a visitor lands on a URL with utm_* tags (or a
+// Google Ads click ID), sent with checkout, and stored on the reservation.
+// Never holds anything personal.
 //
 // Last tagged visit wins, and it expires after 30 days.
 
@@ -19,13 +20,18 @@ export interface Attribution {
 const clean = (v: unknown, max = 100) =>
   String(v ?? "").trim().toLowerCase().replace(/[^a-z0-9_.\-/ ]/g, "").slice(0, max);
 
+// Google Ads auto-tags clicks with a click ID instead of utm_* tags, so an
+// untagged ad click is still credited to Google.
+const GOOGLE_CLICK_IDS = ["gclid", "gbraid", "wbraid"];
+
 export function captureAttribution(pathname: string, search: string) {
   const params = new URLSearchParams(search);
-  const source = params.get("utm_source");
+  const googleClick = GOOGLE_CLICK_IDS.some((k) => params.has(k));
+  const source = params.get("utm_source") || (googleClick ? "google" : null);
   if (!source) return;
   const value: Attribution & { savedAt: number } = {
     utmSource: clean(source),
-    utmMedium: clean(params.get("utm_medium")),
+    utmMedium: clean(params.get("utm_medium") || (googleClick ? "cpc" : "")),
     utmCampaign: clean(params.get("utm_campaign")),
     utmContent: clean(params.get("utm_content")),
     landingPath: clean(pathname, 200),
