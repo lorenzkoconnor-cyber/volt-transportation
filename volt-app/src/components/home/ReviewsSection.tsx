@@ -1,13 +1,17 @@
 import { Star } from "lucide-react";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 import { getPublishedReviews, type PublicReview } from "@/lib/reviews-server";
+import { getGoogleReviews } from "@/lib/google-reviews";
 import { reviewMonth } from "@/lib/reviews";
 
 // Homepage reviews — a slow, endless carousel of what riders wrote on
-// /review/<token> (src/lib/reviews-server.ts). Until there are 3 real reviews,
+// /review/<token> (src/lib/reviews-server.ts) plus the reviews Google returns
+// (src/lib/google-reviews.ts), newest first. Until there are 3 real reviews,
 // the original launch quotes fill the gaps (owner's call, 2026-10-20).
 
-const LAUNCH_REVIEWS: PublicReview[] = [
+type CardReview = PublicReview & { google?: { authorUrl: string | null } };
+
+const LAUNCH_REVIEWS: CardReview[] = [
   {
     id: "launch-1",
     name: "Marcus T.",
@@ -40,12 +44,17 @@ const MIN_PER_LOOP = 6;
 const SECONDS_PER_CARD = 7;
 
 export default async function ReviewsSection() {
-  const real = await getPublishedReviews();
+  const [volt, google] = await Promise.all([getPublishedReviews(), getGoogleReviews()]);
+  const real: CardReview[] = [
+    ...volt,
+    ...(google?.reviews ?? []).map((r) => ({ ...r, tripLabel: null, google: { authorUrl: r.authorUrl } })),
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const reviews = real.length >= MIN_SHOWN ? real : [...real, ...LAUNCH_REVIEWS.slice(0, MIN_SHOWN - real.length)];
-  const average = real.length ? real.reduce((s, r) => s + r.rating, 0) / real.length : null;
+  const average = volt.length ? volt.reduce((s, r) => s + r.rating, 0) / volt.length : null;
+  const starsFilled = google?.rating ?? average;
 
   // Repeat short lists so one loop is wide enough; repeats are hidden from screen readers.
-  const loop: { review: PublicReview; repeat: boolean }[] = [];
+  const loop: { review: CardReview; repeat: boolean }[] = [];
   while (loop.length < Math.max(MIN_PER_LOOP, reviews.length)) {
     reviews.forEach((review) => loop.push({ review, repeat: loop.length >= reviews.length }));
   }
@@ -57,9 +66,17 @@ export default async function ReviewsSection() {
         <div className="flex items-center justify-center gap-1 mb-2" aria-hidden="true">
           {[...Array(5)].map((_, i) => (
             <Star key={i} className="w-5 h-5 text-[#FCC300]"
-              fill={average == null || i < Math.round(average) ? "#FCC300" : "transparent"} />
+              fill={starsFilled == null || i < Math.round(starsFilled) ? "#FCC300" : "transparent"} />
           ))}
         </div>
+        {google && (
+          <p className="text-[#A1A1AA]">
+            {google.rating.toFixed(1)} on Google from {google.count} review{google.count === 1 ? "" : "s"} ·{" "}
+            <a href={google.url} target="_blank" rel="noopener noreferrer" className="text-[#FCC300] hover:underline">
+              Read them on Google
+            </a>
+          </p>
+        )}
         {average != null && (
           <p className="text-[#A1A1AA]">
             {average.toFixed(1)} average from {real.length} rider review{real.length === 1 ? "" : "s"}
@@ -85,7 +102,7 @@ export default async function ReviewsSection() {
   );
 }
 
-function ReviewCard({ review }: { review: PublicReview }) {
+function ReviewCard({ review }: { review: CardReview }) {
   return (
     <figure className="glass rounded-2xl p-6 h-full flex flex-col">
       <div className="flex items-center gap-1 mb-4" aria-label={`${review.rating} out of 5 stars`} role="img">
@@ -97,9 +114,14 @@ function ReviewCard({ review }: { review: PublicReview }) {
         &ldquo;{review.body}&rdquo;
       </blockquote>
       <figcaption className="flex items-center justify-between gap-3">
-        <span className="text-white font-medium text-sm truncate">{review.name}</span>
+        {review.google?.authorUrl ? (
+          <a href={review.google.authorUrl} target="_blank" rel="noopener noreferrer"
+            className="text-white font-medium text-sm truncate hover:underline">{review.name}</a>
+        ) : (
+          <span className="text-white font-medium text-sm truncate">{review.name}</span>
+        )}
         <span className="text-[#A1A1AA] text-xs whitespace-nowrap">
-          {review.tripLabel ? `${review.tripLabel} · ` : ""}{reviewMonth(review.createdAt)}
+          {review.google ? "Google · " : review.tripLabel ? `${review.tripLabel} · ` : ""}{reviewMonth(review.createdAt)}
         </span>
       </figcaption>
     </figure>

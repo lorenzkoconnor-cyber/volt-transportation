@@ -38,6 +38,7 @@ export default function Navbar() {
   }, []);
 
   return (
+    <>
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled ? "bg-[#0A0A0A]/90 backdrop-blur-xl border-b border-white/6" : "bg-transparent"
@@ -162,5 +163,8 @@ export default function Navbar() {
         </div>
       )}
     </header>
+    {/* Room for the website banner, which sits inside the fixed header. */}
+    <div aria-hidden="true" style={{ height: "var(--banner-h, 0px)" }} />
+    </>
   );
 }
