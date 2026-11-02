@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const tripIds = [payload.tripId, ...(payload.isRoundTrip && payload.returnTripId ? [payload.returnTripId] : [])];
     const { data: trips } = await sb
       .from("trips")
-      .select("id, status, total_capacity, seats_booked, departure_date, departure_time, route:routes(origin_label, destination_label)")
+      .select("id, status, total_capacity, seats_booked, departure_date, departure_time, is_custom, is_private, route:routes(origin_label, destination_label)")
       .in("id", tripIds);
     const seats = payload.adults + payload.children;
     const settings = await loadAppSettings();
@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
     for (const id of tripIds) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const t = (trips ?? []).find((x: any) => x.id === id);
-      if (!t || t.status !== "scheduled") {
+      // Custom-time and private departures are booked by staff only.
+      if (!t || t.status !== "scheduled" || t.is_custom || t.is_private) {
         return NextResponse.json({ error: "That departure is no longer available. Please pick another time." }, { status: 409 });
       }
       // Online booking closes before departure (Eastern time) — staff book these.

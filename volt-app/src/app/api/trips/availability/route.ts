@@ -5,7 +5,8 @@ import {
   DEFAULT_FLIGHT_TIMING, DEFAULT_ONLINE_CUTOFF_MINUTES, arrivalFor, displayTime12h, runsAroundTheClock,
   type FlightTimingSettings, type RouteSchedule,
 } from "@/lib/booking";
-import { easternInstant } from "@/lib/staff-pricing";
+import { CUSTOM_BOOKING_ROLES, easternInstant } from "@/lib/staff-pricing";
+import { requireStaff } from "@/lib/staff-booking";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createClient(): Promise<any> {
@@ -15,7 +16,9 @@ async function createClient(): Promise<any> {
   );
 }
 
-// GET /api/trips/availability?route_key=columbus-atl&date=2026-07-10
+// GET /api/trips/availability?route_key=columbus-atl&date=2026-07-10[&staff=1]
+// Custom-time and private departures are never offered online; with staff=1 a
+// signed-in owner/manager gets them too (flagged on each slot).
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const routeKey = searchParams.get("route_key");   // "columbus-atl" or "atl-columbus"
@@ -30,6 +33,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createClient();
+    const staffView = searchParams.get("staff") === "1" && !((await requireStaff(CUSTOM_BOOKING_ROLES)) instanceof NextResponse);
 
     // Find the route
     const { data: route, error: routeError } = await supabase
@@ -46,15 +50,17 @@ export async function GET(request: NextRequest) {
 
     // Get all trips for this route and date with availability, plus the
     // flight-fit settings the booking flow uses to match departures to flights.
+    let tripsQuery = supabase
+      .from("trips")
+      .select("id, departure_time, total_capacity, seats_booked, status, is_custom, is_private")
+      .eq("route_id", route.id)
+      .eq("departure_date", date)
+      // A van that's boarding hasn't left yet — staff can still put riders on it.
+      .in("status", ["scheduled", "boarding"])
+      .order("departure_time");
+    if (!staffView) tripsQuery = tripsQuery.eq("is_custom", false).eq("is_private", false);
     const [{ data: trips, error: tripsError }, { data: settings }] = await Promise.all([
-      supabase
-        .from("trips")
-        .select("id, departure_time, total_capacity, seats_booked, status")
-        .eq("route_id", route.id)
-        .eq("departure_date", date)
-        // A van that's boarding hasn't left yet — staff can still put riders on it.
-        .in("status", ["scheduled", "boarding"])
-        .order("departure_time"),
+      tripsQuery,
       supabase.from("booking_settings").select("*").maybeSingle(),
     ]);
 
@@ -79,9 +85,11 @@ export async function GET(request: NextRequest) {
         time: trip.departure_time.slice(0, 5),
         displayTime: displayTime12h(trip.departure_time),
         ...arrivalFor(date, trip.departure_time.slice(0, 5), routeMinutes),
-        available: seatsLeft > 0,
+        // A private van is full to everyone but the booking already on it.
+        available: seatsLeft > 0 && !(trip.is_private && trip.seats_booked > 0),
         seatsLeft,
         totalSeats: trip.total_capacity,
+        ...(staffView ? { custom: !!trip.is_custom, private: !!trip.is_private } : {}),
         departed: departsIn <= 0,
         closed: departsIn < cutoffMinutes * 60_000 || trip.status === "boarding",
       };

@@ -18,7 +18,15 @@ export type StaffDiscount =
   // server looks the code up again.
   | { kind: "code"; code: string; type: "percent" | "fixed"; value: number }
   // Staff-entered discount: dollars ("amount") or percent.
-  | { kind: "manual"; type: "amount" | "percent"; value: number };
+  | { kind: "manual"; type: "amount" | "percent"; value: number }
+  // Owners/managers only: the whole fare typed in (higher or lower than the
+  // per-seat price). Door fees and tip are added on top.
+  | { kind: "price"; fareCents: number };
+
+// Roles that may book custom/private departures, set a custom price or change
+// door-service fees.
+export const CUSTOM_BOOKING_ROLES = ["owner", "manager"];
+export const canCustomizeBookings = (role: string | null | undefined) => CUSTOM_BOOKING_ROLES.includes(role ?? "");
 
 export interface StaffCounts {
   adults: number;
@@ -57,6 +65,11 @@ export function staffSubtotalCents(c: StaffCounts, rates: StaffRates = DEFAULT_R
   return Math.round(oneWay * (c.isRoundTrip ? 2 : 1) * 100);
 }
 
+/** The fare before discounts: the per-seat price, or the custom price when one is set. */
+export function staffFareCents(c: StaffCounts, d: StaffDiscount, rates: StaffRates = DEFAULT_RATES): number {
+  return d.kind === "price" ? Math.max(0, Math.round(d.fareCents)) : staffSubtotalCents(c, rates);
+}
+
 export function staffDiscountCents(subtotalCents: number, d: StaffDiscount, rates: StaffRates = DEFAULT_RATES): number {
   switch (d.kind) {
     case "military":
@@ -77,7 +90,7 @@ export function staffDiscountCents(subtotalCents: number, d: StaffDiscount, rate
 export function staffPrice(
   c: StaffCounts, d: StaffDiscount, comp = false, rates: StaffRates = DEFAULT_RATES, extras: StaffExtras = NO_EXTRAS,
 ): StaffPrice {
-  const subtotalCents = staffSubtotalCents(c, rates);
+  const subtotalCents = comp ? staffSubtotalCents(c, rates) : staffFareCents(c, d, rates);
   const doorCents = extras.pickupFeeCents + extras.dropoffFeeCents;
   const tipCents = comp ? 0 : extras.tipCents;
   const discountCents = comp ? subtotalCents + doorCents : staffDiscountCents(subtotalCents, d, rates);
@@ -193,6 +206,8 @@ export function staffDiscountLabel(d: StaffDiscount, rates: StaffRates = DEFAULT
       return `Discount Code ${d.code} (${codeLabel({ type: d.type, value: d.value })})`;
     case "manual":
       return d.type === "percent" ? `Discount (${Math.min(d.value, 100)}%)` : "Discount";
+    case "price":
+      return "Custom price";
     default:
       return "";
   }

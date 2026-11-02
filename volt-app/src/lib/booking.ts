@@ -159,6 +159,9 @@ export interface DepartureSlot {
   // Set by the availability API, in Eastern time:
   departed?: boolean;   // already left — never offered
   closed?: boolean;     // inside the online booking cutoff — staff only, riders call
+  // Owners/managers only (never sent to riders):
+  custom?: boolean;     // off the regular schedule (a custom half-hour time)
+  private?: boolean;    // private van — one booking only
 }
 
 export interface Passenger {

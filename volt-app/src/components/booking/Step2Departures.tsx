@@ -3,7 +3,7 @@
 import { useAppSettings } from "@/context/SettingsContext";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, Users, ArrowLeft, Loader2, Plane, AlertTriangle, Timer } from "lucide-react";
+import { ArrowRight, Clock, Users, ArrowLeft, Loader2, Plane, AlertTriangle, Timer, Lock, Sparkles } from "lucide-react";
 import {
   type BookingSearch,
   type DepartureSlot,
@@ -40,6 +40,9 @@ interface Props {
   // count as free, so it can stay on — or grow on — its own departure.
   heldSeats?: Record<string, number>;
   nextLabel?: string;
+  // Owners/managers: also list custom-time and private departures, and let
+  // them set up a departure at any half hour.
+  customTimes?: boolean;
 }
 
 function withHeld(slot: DepartureSlot, held?: Record<string, number>): DepartureSlot {
@@ -56,16 +59,16 @@ function stillOffered(prev: DepartureSlot | null | undefined, slots: DepartureSl
 }
 
 async function fetchDay(
-  from: string, to: string, date: string,
+  from: string, to: string, date: string, staffView = false,
 ): Promise<{ slots: DepartureSlot[]; timing: FlightTimingSettings; schedule: RouteSchedule | null }> {
-  const res = await fetch(`/api/trips/availability?route_key=${from}-${to}&date=${date}`);
+  const res = await fetch(`/api/trips/availability?route_key=${from}-${to}&date=${date}${staffView ? "&staff=1" : ""}`);
   if (!res.ok) return { slots: [], timing: DEFAULT_FLIGHT_TIMING, schedule: null };
   const data = await res.json();
   return { slots: data.slots ?? [], timing: data.timing ?? DEFAULT_FLIGHT_TIMING, schedule: data.schedule ?? null };
 }
 
-async function fetchSlots(from: string, to: string, date: string): Promise<DepartureSlot[]> {
-  return (await fetchDay(from, to, date)).slots;
+async function fetchSlots(from: string, to: string, date: string, staffView = false): Promise<DepartureSlot[]> {
+  return (await fetchDay(from, to, date, staffView)).slots;
 }
 
 // Without a flight, riders choose the time at the airport: when to arrive at
@@ -73,11 +76,11 @@ async function fetchSlots(from: string, to: string, date: string): Promise<Depar
 // ATL-bound leg `date` is the arrival date, so the evening before is loaded too
 // — a late departure can reach ATL after midnight.
 async function fetchAirportLeg(
-  from: LocationKey, to: LocationKey, date: string,
+  from: LocationKey, to: LocationKey, date: string, staffView = false,
 ): Promise<{ slots: DepartureSlot[]; timing: FlightTimingSettings }> {
   const toAirport = to === "atl";
   const days = await Promise.all(
-    (toAirport ? [shiftDate(date, -1), date] : [date]).map((d) => fetchDay(from, to, d)),
+    (toAirport ? [shiftDate(date, -1), date] : [date]).map((d) => fetchDay(from, to, d, staffView)),
   );
   const slots = days
     .flatMap((d) => d.slots)
@@ -96,12 +99,12 @@ export interface FlightLeg {
 
 // Loads every departure that could fit the flight — including the day before/
 // after when the fit window crosses midnight — and keeps the ones that fit.
-async function fetchFlightLeg(from: LocationKey, to: LocationKey, flight: FlightInfo): Promise<FlightLeg> {
+async function fetchFlightLeg(from: LocationKey, to: LocationKey, flight: FlightInfo, staffView = false): Promise<FlightLeg> {
   const direction = flightDirection(from);
-  const first = await fetchDay(from, to, flight.date);
+  const first = await fetchDay(from, to, flight.date, staffView);
   const timing = first.timing;
   const otherDates = candidateDatesForFlight(flight, direction, timing).filter((d) => d !== flight.date);
-  const others = await Promise.all(otherDates.map((d) => fetchSlots(from, to, d)));
+  const others = await Promise.all(otherDates.map((d) => fetchSlots(from, to, d, staffView)));
 
   // Never offer a departure that has already left (decided by the server in Eastern time).
   const matches = matchDeparturesToFlight([...first.slots, ...others.flat()], flight, direction, timing)
@@ -121,7 +124,7 @@ interface LoadedDepartures {
 }
 
 export default function Step2Departures({
-  search, initialOutbound, initialReturn, onChange, onNext, onBack, heldSeats, nextLabel, staff = false,
+  search, initialOutbound, initialReturn, onChange, onNext, onBack, heldSeats, nextLabel, staff = false, customTimes = false,
 }: Props) {
   const { business } = useAppSettings();
   const [selectedOutbound, setSelectedOutbound] = useState<DepartureSlot | null>(null);
@@ -170,16 +173,16 @@ export default function Step2Departures({
 
     if (search.hasFlight) {
       Promise.all([
-        fetchFlightLeg(search.from, search.to, search.outboundFlight),
-        search.roundTrip ? fetchFlightLeg(search.to, search.from, search.returnFlight) : Promise.resolve(null),
+        fetchFlightLeg(search.from, search.to, search.outboundFlight, customTimes),
+        search.roundTrip ? fetchFlightLeg(search.to, search.from, search.returnFlight, customTimes) : Promise.resolve(null),
       ])
         .then(([out, ret]) => finish({ outboundLeg: out, returnLeg: ret }))
         .catch(fail);
     } else {
       Promise.all([
-        fetchAirportLeg(search.from, search.to, search.date),
+        fetchAirportLeg(search.from, search.to, search.date, customTimes),
         search.roundTrip && search.returnDate
-          ? fetchAirportLeg(search.to, search.from, search.returnDate)
+          ? fetchAirportLeg(search.to, search.from, search.returnDate, customTimes)
           : Promise.resolve(null),
       ])
         .then(([out, ret]) =>
@@ -194,7 +197,7 @@ export default function Step2Departures({
     }
 
     return () => { cancelled = true; };
-  }, [search, initialPicks, heldSeats, staff]);
+  }, [search, initialPicks, heldSeats, staff, customTimes]);
 
   useEffect(() => {
     if (!loading) onChange?.(selectedOutbound, selectedReturn);
@@ -246,6 +249,10 @@ export default function Step2Departures({
             selected={selectedOutbound}
             onSelect={setSelectedOutbound}
           />
+          {customTimes && (
+            <CustomDeparture from={search.from} to={search.to} defaultDate={search.outboundFlight.date}
+              selected={selectedOutbound} onPick={setSelectedOutbound} />
+          )}
           {search.roundTrip && returnLeg && (
             <FlightOptions
               leg={returnLeg}
@@ -255,6 +262,10 @@ export default function Step2Departures({
               selected={selectedReturn}
               onSelect={setSelectedReturn}
             />
+          )}
+          {customTimes && search.roundTrip && (
+            <CustomDeparture from={search.to} to={search.from} defaultDate={search.returnFlight.date}
+              selected={selectedReturn} onPick={setSelectedReturn} />
           )}
         </>
       ) : (
@@ -281,6 +292,10 @@ export default function Step2Departures({
             date={search.date}
             label={`${search.roundTrip ? "Outbound" : "Your Ride"} — ${LOCATIONS[search.from].short} → ${LOCATIONS[search.to].short} · ${formatDate(search.date)}`}
           />
+          {customTimes && (
+            <CustomDeparture from={search.from} to={search.to} defaultDate={search.date}
+              selected={selectedOutbound} onPick={setSelectedOutbound} />
+          )}
 
           {search.roundTrip && (
             <DepartureGrid
@@ -291,6 +306,10 @@ export default function Step2Departures({
               date={search.returnDate}
               label={`Return — ${LOCATIONS[search.to].short} → ${LOCATIONS[search.from].short} · ${formatDate(search.returnDate)}`}
             />
+          )}
+          {customTimes && search.roundTrip && (
+            <CustomDeparture from={search.to} to={search.from} defaultDate={search.returnDate}
+              selected={selectedReturn} onPick={setSelectedReturn} />
           )}
         </>
       )}
@@ -383,6 +402,7 @@ function FlightOptions({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="text-white font-semibold">{m.slot.displayTime}</span>
+                    <SlotTags slot={m.slot} />
                     {otherDay && (
                       <span className="text-[#A1A1AA] text-xs">{formatDateShort(m.departsAt.date)}</span>
                     )}
@@ -486,6 +506,7 @@ function DepartureGrid({
                   <Clock className="w-3 h-3 opacity-70" />
                   <span className="text-sm font-semibold">{toAirport && slot.arrivalDisplayTime ? "~" : ""}{primary}</span>
                 </div>
+                <SlotTags slot={slot} />
                 {secondary && (
                   <div className="text-[11px] leading-tight opacity-70 my-1">
                     <div>{secondary.label}</div>
@@ -506,6 +527,138 @@ function DepartureGrid({
               </button>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Owners/managers: custom-time and private departures ──────────────────────
+function SlotTags({ slot }: { slot: DepartureSlot }) {
+  if (!slot.custom && !slot.private) return null;
+  return (
+    <span className="inline-flex items-center justify-center gap-1 flex-wrap">
+      {slot.custom && (
+        <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wide text-sky-300 bg-sky-400/10 px-1.5 py-0.5 rounded">
+          <Sparkles className="w-2.5 h-2.5" /> Custom
+        </span>
+      )}
+      {slot.private && (
+        <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wide text-fuchsia-300 bg-fuchsia-400/10 px-1.5 py-0.5 rounded">
+          <Lock className="w-2.5 h-2.5" /> Private
+        </span>
+      )}
+    </span>
+  );
+}
+
+// Every half hour of the day: "00:00", "00:30" … "23:30".
+const HALF_HOURS = Array.from({ length: 48 }, (_, i) =>
+  `${String(Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
+
+// Sets up (or finds) a departure at any half hour — off-schedule times become
+// custom departures that riders never see online — and selects it.
+function CustomDeparture({
+  from, to, defaultDate, selected, onPick,
+}: {
+  from: LocationKey;
+  to: LocationKey;
+  defaultDate: string;
+  selected: DepartureSlot | null;
+  onPick: (s: DepartureSlot) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(defaultDate);
+  const [time, setTime] = useState("12:30");
+  const [makePrivate, setMakePrivate] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const create = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/trips/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to, date, time, private: makePrivate }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not set up that departure.");
+      if (!data.slot.available) throw new Error("That departure has no room for this booking.");
+      onPick(data.slot);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not set up that departure.");
+    }
+    setBusy(false);
+  };
+
+  const picked = selected && (selected.custom || selected.private) ? selected : null;
+
+  return (
+    <div className="rounded-xl border border-sky-400/25 bg-sky-400/5 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-white text-sm font-semibold flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-sky-300" /> Custom time or private van
+          </p>
+          <p className="text-[#A1A1AA] text-xs mt-0.5">
+            Owners &amp; managers: leave {LOCATIONS[from].short} at any half hour. Custom and private departures
+            never show on the website.
+          </p>
+        </div>
+        {!open && (
+          <button type="button" onClick={() => setOpen(true)} className="text-sky-300 hover:text-white text-sm font-medium flex-shrink-0">
+            Set up
+          </button>
+        )}
+      </div>
+
+      {picked && (
+        <p className="text-sm text-white bg-[#FCC300]/15 border border-[#FCC300]/40 rounded-lg px-3 py-2 flex items-center gap-2 flex-wrap">
+          Selected: leaves {LOCATIONS[from].short} {picked.displayTime}
+          {picked.date ? ` · ${formatDateShort(picked.date)}` : ""}
+          {picked.arrivalDisplayTime ? ` → ~${picked.arrivalDisplayTime} at ${LOCATIONS[to].short}` : ""}
+          <SlotTags slot={picked} />
+        </p>
+      )}
+
+      {open && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="space-y-1">
+              <span className="text-[#A1A1AA] text-xs block">Leaves {LOCATIONS[from].short} on</span>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                className="bg-white/5 border border-white/10 text-white h-10 rounded-xl px-3 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[#A1A1AA] text-xs block">At</span>
+              <select value={time} onChange={(e) => setTime(e.target.value)}
+                className="bg-[#18181B] border border-white/10 text-white h-10 rounded-xl px-3 text-sm">
+                {HALF_HOURS.map((t) => <option key={t} value={t}>{displayTime12h(t)}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" checked={makePrivate} onChange={(e) => setMakePrivate(e.target.checked)}
+              className="w-4 h-4 mt-0.5 accent-[#FCC300]" />
+            <span className="text-white text-sm">
+              Private van
+              <span className="text-[#A1A1AA] text-xs block">Only this booking rides — nobody else can be added.</span>
+            </span>
+          </label>
+          {error && <p className="text-red-400 text-xs">{error}</p>}
+          <div className="flex gap-2">
+            <Button type="button" disabled={busy || !date} onClick={create}
+              className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-10 rounded-xl">
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Use This Departure"}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => { setOpen(false); setError(""); }}
+              className="border-white/15 text-white hover:bg-white/5 h-10 rounded-xl">
+              Cancel
+            </Button>
+          </div>
         </div>
       )}
     </div>

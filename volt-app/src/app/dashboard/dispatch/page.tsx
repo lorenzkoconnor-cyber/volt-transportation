@@ -7,11 +7,25 @@ import { useAuth } from "@/context/AuthContext";
 import { formatTime12h, localDateString } from "@/lib/format";
 import {
   Users, Truck, Clock, ChevronRight, CheckCircle2, AlertTriangle,
-  Plus, Loader2, X, Trash2, Pencil,
+  Plus, Loader2, X, Trash2, Pencil, Lock, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+
+const HALF_HOUR = /^([01]\d|2[0-3]):(00|30)$/;
+
+function PrivateToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-start gap-2 cursor-pointer">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="w-4 h-4 mt-0.5 accent-[#FCC300]" />
+      <span className="text-white text-sm">
+        Private van
+        <span className="text-[#A1A1AA] text-xs block">One booking only — nobody else can be added.</span>
+      </span>
+    </label>
+  );
+}
 
 const STATUS_MAP: Record<string, { label: string; class: string }> = {
   scheduled:   { label: "Scheduled",    class: "bg-blue-500/15 text-blue-400" },
@@ -26,7 +40,9 @@ const STATUS_MAP: Record<string, { label: string; class: string }> = {
 export default function DispatchPage() {
   const supabase = createClient();
   const sb = supabase as any;
-  const { isOwner } = useAuth();
+  const { isOwner, isManager } = useAuth();
+  // Adding departures and changing their time, seats or privacy: owners & managers only.
+  const canSchedule = isOwner || isManager;
 
   const [date, setDate] = useState(localDateString());
   const [deleteTrip, setDeleteTrip] = useState<any>(null);
@@ -45,11 +61,13 @@ export default function DispatchPage() {
   const [addRouteId, setAddRouteId] = useState("");
   const [addTime, setAddTime] = useState("08:00");
   const [addCapacity, setAddCapacity] = useState(8);
+  const [addPrivate, setAddPrivate] = useState(false);
 
   // Edit-trip modal
   const [editTrip, setEditTrip] = useState<any>(null);
   const [editTime, setEditTime] = useState("08:00");
   const [editCapacity, setEditCapacity] = useState(8);
+  const [editPrivate, setEditPrivate] = useState(false);
   const [editError, setEditError] = useState("");
 
   // Assign-vehicle modal
@@ -62,7 +80,7 @@ export default function DispatchPage() {
     const [tripsRes, routesRes, vehiclesRes, driversRes] = await Promise.all([
       sb.from("trips")
         .select(
-          "id, route_id, departure_time, total_capacity, seats_booked, status, notes, " +
+          "id, route_id, departure_time, total_capacity, seats_booked, status, notes, is_custom, is_private, " +
           "route:routes(name), " +
           "trip_vehicles(id, vehicle_id, driver_id, vehicle:vehicles(name, capacity), driver:drivers(first_name, last_name))"
         )
@@ -90,8 +108,9 @@ export default function DispatchPage() {
 
   const addTrip = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
     setError("");
+    if (!HALF_HOUR.test(addTime)) { setError("Departures leave on the hour or half hour (e.g. 3:00 or 3:30)."); return; }
+    setBusy(true);
     const { error: err } = await sb.from("trips").insert({
       route_id: addRouteId,
       departure_date: date,
@@ -99,8 +118,9 @@ export default function DispatchPage() {
       total_capacity: addCapacity,
       seats_booked: 0,
       status: "scheduled",
+      is_private: addPrivate,
     });
-    if (err) setError(err.message);
+    if (err) setError(err.code === "23505" ? "There's already a departure at that time." : err.message);
     else { setShowAdd(false); await load(); }
     setBusy(false);
   };
@@ -118,6 +138,7 @@ export default function DispatchPage() {
     setEditTrip(trip);
     setEditTime(trip.departure_time.slice(0, 5));
     setEditCapacity(trip.total_capacity);
+    setEditPrivate(!!trip.is_private);
     setEditError("");
   };
 
@@ -128,11 +149,19 @@ export default function DispatchPage() {
       setEditError(`Capacity can't be below the ${editTrip.seats_booked} seats already booked.`);
       return;
     }
+    if (!HALF_HOUR.test(editTime)) {
+      setEditError("Departures leave on the hour or half hour (e.g. 3:00 or 3:30).");
+      return;
+    }
+    if (editPrivate && !editTrip.is_private && editTrip.seats_booked > 0) {
+      setEditError("Riders are already booked on this departure, so it can't be made private.");
+      return;
+    }
     setBusy(true);
     setEditError("");
     const { error: err } = await sb
       .from("trips")
-      .update({ departure_time: editTime, total_capacity: editCapacity })
+      .update({ departure_time: editTime, total_capacity: editCapacity, is_private: editPrivate })
       .eq("id", editTrip.id);
     if (err) setEditError(err.message);
     else { setEditTrip(null); await load(); }
@@ -218,10 +247,12 @@ export default function DispatchPage() {
             />
             Show empty departures
           </label>
-          <Button variant="outline" size="sm" onClick={() => setShowAdd(true)}
-            className="border-white/15 text-white hover:bg-white/5">
-            <Plus className="w-4 h-4 mr-1" /> Add Trip
-          </Button>
+          {canSchedule && (
+            <Button variant="outline" size="sm" onClick={() => { setAddPrivate(false); setShowAdd(true); }}
+              className="border-white/15 text-white hover:bg-white/5">
+              <Plus className="w-4 h-4 mr-1" /> Add Trip
+            </Button>
+          )}
         </div>
       </div>
 
@@ -245,7 +276,7 @@ export default function DispatchPage() {
           </p>
           <p className="text-[#A1A1AA] text-sm">
             {trips.length === 0
-              ? "Use “Add Trip” to schedule one."
+              ? canSchedule ? "Use “Add Trip” to schedule one." : "Ask an owner or manager to add one."
               : "Check “Show empty departures” to see all scheduled slots."}
           </p>
         </div>
@@ -269,6 +300,18 @@ export default function DispatchPage() {
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="text-white font-bold text-lg">{formatTime12h(dep.departure_time)}</span>
                         <span className="text-[#A1A1AA] text-sm">{dep.route?.name}</span>
+                        {dep.is_custom && (
+                          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-sky-300 bg-sky-400/10 px-1.5 py-0.5 rounded"
+                            title="Off the regular schedule — not shown on the website">
+                            <Sparkles className="w-2.5 h-2.5" /> Custom
+                          </span>
+                        )}
+                        {dep.is_private && (
+                          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-fuchsia-300 bg-fuchsia-400/10 px-1.5 py-0.5 rounded"
+                            title="Private van — one booking only, not shown on the website">
+                            <Lock className="w-2.5 h-2.5" /> Private
+                          </span>
+                        )}
                         {hasNoDriver && dep.status !== "cancelled" && (
                           <span className="flex items-center gap-1 text-yellow-400 text-xs">
                             <AlertTriangle className="w-3 h-3" /> {assignments.length === 0 ? "No vehicle assigned" : "No driver assigned"}
@@ -282,15 +325,17 @@ export default function DispatchPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
-                    {/* Edit trip */}
-                    <button
-                      onClick={() => openEdit(dep)}
-                      disabled={busy}
-                      title="Edit time / capacity"
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[#A1A1AA] hover:text-white hover:bg-white/10 transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Edit trip (owners & managers) */}
+                    {canSchedule && (
+                      <button
+                        onClick={() => openEdit(dep)}
+                        disabled={busy}
+                        title="Edit time / capacity / private"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-[#A1A1AA] hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {/* Delete trip (owner only) */}
                     {isOwner && (
                       <button
@@ -423,7 +468,7 @@ export default function DispatchPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Departure Time *</Label>
-                  <input type="time" required value={addTime} onChange={(e) => setAddTime(e.target.value)}
+                  <input type="time" required step={1800} value={addTime} onChange={(e) => setAddTime(e.target.value)}
                     className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] [color-scheme:dark]" />
                 </div>
                 <div>
@@ -433,6 +478,11 @@ export default function DispatchPage() {
                     className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#FCC300]" />
                 </div>
               </div>
+              <PrivateToggle checked={addPrivate} onChange={setAddPrivate} />
+              <p className="text-[#A1A1AA] text-xs">
+                Any half hour works. Times off the every-2-hours schedule are custom departures: staff can book them,
+                but they never show on the website. Private departures don't either.
+              </p>
               <Button type="submit" disabled={busy}
                 className="w-full bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold h-11 rounded-xl disabled:opacity-60">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1.5" />Add Trip</>}
@@ -460,7 +510,7 @@ export default function DispatchPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Departure Time *</Label>
-                  <input type="time" required value={editTime} onChange={(e) => setEditTime(e.target.value)}
+                  <input type="time" required step={1800} value={editTime} onChange={(e) => setEditTime(e.target.value)}
                     className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] [color-scheme:dark]" />
                 </div>
                 <div>
@@ -470,6 +520,11 @@ export default function DispatchPage() {
                     className="bg-white/5 border-white/10 text-white h-10 rounded-xl focus:border-[#FCC300]" />
                 </div>
               </div>
+              <PrivateToggle checked={editPrivate} onChange={setEditPrivate} />
+              <p className="text-[#A1A1AA] text-xs">
+                Any half hour works. Times off the every-2-hours schedule are custom departures: staff can book them,
+                but they never show on the website. Private departures don't either.
+              </p>
               {editTrip.seats_booked > 0 && (
                 <p className="text-[#A1A1AA] text-xs">{editTrip.seats_booked} seat{editTrip.seats_booked !== 1 ? "s" : ""} already booked on this trip.</p>
               )}

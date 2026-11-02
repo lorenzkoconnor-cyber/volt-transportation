@@ -27,12 +27,13 @@ import {
 } from "@/lib/booking";
 import { formatCents, localDateString } from "@/lib/format";
 import { codeLabel } from "@/lib/discount-codes";
-import { staffPrice, staffDiscountLabel, type StaffDiscount, type StaffRates } from "@/lib/staff-pricing";
+import { canCustomizeBookings, staffPrice, staffDiscountLabel, type StaffDiscount, type StaffRates } from "@/lib/staff-pricing";
+import { useAuth } from "@/context/AuthContext";
 import { useAppSettings } from "@/context/SettingsContext";
 import { dollars, snapshotPricing, type PricingSnapshot } from "@/lib/settings";
 import {
   AlertCircle, ArrowLeftRight, Banknote, CheckCircle2, CreditCard, Gift, Home, Loader2, MapPin, Nfc, Pencil, Plane, Plus,
-  ShieldCheck, SplitSquareHorizontal, Ticket, User, X,
+  ShieldCheck, Sparkles, SplitSquareHorizontal, Ticket, User, X,
 } from "lucide-react";
 
 export interface StaffCustomer {
@@ -104,6 +105,9 @@ export default function StaffBookingForm({
 }: Props) {
   const router = useRouter();
   const isEdit = mode === "edit";
+  // Owners/managers can book custom times / private vans, set any price and door fees.
+  const { employee } = useAuth();
+  const canCustomize = canCustomizeBookings(employee?.role);
   // New bookings use today's prices; edits keep the booking's own prices.
   const settings = useAppSettings();
   const rates: StaffRates = isEdit
@@ -132,6 +136,7 @@ export default function StaffBookingForm({
   const [manualType, setManualType] = useState<"amount" | "percent">(initial.discount.kind === "manual" ? initial.discount.type : "amount");
   const [manualValue, setManualValue] = useState(initial.discount.kind === "manual" ? String(initial.discount.value) : "");
   const [discountTab, setDiscountTab] = useState<StaffDiscount["kind"]>(initial.discount.kind);
+  const [fareValue, setFareValue] = useState(initial.discount.kind === "price" ? (initial.discount.fareCents / 100).toFixed(2) : "");
 
   const [door, setDoor] = useState<StaffDoor>(
     initial.door ?? { pickup: false, pickupAddress: "", dropoff: false, dropoffAddress: "" },
@@ -140,9 +145,15 @@ export default function StaffBookingForm({
     !!initial.door?.pickup && !!initial.door?.dropoff && initial.door.pickupAddress === initial.door.dropoffAddress,
   );
   const dropoffAddress = door.pickup && sameAddress ? door.pickupAddress : door.dropoffAddress;
+  // Owners/managers may type a booking's own door fee (blank = the usual fee).
+  const [pickupFeeInput, setPickupFeeInput] = useState("");
+  const [dropoffFeeInput, setDropoffFeeInput] = useState("");
+  const feeCents = (v: string) => (v.trim() === "" || !(parseFloat(v) >= 0) ? null : Math.round(parseFloat(v) * 100));
+  const pickupOverride = canCustomize ? feeCents(pickupFeeInput) : null;
+  const dropoffOverride = canCustomize ? feeCents(dropoffFeeInput) : null;
   // An edit keeps the fee the booking was charged for a service it still has.
-  const pickupFee = door.pickup ? (initial.door?.pickupFeeCents || settings.doorService.pickupCents) : 0;
-  const dropoffFee = door.dropoff ? (initial.door?.dropoffFeeCents || settings.doorService.dropoffCents) : 0;
+  const pickupFee = door.pickup ? pickupOverride ?? (initial.door?.pickupFeeCents || settings.doorService.pickupCents) : 0;
+  const dropoffFee = door.dropoff ? dropoffOverride ?? (initial.door?.dropoffFeeCents || settings.doorService.dropoffCents) : 0;
   // New bookings: staff may add a tip. Edits keep the tip already on the booking.
   const [tipCents, setTipCents] = useState(0);
 
@@ -172,8 +183,12 @@ export default function StaffBookingForm({
       const v = parseFloat(manualValue) || 0;
       return v > 0 ? { kind: "manual", type: manualType, value: v } : { kind: "none" };
     }
+    if (discountTab === "price") {
+      const v = parseFloat(fareValue);
+      return v >= 0 ? { kind: "price", fareCents: Math.round(v * 100) } : { kind: "none" };
+    }
     return { kind: "none" };
-  }, [discountTab, discount, manualType, manualValue]);
+  }, [discountTab, discount, manualType, manualValue, fareValue]);
 
   const isComp = !isEdit && payMethod === "comp";
   const price = staffPrice(
@@ -223,7 +238,10 @@ export default function StaffBookingForm({
       email: customer.email.trim(),
     },
     discount: activeDiscount,
-    door: { ...door, dropoffAddress: dropoffAddress.trim(), pickupAddress: door.pickupAddress.trim() },
+    door: {
+      ...door, dropoffAddress: dropoffAddress.trim(), pickupAddress: door.pickupAddress.trim(),
+      pickupFeeOverrideCents: pickupOverride, dropoffFeeOverrideCents: dropoffOverride,
+    },
     tipCents: isEdit ? 0 : tipCents,
     termsAgreed,
     smsConsent,
@@ -237,6 +255,7 @@ export default function StaffBookingForm({
     if (!customer.firstName.trim() || !customer.lastName.trim()) return "Enter the customer's first and last name.";
     if (customer.phone.replace(/\D/g, "").length < 10) return "Enter a 10-digit phone number.";
     if (discountTab === "code" && discount.kind !== "code") return "Apply the discount code, or choose a different discount.";
+    if (discountTab === "price" && activeDiscount.kind !== "price") return "Enter the custom price, or choose a different option.";
     if (door.pickup && door.pickupAddress.trim().length < 5) return "Enter the pickup address.";
     if (door.dropoff && dropoffAddress.trim().length < 5) return "Enter the drop-off address.";
     if (!isEdit && !termsAgreed) return "Confirm the customer agreed to the Terms & Conditions.";
@@ -382,6 +401,7 @@ export default function StaffBookingForm({
       <div className="glass rounded-2xl p-4 sm:p-6">
         <Step2Departures
           staff
+          customTimes={canCustomize}
           search={returnSearch}
           initialOutbound={returnSlot}
           heldSeats={heldSeats}
@@ -420,6 +440,7 @@ export default function StaffBookingForm({
       <div className="glass rounded-2xl p-4 sm:p-6">
         <Step2Departures
           staff
+          customTimes={canCustomize}
           search={search}
           initialOutbound={outbound}
           initialReturn={returnSlot}
@@ -564,6 +585,10 @@ export default function StaffBookingForm({
                 <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Pickup address *</Label>
                 <Input value={door.pickupAddress} placeholder="Street, city, ZIP" className={inputCls}
                   onChange={(e) => { setDoor((d) => ({ ...d, pickupAddress: e.target.value })); touch(); }} />
+                {canCustomize && (
+                  <FeeOverride value={pickupFeeInput} usualCents={initial.door?.pickupFeeCents || settings.doorService.pickupCents}
+                    onChange={(v) => { setPickupFeeInput(v); touch(); }} />
+                )}
               </div>
             )}
             <label className="flex items-start gap-3 cursor-pointer">
@@ -590,6 +615,10 @@ export default function StaffBookingForm({
                       onChange={(e) => { setDoor((d) => ({ ...d, dropoffAddress: e.target.value })); touch(); }} />
                   </div>
                 )}
+                {canCustomize && (
+                  <FeeOverride value={dropoffFeeInput} usualCents={initial.door?.dropoffFeeCents || settings.doorService.dropoffCents}
+                    onChange={(v) => { setDropoffFeeInput(v); touch(); }} />
+                )}
               </div>
             )}
           </div>
@@ -599,15 +628,18 @@ export default function StaffBookingForm({
         {!isComp && !returnOnly && (
           <div className="glass rounded-2xl p-6 space-y-4">
             <h2 className="text-white font-semibold">Discount</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className={`grid grid-cols-2 ${canCustomize ? "sm:grid-cols-5" : "sm:grid-cols-4"} gap-2`}>
               {([
                 ["none", "None", null],
                 ["military", "Military", ShieldCheck],
                 ["code", "Discount Code", Ticket],
                 ["manual", "Custom", null],
+                ["price", "Set Price", Sparkles],
               ] as const)
                 // Hidden for new bookings while the program is off in Settings.
                 .filter(([key]) => key !== "military" || isEdit || settings.military.enabled || discountTab === "military")
+                // Owners/managers only (a booking that already has one keeps showing it).
+                .filter(([key]) => key !== "price" || canCustomize || discountTab === "price")
                 .map(([key, label, Icon]) => (
                 <button key={key} type="button"
                   onClick={() => { setDiscountTab(key); setCodeError(""); touch(); }}
@@ -673,6 +705,20 @@ export default function StaffBookingForm({
                   onChange={(e) => { setManualValue(e.target.value); touch(); }} className={inputCls} />
               </div>
             )}
+
+            {discountTab === "price" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 max-w-xs">
+                  <span className="text-white text-sm">$</span>
+                  <Input type="number" min={0} step={0.01} value={fareValue} placeholder="0.00" disabled={!canCustomize}
+                    onChange={(e) => { setFareValue(e.target.value); touch(); }} className={inputCls} />
+                </div>
+                <p className="text-[#A1A1AA] text-xs">
+                  The whole fare for this booking{search.roundTrip ? " (both legs)" : ""}, higher or lower than the usual
+                  per-seat price. Door fees and tip are added on top. Owners &amp; managers only.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -719,7 +765,12 @@ export default function StaffBookingForm({
         )}
 
         <div className="bg-white/3 rounded-xl p-4 space-y-1.5">
-          {lines.map(([label, cents]) => (
+          {activeDiscount.kind === "price" && !isComp ? (
+            <div className="flex justify-between text-sm">
+              <span className="text-[#A1A1AA]">Fare · custom price{search.roundTrip ? " · round trip" : ""}</span>
+              <span className="text-white">{formatCents(price.subtotalCents)}</span>
+            </div>
+          ) : lines.map(([label, cents]) => (
             <div key={label} className="flex justify-between text-sm">
               <span className="text-[#A1A1AA]">{label}{search.roundTrip ? " · round trip" : ""}</span>
               <span className="text-white">{formatCents(cents)}</span>
@@ -1005,6 +1056,18 @@ function ReturnLegSearch({ search, onBack, onSearch }: {
           Keep the current return
         </Button>
       </div>
+    </div>
+  );
+}
+
+// Owners/managers: this booking's own door fee (blank = the usual fee).
+function FeeOverride({ value, usualCents, onChange }: { value: string; usualCents: number; onChange: (v: string) => void }) {
+  return (
+    <div className="mt-2 flex items-center gap-2 flex-wrap">
+      <Label className="text-[#A1A1AA] text-xs">Fee for this booking $</Label>
+      <Input type="number" min={0} step={0.01} value={value} placeholder={(usualCents / 100).toFixed(2)}
+        onChange={(e) => onChange(e.target.value)} className={`${inputCls} w-28`} />
+      <span className="text-[#A1A1AA] text-xs">Blank = {formatCents(usualCents)}. Owners &amp; managers only.</span>
     </div>
   );
 }

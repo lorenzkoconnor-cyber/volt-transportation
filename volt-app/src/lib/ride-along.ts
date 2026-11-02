@@ -31,7 +31,7 @@ const BOOKABLE = ["scheduled", "boarding"];
 const TOKEN_RE = /^[0-9a-f-]{36}$/i;
 
 const TRIP_FIELDS =
-  "id, departure_date, departure_time, status, total_capacity, seats_booked, " +
+  "id, departure_date, departure_time, status, total_capacity, seats_booked, is_private, " +
   "route:routes(origin_key, destination_key, origin_label, destination_label)";
 
 export function rideAlongUrl(token: string): string {
@@ -41,7 +41,8 @@ export function rideAlongUrl(token: string): string {
 const departsAt = (t: any) => easternInstant(t.departure_date, String(t.departure_time).slice(0, 5));
 
 function tripOpen(t: any, now = Date.now()): boolean {
-  if (!t || !BOOKABLE.includes(t.status)) return false;
+  // A private van takes no walk-up riders.
+  if (!t || !BOOKABLE.includes(t.status) || t.is_private) return false;
   const at = departsAt(t);
   return at > now - LATE_GRACE_MS && at < now + AHEAD_MS;
 }

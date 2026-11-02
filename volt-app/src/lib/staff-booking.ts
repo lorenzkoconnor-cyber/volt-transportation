@@ -26,8 +26,8 @@ import {
 import { generateConfirmationNumber } from "@/lib/booking";
 import { codeDiscountCents, codeState, formatCode, normalizeCode, CODE_ERRORS } from "@/lib/discount-codes";
 import {
-  easternInstant, editAccess, reservationBalance, staffDiscountCents, staffDiscountLabel, staffSubtotalCents,
-  type StaffDiscount, type StaffRates,
+  canCustomizeBookings, easternInstant, editAccess, reservationBalance, staffDiscountCents, staffDiscountLabel,
+  staffFareCents, staffSubtotalCents, type StaffDiscount, type StaffRates,
 } from "@/lib/staff-pricing";
 import { formatCents, formatDateShort, formatTime12h } from "@/lib/format";
 import { loadMessageInfo, notifyConfirmation, notifyUpdated } from "@/lib/reservation-messages";
@@ -79,11 +79,14 @@ export interface StaffInput {
 
 // Door-to-door service: pick the rider up at / drop them off at an address
 // (flat fee each — Settings → Prices). Addresses go to the driver's manifest.
+// Owners/managers may set a booking's own fee instead (null = the usual fee).
 export interface DoorService {
   pickup: boolean;
   pickupAddress: string;
   dropoff: boolean;
   dropoffAddress: string;
+  pickupFeeOverrideCents: number | null;
+  dropoffFeeOverrideCents: number | null;
 }
 
 // "stripe" = card typed in (phone / counter), "square" = tapped on the Square Terminal.
@@ -118,7 +121,17 @@ function normalizeDiscount(d: any): StaffDiscount {
   if (d?.kind === "manual" && Number(d.value) > 0) {
     return { kind: "manual", type: d.type === "percent" ? "percent" : "amount", value: Math.max(0, Number(d.value)) };
   }
+  if (d?.kind === "price" && Number.isFinite(Number(d.fareCents))) {
+    return { kind: "price", fareCents: Math.min(1_000_000, Math.max(0, Math.round(Number(d.fareCents)))) };
+  }
   return { kind: "none" };
+}
+
+// A typed-in fee in cents, or null for "use the usual fee".
+function feeOverride(v: any): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 0 ? Math.min(100_000, n) : null;
 }
 
 export function normalizeStaffInput(body: any): StaffInput | { error: string } {
@@ -145,18 +158,42 @@ export function normalizeStaffInput(body: any): StaffInput | { error: string } {
     pickupAddress: d.pickup ? str(d.pickupAddress, 300) : "",
     dropoff: !!d.dropoff,
     dropoffAddress: d.dropoff ? str(d.dropoffAddress, 300) : "",
+    pickupFeeOverrideCents: d.pickup ? feeOverride(d.pickupFeeOverrideCents) : null,
+    dropoffFeeOverrideCents: d.dropoff ? feeOverride(d.dropoffFeeOverrideCents) : null,
   };
   if (door.pickup && door.pickupAddress.length < 5) return { error: "Enter the pickup address." };
   if (door.dropoff && door.dropoffAddress.length < 5) return { error: "Enter the drop-off address." };
   return { payload, customer, discount: normalizeDiscount(body?.discount), termsAgreed: !!body?.termsAgreed, door };
 }
 
-/** Door fees for this booking: an edit keeps the fee already charged for a service it still has. */
+/**
+ * Door fees for this booking: a fee an owner/manager typed in, else (edits) the
+ * fee already charged for a service it still has, else today's fee.
+ */
 function doorFees(door: DoorService, live: { pickupCents: number; dropoffCents: number }, resv?: any) {
+  const fee = (on: boolean, override: number | null, charged: number | undefined, usual: number) =>
+    !on ? 0 : override ?? ((charged ?? 0) > 0 ? charged! : usual);
   return {
-    pickupFeeCents: door.pickup ? (resv?.pickup_fee_cents > 0 ? resv.pickup_fee_cents : live.pickupCents) : 0,
-    dropoffFeeCents: door.dropoff ? (resv?.dropoff_fee_cents > 0 ? resv.dropoff_fee_cents : live.dropoffCents) : 0,
+    pickupFeeCents: fee(door.pickup, door.pickupFeeOverrideCents, resv?.pickup_fee_cents, live.pickupCents),
+    dropoffFeeCents: fee(door.dropoff, door.dropoffFeeOverrideCents, resv?.dropoff_fee_cents, live.dropoffCents),
   };
+}
+
+const CUSTOM_ONLY = "Only an owner or manager can";
+
+/**
+ * Custom price and door fees are owner/manager only. Anyone may re-save a
+ * booking that already has them, as long as they're left as they were.
+ */
+function customExtrasError(role: string, input: StaffInput, resv?: any): string | null {
+  if (canCustomizeBookings(role)) return null;
+  const d = input.discount;
+  if (d.kind === "price" && !(resv?.custom_fare && d.fareCents === resv.subtotal_cents)) return `${CUSTOM_ONLY} set a custom price.`;
+  const changed = (override: number | null, charged: number | undefined) => override !== null && override !== (charged ?? null);
+  if (changed(input.door.pickupFeeOverrideCents, resv?.pickup_fee_cents) || changed(input.door.dropoffFeeOverrideCents, resv?.dropoff_fee_cents)) {
+    return `${CUSTOM_ONLY} change a door-service fee.`;
+  }
+  return null;
 }
 
 export function normalizePayment(p: any): StaffPayment {
@@ -171,12 +208,14 @@ export function normalizePayment(p: any): StaffPayment {
 
 // ── Trips ─────────────────────────────────────────────────────────────────────
 const TRIP_FIELDS =
-  "id, departure_date, departure_time, status, total_capacity, seats_booked, " +
+  "id, departure_date, departure_time, status, total_capacity, seats_booked, is_custom, is_private, " +
   "route:routes(id, name, origin_key, destination_key, origin_label, destination_label, duration_minutes)";
 
 interface LegTrips { out: any; ret: any | null }
 
-async function loadLegTrips(sb: Db, payload: CheckoutPayload, allowedExisting: string[] = []): Promise<LegTrips | { error: string }> {
+async function loadLegTrips(
+  sb: Db, payload: CheckoutPayload, role: string, allowedExisting: string[] = [],
+): Promise<LegTrips | { error: string }> {
   const ids = [payload.tripId, payload.returnTripId].filter(Boolean);
   const { data: trips } = await sb.from("trips").select(TRIP_FIELDS).in("id", ids);
   const out = trips?.find((t: any) => t.id === payload.tripId);
@@ -195,7 +234,24 @@ async function loadLegTrips(sb: Db, payload: CheckoutPayload, allowedExisting: s
     if (ret.route?.origin_key !== out.route?.destination_key) return { error: "The return trip must go the opposite way." };
     if (departs(ret) <= departs(out)) return { error: "The return departure must be after the outbound one." };
   }
+  // Custom-time and private departures are owner/manager only (a booking
+  // already on one can still be re-saved by anyone).
+  for (const t of [out, ret].filter(Boolean)) {
+    if ((t.is_custom || t.is_private) && !allowedExisting.includes(t.id) && !canCustomizeBookings(role)) {
+      return { error: `${CUSTOM_ONLY} book a ${t.is_private ? "private" : "custom-time"} departure.` };
+    }
+  }
   return { out, ret };
+}
+
+// A private departure takes one booking: nobody else may already be on it.
+function privateConflict(legs: LegTrips, held: Map<string, number>): string | null {
+  for (const t of [legs.out, legs.ret].filter(Boolean)) {
+    if (t.is_private && t.seats_booked - (held.get(t.id) ?? 0) > 0) {
+      return `${legLabel(t)} is a private van booked by another customer.`;
+    }
+  }
+  return null;
 }
 
 function legLabel(t: any): string {
@@ -322,8 +378,12 @@ export async function createStaffReservation(
   const { payload } = input;
   if (!input.termsAgreed) return { error: "Confirm the customer agreed to the Terms & Conditions." };
 
-  const legs = await loadLegTrips(sb, payload);
+  const customErr = customExtrasError(employee.role, input);
+  if (customErr) return { error: customErr, status: 403 };
+  const legs = await loadLegTrips(sb, payload, employee.role);
   if ("error" in legs) return legs;
+  const privateErr = privateConflict(legs, new Map());
+  if (privateErr) return { error: privateErr };
   const seats = payload.adults + payload.children;
   const short = seatShortfall(legs, seatNeeds(legs.out.id, legs.ret?.id ?? null, seats), new Map());
   if (short) return { error: short };
@@ -335,7 +395,8 @@ export async function createStaffReservation(
   }
   const rates: StaffRates = { pricing: settings.pricing, militaryAmount: settings.military.amount };
   const comp = payment.method === "comp";
-  const subtotalCents = staffSubtotalCents(payload, rates);
+  const customFare = !comp && input.discount.kind === "price";
+  const subtotalCents = comp ? staffSubtotalCents(payload, rates) : staffFareCents(payload, input.discount, rates);
   const { pickupFeeCents, dropoffFeeCents } = doorFees(input.door, settings.doorService);
   const doorCents = pickupFeeCents + dropoffFeeCents;
   // Comp covers the fare and the door fees; there's no tip on a free ride.
@@ -407,6 +468,7 @@ export async function createStaffReservation(
         special_notes: payload.specialNotes || null,
         subtotal_cents: subtotalCents,
         discount_cents: discount.discountCents,
+        custom_fare: customFare,
         pickup_fee_cents: pickupFeeCents,
         dropoff_fee_cents: dropoffFeeCents,
         pickup_address: input.door.pickup ? input.door.pickupAddress : null,
@@ -456,6 +518,9 @@ export async function createStaffReservation(
         payload.smsConsent ? "Customer agreed to receive booking texts" : "Customer did not opt in to texts",
         ...(discount.isMilitary ? ["Military Discount — ID checked in person"] : []),
         ...(discount.codeRow ? [`Discount code ${formatCode(discount.codeRow.code)}`] : []),
+        ...(customFare ? [`Custom price: fare ${formatCents(subtotalCents)}`] : []),
+        ...[legs.out, legs.ret].filter((t) => t?.is_private).map((t) => `Private van: ${legLabel(t)}`),
+        ...[legs.out, legs.ret].filter((t) => t?.is_custom && !t?.is_private).map((t) => `Custom-time departure: ${legLabel(t)}`),
         ...(input.door.pickup ? [`Door pickup at ${input.door.pickupAddress} (${formatCents(pickupFeeCents)})`] : []),
         ...(input.door.dropoff ? [`Door drop-off at ${input.door.dropoffAddress} (${formatCents(dropoffFeeCents)})`] : []),
         ...(tipCents > 0 ? [`Tip ${formatCents(tipCents)}`] : []),
@@ -549,14 +614,19 @@ export async function planEdit(sb: Db, resv: any, input: StaffInput, role: strin
   const access = editAccess(role, resv.status, resv.trip, resv.is_round_trip ? resv.return_trip : null, Date.now(), settings);
   if (!access.mode) return { error: access.reason ?? "This reservation can't be changed now." };
 
+  const customErr = customExtrasError(role, input, resv);
+  if (customErr) return { error: customErr };
+
   const { payload, customer } = input;
   const current = [resv.trip_id, resv.return_trip_id].filter(Boolean);
-  const legs = await loadLegTrips(sb, payload, current);
+  const legs = await loadLegTrips(sb, payload, role, current);
   if ("error" in legs) return legs;
 
   const oldSeats = (resv.adults ?? 0) + (resv.children ?? 0);
   const newSeats = payload.adults + payload.children;
   const held = seatNeeds(resv.trip_id, resv.is_round_trip ? resv.return_trip_id : null, oldSeats);
+  const privateErr = privateConflict(legs, held);
+  if (privateErr) return { error: privateErr };
   const short = seatShortfall(legs, seatNeeds(legs.out.id, legs.ret?.id ?? null, newSeats), held);
   if (short) return { error: short };
 
@@ -564,7 +634,7 @@ export async function planEdit(sb: Db, resv: any, input: StaffInput, role: strin
   // never re-prices an existing booking).
   const snap = snapshotPricing(resv.pricing_snapshot);
   const rates: StaffRates = { pricing: snap.pricing, militaryAmount: snap.militaryAmount };
-  const subtotalCents = staffSubtotalCents(payload, rates);
+  const subtotalCents = staffFareCents(payload, input.discount, rates);
   const discount = await resolveDiscount(sb, input.discount, subtotalCents, resv.discount_code_id ?? null, rates);
   if ("error" in discount) return discount;
   // Door service can be added or removed; the tip already on the booking stays.
@@ -619,18 +689,22 @@ export async function planEdit(sb: Db, resv: any, input: StaffInput, role: strin
     s.push(newFlights.length ? "Flight details updated" : "Flight details removed");
   }
   if ((resv.special_notes ?? "") !== payload.specialNotes) s.push("Notes updated");
+  const customFare = input.discount.kind === "price";
+  if (customFare && (!resv.custom_fare || resv.subtotal_cents !== subtotalCents)) s.push(`Custom price: fare ${formatCents(subtotalCents)}`);
+  else if (!customFare && resv.custom_fare) s.push("Custom price removed (back to per-seat prices)");
   const oldDiscountKey = resv.discount_code_id ? `code:${resv.discount_code_id}` : resv.is_military ? "military" : `cents:${resv.discount_cents}`;
   const newDiscountKey = discount.codeRow ? `code:${discount.codeRow.id}` : discount.isMilitary ? "military" : `cents:${discount.discountCents}`;
-  if (oldDiscountKey !== newDiscountKey) {
+  if (oldDiscountKey !== newDiscountKey && !(customFare && discount.discountCents === 0 && !resv.discount_cents)) {
     s.push(discount.discountCents > 0 ? `Discount: ${discount.label || "custom"} (−${formatCents(discount.discountCents)})` : "Discount removed");
   }
-  const doorLine = (label: string, had: string | null, on: boolean, address: string, fee: number) => {
+  const doorLine = (label: string, had: string | null, on: boolean, address: string, fee: number, oldFee: number) => {
     if (!had && on) s.push(`${label} added: ${address} (${formatCents(fee)})`);
     else if (had && !on) s.push(`${label} removed`);
     else if (had && on && had !== address) s.push(`${label} address: ${address}`);
+    if (had && on && fee !== oldFee) s.push(`${label} fee: ${formatCents(oldFee)} → ${formatCents(fee)}`);
   };
-  doorLine("Door pickup", resv.pickup_address ?? null, input.door.pickup, input.door.pickupAddress, pickupFeeCents);
-  doorLine("Door drop-off", resv.dropoff_address ?? null, input.door.dropoff, input.door.dropoffAddress, dropoffFeeCents);
+  doorLine("Door pickup", resv.pickup_address ?? null, input.door.pickup, input.door.pickupAddress, pickupFeeCents, resv.pickup_fee_cents ?? 0);
+  doorLine("Door drop-off", resv.dropoff_address ?? null, input.door.dropoff, input.door.dropoffAddress, dropoffFeeCents, resv.dropoff_fee_cents ?? 0);
   if (priceChangeCents !== 0) s.push(`Price: ${formatCents(resv.total_cents)} → ${formatCents(newTotalCents)}`);
 
   const balance = reservationBalance(newTotalCents, resv.payments ?? []);
@@ -853,6 +927,7 @@ export async function finishEdit(sb: Db, changeId: string, cashRows: Record<stri
       special_notes: payload.specialNotes || null,
       subtotal_cents: plan.subtotalCents,
       discount_cents: plan.discount.discountCents,
+      custom_fare: input.discount.kind === "price",
       pickup_fee_cents: plan.pickupFeeCents,
       dropoff_fee_cents: plan.dropoffFeeCents,
       pickup_address: input.door.pickup ? input.door.pickupAddress : null,

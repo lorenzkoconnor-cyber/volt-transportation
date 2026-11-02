@@ -26,6 +26,8 @@ function slotFor(t: any, held: number): DepartureSlot {
     available: seatsLeft > 0,
     seatsLeft,
     totalSeats: t.total_capacity,
+    custom: !!t.is_custom,
+    private: !!t.is_private,
   };
 }
 
@@ -70,7 +72,8 @@ function toInitial(r: any): { initial: StaffFormInitial; held: Record<string, nu
   };
 
   const discount: StaffDiscount =
-    r.discount_code ? { kind: "code", code: r.discount_code.code, type: r.discount_code.discount_type, value: r.discount_code.value }
+    r.custom_fare ? { kind: "price", fareCents: r.subtotal_cents }
+    : r.discount_code ? { kind: "code", code: r.discount_code.code, type: r.discount_code.discount_type, value: r.discount_code.value }
     : r.is_military ? { kind: "military" }
     : r.discount_cents > 0 && r.total_cents === 0 ? { kind: "manual", type: "percent", value: 100 }
     : r.discount_cents > 0 ? { kind: "manual", type: "amount", value: r.discount_cents / 100 }

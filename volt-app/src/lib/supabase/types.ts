@@ -50,6 +50,8 @@ export interface Database {
           total_capacity: number;          // 8 (per vehicle)
           seats_booked: number;
           status: TripStatus;
+          is_custom?: boolean;             // off the route schedule — staff only, never sold online (set by trigger)
+          is_private?: boolean;            // private van — one booking only, never sold online
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -171,6 +173,7 @@ export interface Database {
           military_discount_pending: boolean;   // verification pending — card held for full fare (or charged in full; discount refunded on approval)
           subtotal_cents: number;          // stored in cents to avoid float issues
           discount_cents: number;
+          custom_fare?: boolean;           // subtotal_cents typed in by an owner/manager (custom price)
           total_cents: number;
           created_at: string;
           updated_at: string;
