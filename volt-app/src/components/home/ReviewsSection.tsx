@@ -45,8 +45,10 @@ const SECONDS_PER_CARD = 7;
 
 export default async function ReviewsSection() {
   const [volt, google] = await Promise.all([getPublishedReviews(), getGoogleReviews()]);
+  // Riders are asked to post on Google too; show their Google copy once, not both.
+  const googleNames = (google?.reviews ?? []).map((r) => nameKey(r.name));
   const real: CardReview[] = [
-    ...volt,
+    ...volt.filter((r) => !googleNames.some((g) => sameRider(nameKey(r.name), g))),
     ...(google?.reviews ?? []).map((r) => ({ ...r, tripLabel: null, google: { authorUrl: r.authorUrl } })),
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const reviews = real.length >= MIN_SHOWN ? real : [...real, ...LAUNCH_REVIEWS.slice(0, MIN_SHOWN - real.length)];
@@ -77,9 +79,9 @@ export default async function ReviewsSection() {
             </a>
           </p>
         )}
-        {average != null && (
+        {!google && average != null && (
           <p className="text-[#A1A1AA]">
-            {average.toFixed(1)} average from {real.length} rider review{real.length === 1 ? "" : "s"}
+            {average.toFixed(1)} average from {volt.length} rider review{volt.length === 1 ? "" : "s"}
           </p>
         )}
       </ScrollReveal>
@@ -100,6 +102,17 @@ export default async function ReviewsSection() {
       </div>
     </section>
   );
+}
+
+// "Joannie M." / "Joannie Mcgee" → { first: "joannie", initial: "m" }
+function nameKey(name: string) {
+  const [first = "", last = ""] = name.toLowerCase().replace(/[^a-z ]/g, "").trim().split(/\s+/);
+  return { first, initial: last.charAt(0) };
+}
+
+// Same first name (or a short form of it, "Ron" for "Ronne") and same last initial.
+function sameRider(a: { first: string; initial: string }, b: { first: string; initial: string }) {
+  return !!a.first && !!a.initial && a.initial === b.initial && (b.first.startsWith(a.first) || a.first.startsWith(b.first));
 }
 
 function ReviewCard({ review }: { review: CardReview }) {
