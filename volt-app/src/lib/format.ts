@@ -45,3 +45,14 @@ export function localDateString(d: Date = new Date()): string {
 export function easternToday(now: Date = new Date()): string {
   return now.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
+
+// 1440 → "24 hours", 90 → "90 minutes" — for the online booking cutoff.
+export function noticeWords(minutes: number): string {
+  return minutes % 60 === 0 ? `${minutes / 60} hour${minutes === 60 ? "" : "s"}` : `${minutes} minutes`;
+}
+
+// First Eastern date that can still have a departure outside the online
+// booking cutoff (with 24h notice, never today) — for rider date pickers.
+export function earliestOnlineDate(cutoffMinutes: number, now: Date = new Date()): string {
+  return easternToday(new Date(now.getTime() + cutoffMinutes * 60_000));
+}

@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeftRight, ArrowRight, Calendar, Users } from "lucide-react";
+import { useAppSettings } from "@/context/SettingsContext";
+import { earliestOnlineDate } from "@/lib/format";
 
 const LOCATIONS = [
   { value: "columbus", label: "Volt Columbus" },
@@ -19,6 +21,7 @@ const LOCATIONS = [
 ];
 
 export default function BookingWidget() {
+  const earliest = earliestOnlineDate(useAppSettings().onlineCutoffMinutes);
   const router = useRouter();
   const [from,      setFrom]      = useState("columbus");
   const [to,        setTo]        = useState("atl");
@@ -142,7 +145,7 @@ export default function BookingWidget() {
                     setDate(d);
                     if (returnDate && returnDate < d) setReturnDate("");
                   }}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={earliest}
                   required
                   className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]"
                 />
@@ -157,7 +160,7 @@ export default function BookingWidget() {
                     type="date"
                     value={returnDate}
                     onChange={(e) => setReturnDate(e.target.value)}
-                    min={date || new Date().toISOString().split("T")[0]}
+                    min={date || earliest}
                     required
                     className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] transition-colors [color-scheme:dark]"
                   />

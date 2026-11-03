@@ -18,7 +18,7 @@ export const PRICING = {
 export const MILITARY_DISCOUNT_AMOUNT = 10;
 // Website booking closes this long before a departure unless
 // booking_settings.online_booking_cutoff_minutes says otherwise (staff can still book).
-export const DEFAULT_ONLINE_CUTOFF_MINUTES = 120;
+export const DEFAULT_ONLINE_CUTOFF_MINUTES = 1440; // 24 hours' notice
 // Riders can cancel (for a refund minus the fee) until this long before their
 // first departure; after that it's non-refundable and they must call.
 export const CANCEL_NOTICE_HOURS = 24;

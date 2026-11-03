@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { ArrowRight, ArrowLeftRight } from "lucide-react";
 import { type BookingSearch, type FlightInfo, LOCATIONS, flightDirection } from "@/lib/booking";
-import { localDateString } from "@/lib/format";
+import { earliestOnlineDate, localDateString, noticeWords } from "@/lib/format";
+import { useAppSettings } from "@/context/SettingsContext";
 import FlightFields from "./FlightFields";
 
 const LOCATION_LABELS: Record<string, string> = {
@@ -18,9 +19,10 @@ interface Props {
   initial: BookingSearch;
   onChange?: (search: BookingSearch) => void;   // every edit, so a reload can restore it
   onNext: (search: BookingSearch) => void;
+  staff?: boolean;   // Team Portal: staff can book inside the online cutoff
 }
 
-export default function Step1Search({ initial, onChange, onNext }: Props) {
+export default function Step1Search({ initial, onChange, onNext, staff = false }: Props) {
   const [search, setSearch] = useState<BookingSearch>(initial);
   const [error, setError] = useState("");
 
@@ -29,7 +31,8 @@ export default function Step1Search({ initial, onChange, onNext }: Props) {
   const set = (key: keyof BookingSearch, value: string | number | boolean) =>
     setSearch((prev) => ({ ...prev, [key]: value }));
 
-  const today = localDateString();
+  const { onlineCutoffMinutes, business } = useAppSettings();
+  const today = staff ? localDateString() : earliestOnlineDate(onlineCutoffMinutes);
 
   // Switching flight mode on/off carries the dates already chosen across
   // (travel dates ⇄ flight dates) so the rider doesn't re-enter them.
@@ -77,6 +80,11 @@ export default function Step1Search({ initial, onChange, onNext }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const travelDate = search.hasFlight ? search.outboundFlight.date : search.date;
+    if (travelDate && travelDate < today) {
+      setError(`Online bookings need at least ${noticeWords(onlineCutoffMinutes)} notice. To book a trip sooner, call Volt at ${business.phone} and speak with a manager.`);
+      return;
+    }
     if (search.hasFlight) {
       if (flightIncomplete(search.outboundFlight) || (search.roundTrip && flightIncomplete(search.returnFlight))) {
         setError("Please fill in every flight detail, including the ATL terminal.");

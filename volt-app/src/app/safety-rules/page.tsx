@@ -71,7 +71,7 @@ const sectionsFor = (s: AppSettings): { id?: string; title: string; items: strin
     items: [
       `Passengers may cancel their reservation up to ${CANCEL_NOTICE_HOURS} hours before the scheduled departure for a refund of the fare${s.cancellationFeeCents > 0 ? ` minus a ${dollars(s.cancellationFeeCents / 100)} cancellation fee per reservation` : ""}.`,
       `Cancellations made with less than ${CANCEL_NOTICE_HOURS} hours' notice before departure are non-refundable.`,
-      `Online booking closes ${cutoffWords(s.onlineCutoffMinutes)} before each departure; call us at ${s.business.phone} to book a departure leaving sooner.`,
+      `Online booking closes ${cutoffWords(s.onlineCutoffMinutes)} before each departure; to book a departure leaving sooner, call Volt at ${s.business.phone} and speak with a manager.`,
       "To cancel or modify, use the Manage Reservation page or contact us directly.",
       "No-shows forfeit their fare and are not eligible for a refund.",
     ],

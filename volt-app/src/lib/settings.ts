@@ -77,7 +77,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   military: { enabled: true, amount: MILITARY_DISCOUNT_AMOUNT },
   business: business("(706) 530-5896", "support@contactvolt.com", "3885 Miller Road, Suite C", "Columbus, GA 31909", "Mon–Sat · 4:00 AM – 12:00 AM · Sun: open for booked trips only"),
   arriveEarlyMinutes: 20,
-  onlineCutoffMinutes: 120,
+  onlineCutoffMinutes: 1440,
   cancellationFeeCents: 1500,
   doorService: { pickupCents: 5000, dropoffCents: 5000 },
   shortNoticeHours: 36,

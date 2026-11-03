@@ -97,7 +97,7 @@ const faqFor = (s: AppSettings) => {
     },
     {
       question: "Do I need to book the airport shuttle in advance?",
-      answer: `Booking ahead is the best way to guarantee your seat, since each van carries at most 8 passengers. You can book online up to ${Math.round(s.onlineCutoffMinutes / 60)} hours before departure, or call ${s.business.phone}.`,
+      answer: `Booking ahead is the best way to guarantee your seat, since each van carries at most 8 passengers. You can book online up to ${Math.round(s.onlineCutoffMinutes / 60)} hours before departure; for anything sooner, call ${s.business.phone} and speak with a manager.`,
     },
   ];
 };

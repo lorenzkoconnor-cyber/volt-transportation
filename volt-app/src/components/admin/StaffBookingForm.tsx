@@ -423,6 +423,7 @@ export default function StaffBookingForm({
     return (
       <div className="glass rounded-2xl p-4 sm:p-6">
         <Step1Search
+          staff
           initial={search}
           onNext={(s) => { setSearch(s); touch(); setPhase("departures"); }}
         />

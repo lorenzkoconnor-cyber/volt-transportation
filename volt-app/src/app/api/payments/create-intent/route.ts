@@ -7,6 +7,7 @@ import {
 } from "@/lib/checkout";
 import { CODE_ERRORS } from "@/lib/discount-codes";
 import { easternInstant } from "@/lib/staff-pricing";
+import { noticeWords } from "@/lib/format";
 import { loadAppSettings } from "@/lib/settings-server";
 import { snapshotFrom } from "@/lib/settings";
 import { rateLimit, breakerTripped, recordFailure, DISCOUNT_BREAKER, DISCOUNT_PAUSED_ERROR } from "@/lib/rate-limit";
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       // Online booking closes before departure (Eastern time) — staff book these.
       if (easternInstant(t.departure_date, t.departure_time.slice(0, 5)) - Date.now() < cutoffMs) {
         return NextResponse.json(
-          { error: `That departure leaves too soon to book online. Please call us at ${settings.business.phone} and we'll get you a seat.` },
+          { error: `Online bookings need at least ${noticeWords(settings.onlineCutoffMinutes)} notice. To book this departure, call Volt at ${settings.business.phone} and speak with a manager.` },
           { status: 409 },
         );
       }
