@@ -549,10 +549,14 @@ function StripePaymentForm({
   const [ready, setReady] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Apple Pay button (Stripe Express Checkout). "always" shows it in every
-  // desktop browser too: Chrome/Edge/Firefox show a QR code to finish on an
-  // iPhone. Hidden when Stripe says Apple Pay isn't possible here.
-  const [applePayShown, setApplePayShown] = useState(false);
+  // Our own Card | Apple Pay | Google Pay tabs. Stripe's built-in tabs bundle
+  // Link's Bank and Klarna, so the card form runs with Link off and the
+  // wallets get their own Express Checkout button. Apple Pay "always" works in
+  // every desktop browser too: Chrome/Edge/Firefox show a QR code to finish on
+  // an iPhone. A wallet tab says so when Stripe reports it isn't possible here.
+  const [method, setMethod] = useState<PayMethod>("card");
+  const [walletAvailable, setWalletAvailable] = useState<boolean | null>(null);
+  const pickMethod = (m: PayMethod) => { setMethod(m); setWalletAvailable(null); setError(""); };
 
   // Card form and Apple Pay share one path: submit → create the intent → confirm.
   const pay = async (express?: StripeExpressCheckoutElementConfirmEvent) => {
@@ -600,7 +604,8 @@ function StripePaymentForm({
   };
 
   const busy = processing || submitting;
-  const applePayLocked = !termsAccepted || busy;
+  const walletLocked = !termsAccepted || busy;
+  const walletName = method === "applePay" ? "Apple Pay" : "Google Pay";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -613,15 +618,85 @@ function StripePaymentForm({
           </span>
         </div>
 
-        {!ready && (
-          <div className="flex items-center gap-2 text-[#A1A1AA] text-sm py-6 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading secure payment form…
+        <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Payment method">
+          {PAY_METHODS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={method === id}
+              disabled={busy}
+              onClick={() => pickMethod(id)}
+              className={`flex flex-col items-start gap-1.5 rounded-xl border px-3 py-2.5 text-sm transition-colors disabled:opacity-60 ${
+                method === id
+                  ? "bg-[#FCC300] border-[#FCC300] text-[#0A0A0A] font-semibold"
+                  : "bg-[#141414] border-white/10 text-[#A1A1AA] hover:text-white hover:border-white/20"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Stays mounted on the wallet tabs so the Elements group keeps working. */}
+        <div className={method === "card" ? undefined : "hidden"}>
+          {!ready && (
+            <div className="flex items-center gap-2 text-[#A1A1AA] text-sm py-6 justify-center">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading secure payment form…
+            </div>
+          )}
+          <PaymentElement
+            onReady={() => setReady(true)}
+            options={{ layout: "tabs", wallets: { link: "never", applePay: "never", googlePay: "never" } }}
+          />
+        </div>
+
+        {method !== "card" && (
+          <div className="space-y-2">
+            {walletAvailable === null && (
+              <div className="flex items-center gap-2 text-[#A1A1AA] text-sm py-4 justify-center">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading {walletName}…
+              </div>
+            )}
+            {walletAvailable === false && (
+              <p className="text-[#A1A1AA] text-sm text-center py-4">
+                {walletName} isn&apos;t available on this device or browser. Please choose Card.
+              </p>
+            )}
+            <div className={walletLocked ? "opacity-50 pointer-events-none" : undefined} aria-disabled={walletLocked}>
+              <ExpressCheckoutElement
+                key={method}
+                options={{
+                  paymentMethods: {
+                    applePay: method === "applePay" ? "always" : "never",
+                    googlePay: method === "googlePay" ? "always" : "never",
+                    link: "never", paypal: "never", amazonPay: "never", klarna: "never",
+                  },
+                  buttonType: { applePay: "book", googlePay: "book" },
+                  buttonTheme: { applePay: "white", googlePay: "white" },
+                  buttonHeight: 52,
+                }}
+                onReady={(e) => setWalletAvailable(!!e.availablePaymentMethods?.[method])}
+                onClick={(e) => {
+                  if (!termsAccepted || busy) return;
+                  if (blockedReason) { setError(blockedReason); return; }
+                  e.resolve();
+                }}
+                onConfirm={(e) => pay(e)}
+              />
+            </div>
+            {walletAvailable && (
+              <p className="text-[#A1A1AA] text-xs text-center">
+                {!termsAccepted
+                  ? `Tick the Terms box below to pay with ${walletName}.`
+                  : method === "applePay"
+                    ? "On a computer, Apple Pay shows a code to scan with your iPhone."
+                    : "Google Pay opens a secure Google window to finish."}
+              </p>
+            )}
           </div>
         )}
-        <PaymentElement
-          onReady={() => setReady(true)}
-          options={{ layout: "tabs" }}
-        />
 
         <p className="text-[#A1A1AA] text-xs flex items-start gap-1.5">
           <Lock className="w-3.5 h-3.5 text-[#FCC300] flex-shrink-0 mt-0.5" />
@@ -640,40 +715,9 @@ function StripePaymentForm({
         <TermsLine checked={termsAccepted} onChange={setTermsAccepted} />
       </div>
 
-      <div className={applePayShown ? "space-y-2" : "hidden"}>
-        <div className={applePayLocked ? "opacity-50 pointer-events-none" : undefined} aria-disabled={applePayLocked}>
-          <ExpressCheckoutElement
-            options={{
-              paymentMethods: {
-                applePay: "always", googlePay: "never", link: "never",
-                paypal: "never", amazonPay: "never", klarna: "never",
-              },
-              buttonType: { applePay: "book" },
-              buttonTheme: { applePay: "white" },
-              buttonHeight: 52,
-            }}
-            onReady={(e) => setApplePayShown(!!e.availablePaymentMethods?.applePay)}
-            onClick={(e) => {
-              if (!termsAccepted || busy) return;
-              if (blockedReason) { setError(blockedReason); return; }
-              e.resolve();
-            }}
-            onConfirm={(e) => pay(e)}
-          />
-        </div>
-        <p className="text-[#A1A1AA] text-xs text-center">
-          {termsAccepted
-            ? "On a computer, Apple Pay shows a code to scan with your iPhone."
-            : "Tick the Terms box above to pay with Apple Pay."}
-        </p>
-        <div className="flex items-center gap-3 text-[#71717A] text-xs">
-          <span className="h-px flex-1 bg-white/10" /> or pay by card <span className="h-px flex-1 bg-white/10" />
-        </div>
-      </div>
-
       <TrustBadges />
 
-      <Button
+      {method === "card" && <Button
         type="submit"
         disabled={!stripe || !ready || busy || !termsAccepted}
         size="lg"
@@ -690,10 +734,34 @@ function StripePaymentForm({
             {payLabel(total, hold)}
           </>
         )}
-      </Button>
+      </Button>}
     </form>
   );
 }
+
+type PayMethod = "card" | "applePay" | "googlePay";
+
+function AppleLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M16.37 12.63c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.99.72 1.24-.02 2.02-1.12 2.77-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.39-.92-2.4-3.69zM14.1 5.88c.63-.77 1.06-1.83.94-2.88-.91.04-2.01.6-2.66 1.37-.58.67-1.09 1.75-.95 2.78 1.01.08 2.04-.51 2.67-1.27z" />
+    </svg>
+  );
+}
+
+function GoogleLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M21.35 11.1H12v3.2h5.35c-.23 1.4-1.66 4.1-5.35 4.1-3.22 0-5.85-2.67-5.85-5.95S8.78 6.5 12 6.5c1.83 0 3.06.78 3.76 1.45l2.56-2.47C16.68 3.95 14.55 3 12 3 7.03 3 3 7.03 3 12s4.03 9 9 9c5.2 0 8.64-3.65 8.64-8.8 0-.6-.07-1.05-.15-1.5z" />
+    </svg>
+  );
+}
+
+const PAY_METHODS: { id: PayMethod; label: string; Icon: (p: { className?: string }) => React.ReactNode }[] = [
+  { id: "card", label: "Card", Icon: CreditCard },
+  { id: "applePay", label: "Apple Pay", Icon: AppleLogo },
+  { id: "googlePay", label: "Google Pay", Icon: GoogleLogo },
+];
 
 // ── Simulated payment form (no Stripe keys) ────────────────────────────────────
 function SimulatedPaymentForm({
