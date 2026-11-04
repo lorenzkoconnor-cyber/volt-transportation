@@ -82,6 +82,10 @@ function BookingFlow() {
     hasFlight: params.get("hasFlight") === "true",
     outboundFlight: { ...EMPTY_FLIGHT, date: params.get("date") || "" },
     returnFlight: { ...EMPTY_FLIGHT, date: params.get("returnDate") || "" },
+    // Only count a choice the rider made (on the homepage or via a link);
+    // otherwise both switches start in the middle and must be picked.
+    roundTripChosen: params.has("roundTrip"),
+    hasFlightChosen: params.has("hasFlight"),
   });
   const [outbound, setOutbound] = useState<DepartureSlot | null>(savedSlotsValid ? saved!.outbound : null);
   const [returnSlot, setReturnSlot] = useState<DepartureSlot | null>(savedSlotsValid ? saved!.returnSlot : null);

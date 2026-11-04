@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowRight, ArrowLeftRight } from "lucide-react";
 import { LOCATIONS } from "@/lib/booking";
+import ChoiceSwitch from "@/components/booking/ChoiceSwitch";
 
 type LocationKey = "columbus" | "atl";
 
@@ -36,9 +37,10 @@ export default function HeroSection() {
   const [children, setChildren]   = useState(0);
   const [pets, setPets]           = useState(0);
   const [extraBags, setExtraBags] = useState(0);
-  const [roundTrip, setRoundTrip] = useState(false);
-  // Riders see departure times first; flight matching is opt-in.
-  const [hasFlight, setHasFlight] = useState(false);
+  // Both start unanswered (switch knob in the middle); the rider must pick.
+  const [roundTrip, setRoundTrip] = useState<boolean | null>(null);
+  const [hasFlight, setHasFlight] = useState<boolean | null>(null);
+  const [choiceError, setChoiceError] = useState(false);
 
   const handleFrom = (v: string | null) => {
     if (!v) return;
@@ -62,6 +64,11 @@ export default function HeroSection() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (roundTrip === null || hasFlight === null) {
+      setChoiceError(true);
+      document.getElementById("hero-trip-choices")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     const params = new URLSearchParams({
       from, to, date,
       adults: String(adults), children: String(children),
@@ -73,11 +80,9 @@ export default function HeroSection() {
     router.push(`/book?${params.toString()}`);
   };
 
-  const toggleRoundTrip = () => {
-    setRoundTrip((prev) => {
-      if (prev) setReturnDate(""); // switching to one-way clears return date
-      return !prev;
-    });
+  const chooseRoundTrip = (v: boolean) => {
+    setRoundTrip(v);
+    if (!v) setReturnDate(""); // one-way clears any return date
   };
 
   // Scroll-driven video parallax
@@ -200,9 +205,22 @@ export default function HeroSection() {
               </div>
 
               {/* Round trip + flight */}
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                <Toggle on={roundTrip} onToggle={toggleRoundTrip} label="Round Trip" />
-                <Toggle on={hasFlight} onToggle={() => setHasFlight((v) => !v)} label="I have a flight" />
+              <div id="hero-trip-choices">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <ChoiceSwitch value={roundTrip} onChange={chooseRoundTrip}
+                    offLabel="One Way" onLabel="Round Trip" groupLabel="Trip type"
+                    invalid={choiceError} />
+                  <ChoiceSwitch value={hasFlight} onChange={setHasFlight}
+                    offLabel="No flight" onLabel="I have a flight" groupLabel="Do you have a flight?"
+                    invalid={choiceError} />
+                </div>
+                {choiceError && (roundTrip === null || hasFlight === null) && (
+                  <p className="text-red-400 text-xs mt-2">
+                    Please choose {roundTrip === null && hasFlight === null
+                      ? "One Way or Round Trip, and whether you have a flight"
+                      : roundTrip === null ? "One Way or Round Trip" : "whether you have a flight"}.
+                  </p>
+                )}
               </div>
 
               {/* Date(s) */}
@@ -305,19 +323,5 @@ export default function HeroSection() {
         </div>
       </div>
     </section>
-  );
-}
-
-function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onToggle}
-        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? "bg-[#FCC300]" : "bg-white/10"}`}>
-        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : ""}`} />
-      </button>
-      <span className="text-[#A1A1AA] text-sm cursor-pointer select-none" onClick={onToggle}>
-        {label}
-      </span>
-    </div>
   );
 }

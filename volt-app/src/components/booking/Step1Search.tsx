@@ -9,6 +9,7 @@ import { type BookingSearch, type FlightInfo, LOCATIONS, flightDirection } from 
 import { earliestOnlineDate, localDateString, noticeWords } from "@/lib/format";
 import { useAppSettings } from "@/context/SettingsContext";
 import FlightFields from "./FlightFields";
+import ChoiceSwitch from "./ChoiceSwitch";
 
 const LOCATION_LABELS: Record<string, string> = {
   columbus: "Volt Columbus",
@@ -25,6 +26,11 @@ interface Props {
 export default function Step1Search({ initial, onChange, onNext, staff = false }: Props) {
   const [search, setSearch] = useState<BookingSearch>(initial);
   const [error, setError] = useState("");
+  const [triedSubmit, setTriedSubmit] = useState(false);
+
+  // Riders must pick each option; until they do the switch sits in the middle.
+  const roundTripValue = staff || search.roundTripChosen ? search.roundTrip : null;
+  const hasFlightValue = staff || search.hasFlightChosen ? search.hasFlight : null;
 
   useEffect(() => { onChange?.(search); }, [search, onChange]);
 
@@ -36,15 +42,18 @@ export default function Step1Search({ initial, onChange, onNext, staff = false }
 
   // Switching flight mode on/off carries the dates already chosen across
   // (travel dates ⇄ flight dates) so the rider doesn't re-enter them.
-  const toggleFlight = () =>
+  const chooseFlight = (hasFlight: boolean) => {
+    setError("");
     setSearch((prev) => ({
       ...prev,
-      hasFlight: !prev.hasFlight,
+      hasFlight,
+      hasFlightChosen: true,
       date: prev.date || prev.outboundFlight.date,
       returnDate: prev.returnDate || (prev.roundTrip ? prev.returnFlight.date : ""),
       outboundFlight: { ...prev.outboundFlight, date: prev.outboundFlight.date || prev.date },
       returnFlight: { ...prev.returnFlight, date: prev.returnFlight.date || prev.returnDate },
     }));
+  };
 
   const setFlight = (leg: "outboundFlight" | "returnFlight", flight: FlightInfo) =>
     setSearch((prev) => ({ ...prev, [leg]: flight }));
@@ -52,13 +61,16 @@ export default function Step1Search({ initial, onChange, onNext, staff = false }
   const flightIncomplete = (f: FlightInfo) =>
     !f.date || !f.time || !f.airline.trim() || !f.flightNumber.trim() || !f.terminal;
 
-  const toggleRoundTrip = () =>
+  const chooseRoundTrip = (roundTrip: boolean) => {
+    setError("");
     setSearch((prev) => ({
       ...prev,
-      roundTrip: !prev.roundTrip,
+      roundTrip,
+      roundTripChosen: true,
       // clear a stale return date when switching back to one-way
-      returnDate: !prev.roundTrip ? prev.returnDate : "",
+      returnDate: roundTrip ? prev.returnDate : "",
     }));
+  };
 
   const swapLocations = () =>
     setSearch((prev) => ({ ...prev, from: prev.to, to: prev.from }));
@@ -80,6 +92,17 @@ export default function Step1Search({ initial, onChange, onNext, staff = false }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (roundTripValue === null || hasFlightValue === null) {
+      setTriedSubmit(true);
+      setError(
+        roundTripValue === null && hasFlightValue === null
+          ? "Please choose One Way or Round Trip, and whether you have a flight."
+          : roundTripValue === null
+            ? "Please choose One Way or Round Trip."
+            : "Please tell us whether you have a flight.",
+      );
+      return;
+    }
     const travelDate = search.hasFlight ? search.outboundFlight.date : search.date;
     if (travelDate && travelDate < today) {
       setError(`Online bookings need at least ${noticeWords(onlineCutoffMinutes)} notice. To book a trip sooner, call Volt at ${business.phone} and speak with a manager.`);
@@ -175,12 +198,16 @@ export default function Step1Search({ initial, onChange, onNext, staff = false }
       </div>
 
       {/* Round trip + flight toggles */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <Toggle on={search.roundTrip} onToggle={toggleRoundTrip} label="Round Trip" />
-        <Toggle on={search.hasFlight} onToggle={toggleFlight} label="I have a flight" />
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+        <ChoiceSwitch value={roundTripValue} onChange={chooseRoundTrip}
+          offLabel="One Way" onLabel="Round Trip" groupLabel="Trip type"
+          invalid={triedSubmit} />
+        <ChoiceSwitch value={hasFlightValue} onChange={chooseFlight}
+          offLabel="No flight" onLabel="I have a flight" groupLabel="Do you have a flight?"
+          invalid={triedSubmit} />
       </div>
 
-      {search.hasFlight ? (
+      {hasFlightValue ? (
         <div className="space-y-3">
           <p className="text-[#A1A1AA] text-xs">
             Tell us about your flight and we&apos;ll show the Volt departures that fit it.
@@ -296,27 +323,5 @@ export default function Step1Search({ initial, onChange, onNext, staff = false }
         <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
       </Button>
     </form>
-  );
-}
-
-function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label={label}
-        onClick={onToggle}
-        className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-[#FCC300]" : "bg-white/10"}`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : ""}`}
-        />
-      </button>
-      <Label className="text-[#A1A1AA] text-sm cursor-pointer" onClick={onToggle}>
-        {label}
-      </Label>
-    </div>
   );
 }

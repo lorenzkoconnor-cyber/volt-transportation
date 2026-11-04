@@ -61,6 +61,10 @@ export interface BookingSearch {
   hasFlight: boolean;
   outboundFlight: FlightInfo;
   returnFlight: FlightInfo;   // only used when roundTrip is true
+  // Online riders must actively pick one way / round trip and flight / no
+  // flight; these record that they have. Staff bookings skip the check.
+  roundTripChosen?: boolean;
+  hasFlightChosen?: boolean;
 }
 
 export interface FlightInfo {
