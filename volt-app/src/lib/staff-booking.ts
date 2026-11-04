@@ -24,6 +24,7 @@ import {
   buildFlightRows, createAdminDb, findCustomer, isSimulatedPaymentId, normalizePayload, type CheckoutPayload,
 } from "@/lib/checkout";
 import { generateConfirmationNumber } from "@/lib/booking";
+import { normalizeEmail, normalizePhone } from "@/lib/customer-match";
 import { codeDiscountCents, codeState, formatCode, normalizeCode, CODE_ERRORS } from "@/lib/discount-codes";
 import {
   canCustomizeBookings, easternInstant, editAccess, reservationBalance, staffDiscountCents, staffDiscountLabel,
@@ -429,9 +430,9 @@ export async function createStaffReservation(
     : cardMethod ? [{ method: cardMethod, status: "pending", amount_cents: totalCents, notes: chargeCardNow ? null : "To be collected" }]
     : [{ method: "cash", status: payment.collectNow ? "paid" : "pending", amount_cents: totalCents, notes: payment.collectNow ? null : "To be collected" }];
 
-  // Customer — reuse a matching record (same email + phone), else create one.
-  const digits = input.customer.phone.replace(/\D/g, "");
-  const email = input.customer.email || `${digits}@walkin.volt`;
+  // Customer — reuse a matching record (same email + phone, ignoring capital
+  // letters and phone formatting), else create one.
+  const email = normalizeEmail(input.customer.email) || `${normalizePhone(input.customer.phone)}@walkin.volt`;
   const lookup = { ...payload, primaryPassenger: { ...payload.primaryPassenger, email } };
   let customerId = (await findCustomer(sb, null, lookup))?.id ?? null;
   if (!customerId) {

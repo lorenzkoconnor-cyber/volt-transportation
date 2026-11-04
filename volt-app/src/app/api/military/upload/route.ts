@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient, createAdminClient } from "@/lib/supabase/server";
 import { MILITARY_BUCKET, isAllowedIdFile, extForMime, isMilitaryCategory } from "@/lib/military";
 import { rateLimit } from "@/lib/rate-limit";
+import { findCustomerByContact } from "@/lib/checkout";
 
 // POST /api/military/upload  (multipart/form-data)
 // Fields: file, category ('active_duty'|'retired')
@@ -83,13 +84,7 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-      const { data: existing } = await sb
-        .from("customers")
-        .select("id, military_status")
-        .eq("email", email)
-        .eq("phone", phone)
-        .limit(1)
-        .maybeSingle();
+      const existing = await findCustomerByContact(sb, email, phone);
       if (existing) {
         customerId = existing.id;
         alreadyApproved = existing.military_status === "approved";

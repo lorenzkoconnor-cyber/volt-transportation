@@ -25,6 +25,7 @@ import { alertIfShortNotice } from "@/lib/notifications/alerts";
 import { generateConfirmationNumber, militaryDiscountCents } from "@/lib/booking";
 import { DEFAULT_SETTINGS, militaryAmount, type AppSettings } from "@/lib/settings";
 import { normalizeTipCents } from "@/lib/tips";
+import { ilikeExact, normalizeEmail, normalizePhone, sameContact } from "@/lib/customer-match";
 import { normalizeAttribution, type Attribution } from "@/lib/attribution";
 import { normalizeHeardFrom, normalizeHeardFromOther, type HeardFrom } from "@/lib/heard-from";
 import {
@@ -146,16 +147,27 @@ export async function findCustomer(
       .maybeSingle();
     if (data) return data;
   }
-  const { email, phone } = payload.primaryPassenger;
-  if (!email) return null;
+  return findCustomerByContact(sb, payload.primaryPassenger.email, payload.primaryPassenger.phone);
+}
+
+// Guest match: same email ignoring capital letters, same phone ignoring
+// formatting. Oldest record wins so repeat riders keep one profile.
+export async function findCustomerByContact(
+  sb: Db,
+  email: string | null | undefined,
+  phone: string | null | undefined,
+): Promise<{ id: string; military_status: string } | null> {
+  const want = { email: normalizeEmail(email), phone: normalizePhone(phone) };
+  if (!want.email || !want.phone) return null;
   const { data } = await sb
     .from("customers")
-    .select("id, military_status")
-    .eq("email", email)
-    .eq("phone", phone)
-    .limit(1)
-    .maybeSingle();
-  return data ?? null;
+    .select("id, military_status, email, phone")
+    .ilike("email", ilikeExact(want.email))
+    .order("created_at", { ascending: true })
+    .limit(50);
+  const match = ((data ?? []) as { id: string; military_status: string; email: string | null; phone: string | null }[])
+    .find((c) => sameContact(c, want));
+  return match ? { id: match.id, military_status: match.military_status } : null;
 }
 
 export interface CheckoutPrice {
@@ -441,8 +453,8 @@ export async function finalizeCheckout(
         customerId = found.id;
       } else {
         const nameParts = payload.primaryPassenger.name.split(/\s+/);
-        const email = payload.primaryPassenger.email ||
-          `${payload.primaryPassenger.phone.replace(/\D/g, "")}@guest.volt`;
+        const email = normalizeEmail(payload.primaryPassenger.email) ||
+          `${normalizePhone(payload.primaryPassenger.phone)}@guest.volt`;
         const { data: created, error } = await sb
           .from("customers")
           .insert({
