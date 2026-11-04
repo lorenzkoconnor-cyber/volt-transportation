@@ -7,6 +7,7 @@
 export const HEARD_FROM_OPTIONS = [
   { value: "google", label: "Google" },
   { value: "facebook_instagram", label: "Facebook / Instagram" },
+  { value: "tv", label: "TV commercial" },
   { value: "friend_family", label: "Friend or family" },
   { value: "saw_volt", label: "Saw our van, office or flyer" },
   { value: "other", label: "Other" },
