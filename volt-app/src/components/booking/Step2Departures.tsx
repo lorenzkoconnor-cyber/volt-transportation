@@ -3,7 +3,7 @@
 import { useAppSettings } from "@/context/SettingsContext";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, Users, ArrowLeft, Loader2, Plane, AlertTriangle, Timer, Lock, Sparkles } from "lucide-react";
+import { ArrowRight, Clock, Users, ArrowLeft, Loader2, Plane, AlertTriangle, Timer, Lock, Sparkles, Phone } from "lucide-react";
 import {
   type BookingSearch,
   type DepartureSlot,
@@ -336,6 +336,20 @@ export default function Step2Departures({
   );
 }
 
+// A departure inside the online-booking cutoff that still has seats: riders
+// can't book it here, but a manager can over the phone.
+function isCallToBook(slot: DepartureSlot) {
+  return !slot.available && !!slot.closed && slot.seatsLeft > 0;
+}
+
+function CallToBookLabel() {
+  return (
+    <span className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-[#FCC300] whitespace-nowrap">
+      <Phone className="w-3 h-3" /> Call to book
+    </span>
+  );
+}
+
 // ── Flight-matched departure list ─────────────────────────────────────────────
 function FlightOptions({
   leg, from, to, label, selected, onSelect,
@@ -347,6 +361,7 @@ function FlightOptions({
   selected: DepartureSlot | null;
   onSelect: (s: DepartureSlot) => void;
 }) {
+  const { business } = useAppSettings();
   const { flight, direction, timing, schedule, matches } = leg;
   const departing = direction === "departing";
 
@@ -383,21 +398,19 @@ function FlightOptions({
           {matches.map((m) => {
             const isSelected = selected?.id === m.slot.id;
             const full = !m.slot.available;
+            const callToBook = isCallToBook(m.slot);
             const otherDay = m.departsAt.date !== flight.date;
-            return (
-              <button
-                key={m.slot.id}
-                type="button"
-                disabled={full}
-                onClick={() => onSelect(m.slot)}
-                className={`w-full text-left rounded-xl p-3 sm:p-4 border transition-all flex items-center gap-3 ${
-                  isSelected
-                    ? "bg-[#FCC300]/20 border-[#FCC300]"
-                    : full
-                    ? "bg-white/3 border-white/5 opacity-40 cursor-not-allowed"
-                    : "glass border-white/10 hover:border-[#FCC300]/50 hover:bg-[#FCC300]/10"
-                }`}
-              >
+            const rowClass = `w-full text-left rounded-xl p-3 sm:p-4 border transition-all flex items-center gap-3 ${
+              isSelected
+                ? "bg-[#FCC300]/20 border-[#FCC300]"
+                : callToBook
+                ? "bg-[#FCC300]/5 border-[#FCC300]/40 hover:border-[#FCC300] hover:bg-[#FCC300]/10"
+                : full
+                ? "bg-white/3 border-white/5 opacity-40 cursor-not-allowed"
+                : "glass border-white/10 hover:border-[#FCC300]/50 hover:bg-[#FCC300]/10"
+            }`;
+            const body = (
+              <>
                 <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isSelected ? "border-[#FCC300] bg-[#FCC300] ring-2 ring-inset ring-[#0A0A0A]" : "border-white/30"}`} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
@@ -424,14 +437,39 @@ function FlightOptions({
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  {full ? (
-                    <span className="text-xs text-[#A1A1AA]">{m.slot.closed && m.slot.seatsLeft > 0 ? "Call to book" : "Full"}</span>
+                  {callToBook ? (
+                    <CallToBookLabel />
+                  ) : full ? (
+                    <span className="text-xs text-[#A1A1AA]">Full</span>
                   ) : (
                     <span className="flex items-center gap-1 text-xs text-[#A1A1AA]">
                       <Users className="w-3 h-3" /> {m.slot.seatsLeft} left
                     </span>
                   )}
                 </div>
+              </>
+            );
+            if (callToBook) {
+              return (
+                <a
+                  key={m.slot.id}
+                  href={business.phoneHref}
+                  aria-label={`Call Volt at ${business.phone} to book the ${m.slot.displayTime} departure`}
+                  className={rowClass}
+                >
+                  {body}
+                </a>
+              );
+            }
+            return (
+              <button
+                key={m.slot.id}
+                type="button"
+                disabled={full}
+                onClick={() => onSelect(m.slot)}
+                className={rowClass}
+              >
+                {body}
               </button>
             );
           })}
@@ -466,6 +504,7 @@ function DepartureGrid({
   to: LocationKey;
   date: string;
 }) {
+  const { business } = useAppSettings();
   const toAirport = to === "atl";
   return (
     <div>
@@ -483,25 +522,24 @@ function DepartureGrid({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {slots.map((slot) => {
             const isSelected = selected?.id === slot.id;
+            const callToBook = isCallToBook(slot);
             const primary = toAirport ? slot.arrivalDisplayTime ?? slot.displayTime : slot.displayTime;
             const secondary = toAirport
               ? { label: "Leaves Volt", time: `${slot.displayTime}${slot.date && slot.date !== date ? ` · ${formatDateShort(slot.date)}` : ""}` }
               : slot.arrivalDisplayTime
               ? { label: "Arrives Columbus", time: `~${slot.arrivalDisplayTime}` }
               : null;
-            return (
-              <button
-                key={slot.id}
-                disabled={!slot.available}
-                onClick={() => onSelect(slot)}
-                className={`relative rounded-xl p-3 text-center transition-all border ${
-                  isSelected
-                    ? "bg-[#FCC300] border-[#FCC300] text-[#0A0A0A]"
-                    : slot.available
-                    ? "glass border-white/10 text-white hover:border-[#FCC300]/50 hover:bg-[#FCC300]/10"
-                    : "bg-white/3 border-white/5 text-[#A1A1AA]/40 cursor-not-allowed"
-                }`}
-              >
+            const cardClass = `relative rounded-xl p-3 text-center transition-all border ${
+              isSelected
+                ? "bg-[#FCC300] border-[#FCC300] text-[#0A0A0A]"
+                : slot.available
+                ? "glass border-white/10 text-white hover:border-[#FCC300]/50 hover:bg-[#FCC300]/10"
+                : callToBook
+                ? "bg-[#FCC300]/5 border-[#FCC300]/40 text-white/80 hover:border-[#FCC300] hover:bg-[#FCC300]/10"
+                : "bg-white/3 border-white/5 text-[#A1A1AA]/40 cursor-not-allowed"
+            }`;
+            const body = (
+              <>
                 <div className="flex items-center justify-center gap-1">
                   <Clock className="w-3 h-3 opacity-70" />
                   <span className="text-sm font-semibold">{toAirport && slot.arrivalDisplayTime ? "~" : ""}{primary}</span>
@@ -518,12 +556,36 @@ function DepartureGrid({
                     <Users className="w-2.5 h-2.5 opacity-60" />
                     <span className="text-xs opacity-70">{slot.seatsLeft} left</span>
                   </div>
+                ) : callToBook ? (
+                  <CallToBookLabel />
                 ) : (
-                  <span className="text-xs opacity-50">{slot.closed && slot.seatsLeft > 0 ? "Call to book" : "Full"}</span>
+                  <span className="text-xs opacity-50">Full</span>
                 )}
                 {isSelected && (
                   <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-white" />
                 )}
+              </>
+            );
+            if (callToBook) {
+              return (
+                <a
+                  key={slot.id}
+                  href={business.phoneHref}
+                  aria-label={`Call Volt at ${business.phone} to book the ${slot.displayTime} departure`}
+                  className={cardClass}
+                >
+                  {body}
+                </a>
+              );
+            }
+            return (
+              <button
+                key={slot.id}
+                disabled={!slot.available}
+                onClick={() => onSelect(slot)}
+                className={cardClass}
+              >
+                {body}
               </button>
             );
           })}
