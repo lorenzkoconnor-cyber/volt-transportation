@@ -24,7 +24,7 @@ export default function GoogleTag() {
   useEffect(() => {
     // Ad tags are remembered on public pages even locally (browser only), so
     // the booking flow can be tested end to end.
-    if (isTrackedPath(pathname)) captureAttribution(pathname, window.location.search);
+    if (isTrackedPath(pathname)) captureAttribution(pathname, window.location.search, document.referrer, window.location.hostname);
     if (tracked) trackPageView(pathname, window.location.search);
   }, [pathname, tracked]);
 
