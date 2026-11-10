@@ -8,7 +8,7 @@
 // Prices shown here are a preview; /api/reservations/staff and
 // /api/reservations/[id]/edit re-price everything on the server.
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Step1Search from "@/components/booking/Step1Search";
@@ -91,7 +91,76 @@ interface Quote {
   refundDueAfterCents: number;
 }
 
-const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]";
+// ── Booking in progress (New Reservation only) ──────────────────────────────
+// Saved for this browser tab so the browser's Back button, a refresh or a
+// misclick away doesn't wipe what staff already typed. Each step is also a
+// history entry (#trip, #departures, #details), so Back goes to the previous
+// step instead of leaving the page. Cleared once the booking is saved.
+const DRAFT_KEY = "volt-staff-booking-draft-v1";
+const DRAFT_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+
+const PHASE_HASH: Record<Phase, string> = {
+  trip: "#trip", departures: "#departures", details: "#details",
+  return: "#return-trip", returnDepartures: "#return-departures",
+};
+const phaseFromHash = (hash: string) =>
+  (Object.keys(PHASE_HASH) as Phase[]).find((p) => PHASE_HASH[p] === hash) ?? null;
+
+interface StaffDraft {
+  savedAt: number;
+  phase: Phase;
+  search: BookingSearch;
+  tripDraft: BookingSearch | null;
+  outbound: DepartureSlot | null;
+  returnSlot: DepartureSlot | null;
+  pickDraft: { ob: DepartureSlot | null; ret: DepartureSlot | null } | null;
+  customer: StaffCustomer;
+  additional: string[];
+  notes: string;
+  discountTab: StaffDiscount["kind"];
+  discount: StaffDiscount;
+  codeInput: string;
+  manualType: "amount" | "percent";
+  manualValue: string;
+  fareValue: string;
+  door: StaffDoor;
+  sameAddress: boolean;
+  pickupFeeInput: string;
+  dropoffFeeInput: string;
+  tipCents: number;
+}
+
+function loadDraft(): StaffDraft | null {
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as StaffDraft;
+    if (!d.search || !d.customer || Date.now() - d.savedAt > DRAFT_MAX_AGE_MS) return null;
+    return d;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  try { window.sessionStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable */ }
+}
+
+function slotHasLeft(slot: DepartureSlot | null): boolean {
+  if (!slot?.date) return false;
+  const now = new Date();
+  const nowKey = `${localDateString(now)}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  return `${slot.date}T${slot.time}` <= nowKey;
+}
+
+// Something worth keeping has been typed or picked.
+function draftHasContent(d: StaffDraft): boolean {
+  const c = d.customer;
+  return !!(c.firstName || c.lastName || c.phone || c.email || d.outbound || d.notes || d.additional.some(Boolean) ||
+    d.search.outboundFlight.flightNumber || d.tripDraft?.outboundFlight.flightNumber);
+}
+
+const inputCls ="bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]";
 
 async function postJson(url: string, body: unknown) {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -115,39 +184,76 @@ export default function StaffBookingForm({
     : { pricing: settings.pricing, militaryAmount: settings.military.amount };
   const P = rates.pricing;
 
-  const [phase, setPhaseState] = useState<Phase>(initial.outbound ? "details" : "trip");
+  // A New Reservation in progress from earlier in this tab (Back / refresh).
+  const [restored] = useState<StaffDraft | null>(() => (isEdit ? null : loadDraft()));
+  const [showRestored, setShowRestored] = useState(() => !!restored && draftHasContent(restored));
+  // A departure that has since left can't be booked: pick again.
+  const restoredSlotsValid = !!restored && !slotHasLeft(restored.outbound) && !slotHasLeft(restored.returnSlot);
+  const R = restored;
+
+  const [phase, setPhaseState] = useState<Phase>(() => {
+    if (R) {
+      if (!restoredSlotsValid && (R.phase === "details" || R.phase === "departures")) return "departures";
+      if (R.phase === "details" && !R.outbound) return R.search ? "departures" : "trip";
+      if (R.phase === "trip" || R.phase === "departures" || R.phase === "details") return R.phase;
+    }
+    return initial.outbound ? "details" : "trip";
+  });
   const setPhase = (p: Phase) => {
+    if (p !== phase) {
+      // Each step is its own history entry, so the browser's Back button
+      // returns to the previous step instead of leaving the page.
+      try { window.history.pushState(window.history.state, "", PHASE_HASH[p]); } catch { /* ignore */ }
+    }
     setPhaseState(p);
     window.scrollTo({ top: 0 });
   };
-  const [search, setSearch] = useState<BookingSearch>(initial.search);
-  const [outbound, setOutbound] = useState<DepartureSlot | null>(initial.outbound);
-  const [returnSlot, setReturnSlot] = useState<DepartureSlot | null>(initial.returnSlot);
+  useEffect(() => {
+    try { window.history.replaceState(window.history.state, "", PHASE_HASH[phase]); } catch { /* ignore */ }
+    const onPop = () => {
+      const p = phaseFromHash(window.location.hash);
+      if (p) { setPhaseState(p); window.scrollTo({ top: 0 }); }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // Only on mount: later steps push their own entries in setPhase.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const [customer, setCustomer] = useState<StaffCustomer>(initial.customer);
+  const [search, setSearch] = useState<BookingSearch>(R?.search ?? initial.search);
+  // Trip-step edits not yet confirmed with "Search" (kept when stepping away).
+  const [tripDraft, setTripDraft] = useState<BookingSearch | null>(R?.tripDraft ?? null);
+  const [outbound, setOutbound] = useState<DepartureSlot | null>(R ? (restoredSlotsValid ? R.outbound : null) : initial.outbound);
+  const [returnSlot, setReturnSlot] = useState<DepartureSlot | null>(R ? (restoredSlotsValid ? R.returnSlot : null) : initial.returnSlot);
+  // Departure picks not yet confirmed with "Continue" (kept when going Back).
+  const [pickDraft, setPickDraft] = useState<{ ob: DepartureSlot | null; ret: DepartureSlot | null } | null>(
+    R && restoredSlotsValid ? R.pickDraft ?? null : null,
+  );
+
+  const [customer, setCustomer] = useState<StaffCustomer>(R?.customer ?? initial.customer);
   const seatCount = search.adults + search.children;
-  const [additional, setAdditional] = useState<string[]>(initial.additional);
-  const [notes, setNotes] = useState(initial.notes);
+  const [additional, setAdditional] = useState<string[]>(R?.additional ?? initial.additional);
+  const [notes, setNotes] = useState(R?.notes ?? initial.notes);
 
-  const [discount, setDiscount] = useState<StaffDiscount>(initial.discount);
-  const [codeInput, setCodeInput] = useState(initial.discount.kind === "code" ? initial.discount.code : "");
+  const [discount, setDiscount] = useState<StaffDiscount>(R?.discount ?? initial.discount);
+  const [codeInput, setCodeInput] = useState(R?.codeInput ?? (initial.discount.kind === "code" ? initial.discount.code : ""));
   const [codeBusy, setCodeBusy] = useState(false);
   const [codeError, setCodeError] = useState("");
-  const [manualType, setManualType] = useState<"amount" | "percent">(initial.discount.kind === "manual" ? initial.discount.type : "amount");
-  const [manualValue, setManualValue] = useState(initial.discount.kind === "manual" ? String(initial.discount.value) : "");
-  const [discountTab, setDiscountTab] = useState<StaffDiscount["kind"]>(initial.discount.kind);
-  const [fareValue, setFareValue] = useState(initial.discount.kind === "price" ? (initial.discount.fareCents / 100).toFixed(2) : "");
+  const [manualType, setManualType] = useState<"amount" | "percent">(R?.manualType ?? (initial.discount.kind === "manual" ? initial.discount.type : "amount"));
+  const [manualValue, setManualValue] = useState(R?.manualValue ?? (initial.discount.kind === "manual" ? String(initial.discount.value) : ""));
+  const [discountTab, setDiscountTab] = useState<StaffDiscount["kind"]>(R?.discountTab ?? initial.discount.kind);
+  const [fareValue, setFareValue] = useState(R?.fareValue ?? (initial.discount.kind === "price" ? (initial.discount.fareCents / 100).toFixed(2) : ""));
 
   const [door, setDoor] = useState<StaffDoor>(
-    initial.door ?? { pickup: false, pickupAddress: "", dropoff: false, dropoffAddress: "" },
+    R?.door ?? initial.door ?? { pickup: false, pickupAddress: "", dropoff: false, dropoffAddress: "" },
   );
   const [sameAddress, setSameAddress] = useState(
-    !!initial.door?.pickup && !!initial.door?.dropoff && initial.door.pickupAddress === initial.door.dropoffAddress,
+    R?.sameAddress ?? (!!initial.door?.pickup && !!initial.door?.dropoff && initial.door.pickupAddress === initial.door.dropoffAddress),
   );
   const dropoffAddress = door.pickup && sameAddress ? door.pickupAddress : door.dropoffAddress;
   // Owners/managers may type a booking's own door fee (blank = the usual fee).
-  const [pickupFeeInput, setPickupFeeInput] = useState("");
-  const [dropoffFeeInput, setDropoffFeeInput] = useState("");
+  const [pickupFeeInput, setPickupFeeInput] = useState(R?.pickupFeeInput ?? "");
+  const [dropoffFeeInput, setDropoffFeeInput] = useState(R?.dropoffFeeInput ?? "");
   const feeCents = (v: string) => (v.trim() === "" || !(parseFloat(v) >= 0) ? null : Math.round(parseFloat(v) * 100));
   const pickupOverride = canCustomize ? feeCents(pickupFeeInput) : null;
   const dropoffOverride = canCustomize ? feeCents(dropoffFeeInput) : null;
@@ -155,7 +261,7 @@ export default function StaffBookingForm({
   const pickupFee = door.pickup ? pickupOverride ?? (initial.door?.pickupFeeCents || settings.doorService.pickupCents) : 0;
   const dropoffFee = door.dropoff ? dropoffOverride ?? (initial.door?.dropoffFeeCents || settings.doorService.dropoffCents) : 0;
   // New bookings: staff may add a tip. Edits keep the tip already on the booking.
-  const [tipCents, setTipCents] = useState(0);
+  const [tipCents, setTipCents] = useState(R?.tipCents ?? 0);
 
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [smsConsent, setSmsConsent] = useState(false);
@@ -171,6 +277,28 @@ export default function StaffBookingForm({
   const [error, setError] = useState("");
   // A saved booking / started edit whose card still needs to go through.
   const [pendingCard, setPendingCard] = useState<{ cardPaymentId: string; changeId?: string; reservationId: string; label: string } | null>(null);
+
+  // Save the New Reservation in progress on every change (cleared once booked).
+  const draftDone = useRef(false);
+  useEffect(() => {
+    if (isEdit || draftDone.current) return;
+    const d: StaffDraft = {
+      savedAt: Date.now(), phase, search, tripDraft, outbound, returnSlot, pickDraft, customer, additional, notes,
+      discountTab, discount, codeInput, manualType, manualValue, fareValue, door, sameAddress,
+      pickupFeeInput, dropoffFeeInput, tipCents,
+    };
+    try { window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch { /* storage unavailable */ }
+  }, [isEdit, phase, search, tripDraft, outbound, returnSlot, pickDraft, customer, additional, notes,
+    discountTab, discount, codeInput, manualType, manualValue, fareValue, door, sameAddress,
+    pickupFeeInput, dropoffFeeInput, tipCents]);
+  const finishDraft = () => { draftDone.current = true; clearDraft(); };
+  const startOver = () => {
+    finishDraft();
+    window.location.replace(window.location.pathname + window.location.search);
+  };
+
+  const onPicksChange = useCallback(
+    (ob: DepartureSlot | null, ret: DepartureSlot | null) => setPickDraft({ ob, ret }), []);
 
   // Any change to the form invalidates the edit quote.
   const touch = () => setQuote(null);
@@ -321,6 +449,8 @@ export default function StaffBookingForm({
     setSaving(true);
     try {
       const data = await postJson("/api/reservations/staff", body());
+      // The reservation exists now — don't offer to book it again.
+      finishDraft();
       if (data.cardPaymentId) {
         const pc = { cardPaymentId: data.cardPaymentId, reservationId: data.id, label: data.confirmationNumber };
         setPendingCard(pc);
@@ -373,6 +503,20 @@ export default function StaffBookingForm({
     }
   };
 
+  const restoredBanner = showRestored && (
+    <div className="mb-4 rounded-xl border border-[#FCC300]/30 bg-[#FCC300]/10 px-4 py-3 flex items-center justify-between gap-3">
+      <p className="text-white text-sm">
+        Picked up the booking you were working on{customer.firstName ? ` for ${customer.firstName} ${customer.lastName}`.trimEnd() : ""}.
+      </p>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <button type="button" onClick={startOver} className="text-[#FCC300] hover:text-[#FFD54A] text-sm font-medium">Start over</button>
+        <button type="button" aria-label="Dismiss" onClick={() => setShowRestored(false)} className="text-[#A1A1AA] hover:text-white">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+
   // ── Return leg only (outbound already left) ────────────────────────────────
   if (phase === "return") {
     return (
@@ -422,13 +566,15 @@ export default function StaffBookingForm({
   if (phase === "trip") {
     return (
       <div className="glass rounded-2xl p-4 sm:p-6">
+        {restoredBanner}
         <Step1Search
           staff
-          initial={search}
-          onNext={(s) => { setSearch(s); touch(); setPhase("departures"); }}
+          initial={tripDraft ?? search}
+          onChange={setTripDraft}
+          onNext={(s) => { setSearch(s); setTripDraft(null); touch(); setPhase("departures"); }}
         />
         {outbound && (
-          <button type="button" onClick={() => setPhase("details")} className="mt-4 w-full text-center text-[#A1A1AA] hover:text-white text-sm">
+          <button type="button" onClick={() => { setTripDraft(null); setPhase("details"); }} className="mt-4 w-full text-center text-[#A1A1AA] hover:text-white text-sm">
             Keep the current trip
           </button>
         )}
@@ -439,15 +585,18 @@ export default function StaffBookingForm({
   if (phase === "departures") {
     return (
       <div className="glass rounded-2xl p-4 sm:p-6">
+        {restoredBanner}
         <Step2Departures
           staff
           customTimes={canCustomize}
           search={search}
-          initialOutbound={outbound}
-          initialReturn={returnSlot}
+          initialOutbound={pickDraft ? pickDraft.ob : outbound}
+          initialReturn={pickDraft ? pickDraft.ret : returnSlot}
+          onChange={onPicksChange}
           heldSeats={heldSeats}
           nextLabel="Continue to Customer & Payment"
           onNext={(ob, ret) => {
+            setPickDraft(null);
             setOutbound(ob);
             setReturnSlot(search.roundTrip ? ret : null);
             setAdditional((prev) => prev.slice(0, Math.max(0, search.adults + search.children - 1)));
@@ -472,6 +621,7 @@ export default function StaffBookingForm({
 
   return (
     <div className="space-y-6">
+      {restoredBanner}
       <fieldset disabled={locked || saving} className="space-y-6">
         {/* Trip summary */}
         <div className="glass rounded-2xl p-6 space-y-3">
