@@ -16,16 +16,10 @@ import {
   Search, Loader2, Users, Repeat, DollarSign, ShieldCheck, ChevronDown,
   Mail, Phone, Download, UserCheck, Calendar,
 } from "lucide-react";
+import { STATUS_STYLES, statusLabel } from "@/lib/reservation-status";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const STATUS_STYLES: Record<string, string> = {
-  confirmed: "bg-green-500/15 text-green-400",
-  pending:   "bg-yellow-500/15 text-yellow-400",
-  cancelled: "bg-red-500/15 text-red-400",
-  completed: "bg-[#FCC300]/15 text-[#FCC300]",
-  no_show:   "bg-orange-500/15 text-orange-400",
-};
 
 const MILITARY_LABELS: Record<string, string> = {
   approved: "Military verified",
@@ -370,8 +364,8 @@ function CustomerDetail({ profile: p }: { profile: CustomerProfile }) {
                 </span>
                 <span className="text-[#A1A1AA] text-xs flex items-center gap-1"><Users className="w-3 h-3" />{b.pax}</span>
                 <span className="text-white text-xs font-semibold w-16 text-right">{formatCents(b.totalCents)}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[b.status] ?? ""}`}>
-                  {b.status.replace("_", " ")}
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[b.status] ?? ""}`}>
+                  {statusLabel(b.status)}
                 </span>
               </Link>
             </li>

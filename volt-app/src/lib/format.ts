@@ -32,6 +32,18 @@ export function formatDateLong(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 
+// Timestamp → Eastern date and time, e.g. "Nov 3, 2026" + "2:14 PM ET".
+// Used for when a reservation was booked.
+export function formatEasternDateTime(ts: string): { date: string; time: string } {
+  if (!ts) return { date: "", time: "" };
+  const d = new Date(ts);
+  const tz = "America/New_York";
+  return {
+    date: d.toLocaleDateString("en-US", { timeZone: tz, month: "short", day: "numeric", year: "numeric" }),
+    time: d.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }) + " ET",
+  };
+}
+
 // Local date as "YYYY-MM-DD" (avoids toISOString UTC shift)
 export function localDateString(d: Date = new Date()): string {
   const y = d.getFullYear();

@@ -7,7 +7,7 @@ import { canViewFinancials } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
 import { useAppSettings } from "@/context/SettingsContext";
 import { createClient } from "@/lib/supabase/client";
-import { formatCents, easternToday } from "@/lib/format";
+import { formatCents, easternToday, formatEasternDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
@@ -15,19 +15,13 @@ import { SquareTerminalPayment } from "@/components/admin/SquareTerminalPayment"
 import { editAccess, reservationBalance } from "@/lib/staff-pricing";
 import { TripLegTimeline } from "@/components/admin/TripTimeline";
 import { heardFromLabel } from "@/lib/heard-from";
+import ReservationStatusBadge from "@/components/admin/ReservationStatusBadge";
 import {
   ArrowLeft, Loader2, AlertCircle, CheckCircle2, XCircle,
   Phone, Mail, Users, MapPin, CreditCard, Banknote, Gift, FileText,
   Pencil, Printer, MessageSquare, History, Undo2, Lock, Trash2, Nfc,
 } from "lucide-react";
 
-const STATUS_STYLES: Record<string, string> = {
-  confirmed: "bg-green-500/15 text-green-400",
-  pending:   "bg-yellow-500/15 text-yellow-400",
-  cancelled: "bg-red-500/15 text-red-400",
-  completed: "bg-[#FCC300]/15 text-[#FCC300]",
-  no_show:   "bg-orange-500/15 text-orange-400",
-};
 
 const PAY_ICONS = { stripe: CreditCard, square: Nfc, cash: Banknote, comp: Gift } as const;
 const PAY_LABELS: Record<string, string> = { stripe: "Card", square: "Square Terminal" };
@@ -259,12 +253,15 @@ export default function ReservationDetailPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-white font-mono">{resv.confirmation_number}</h1>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[resv.status] ?? ""}`}>
-                {resv.status.replace("_", " ")}
-              </span>
+              <ReservationStatusBadge
+                status={resv.status}
+                lastRideDate={resv.return_trip?.departure_date ?? trip?.departure_date}
+                onComplete={() => updateStatus("completed")}
+                className="px-2.5 py-1"
+              />
             </div>
             <p className="text-[#A1A1AA] text-sm mt-0.5">
-              Booked {new Date(resv.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              Booked {formatEasternDateTime(resv.created_at).date} at {formatEasternDateTime(resv.created_at).time}
             </p>
           </div>
         </div>
@@ -301,7 +298,7 @@ export default function ReservationDetailPage() {
               <Button size="sm" variant="outline" disabled={busy}
                 onClick={() => updateStatus("confirmed")}
                 className="border-white/15 text-[#A1A1AA] hover:bg-white/5 text-xs">
-                Re-confirm
+                Back to Booked
               </Button>
             )}
           </div>

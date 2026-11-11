@@ -6,6 +6,7 @@ import { formatCents, formatDateShort, localDateString } from "@/lib/format";
 import { TrendingUp, Users, Truck, DollarSign, Loader2, Download, HeartHandshake, Clock } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
 import HowRidersFoundUsCard from "@/components/admin/HowRidersFoundUsCard";
+import BookingTimesCard from "@/components/admin/BookingTimesCard";
 import { useAppSettings } from "@/context/SettingsContext";
 import { DONATION_PARTNER } from "@/lib/military";
 import { dollars, snapshotPricing } from "@/lib/settings";
@@ -210,6 +211,8 @@ export default function ReportsPage() {
       </div>
 
       <HowRidersFoundUsCard days={PERIOD_DAYS[period]} />
+
+      <BookingTimesCard />
 
       {/* Military discount + giving back */}
       <div className="glass rounded-2xl overflow-hidden">
