@@ -5,6 +5,7 @@ import { isDeliverableEmail, isEmailConfigured, emailHtml } from "@/lib/notifica
 import { enqueue } from "@/lib/notifications/queue";
 import { loadAppSettings } from "@/lib/settings-server";
 import { appUrl } from "@/lib/reservation-messages";
+import { sampleLinks } from "@/lib/sample-pages";
 import { TEMPLATES, mergeTemplate, renderTemplate, type TemplateKey } from "@/lib/message-templates";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -103,13 +104,17 @@ async function sendSample(sb: any, me: any, body: any) {
   };
   const settings = await loadAppSettings();
   const home = appUrl();
+  // Tip / review links open sample versions of those pages (nothing charged or saved).
+  const links = sampleLinks(home, me?.first_name);
   const vars = {
     ...info.sample,
     phone: settings.business.phone,
     arrive_minutes: String(settings.arriveEarlyMinutes),
     name: me?.first_name || info.sample.name,
-    // Links in a sample go to the homepage — there's no real booking behind them.
+    // Other links go to the homepage — there's no real booking behind a sample.
     ...Object.fromEntries(Object.keys(info.sample).filter((k) => k.endsWith("_link")).map((k) => [k, home])),
+    tip_link: links.tip,
+    review_link: links.review,
   };
 
   if (body.channel === "sms") {
@@ -131,8 +136,8 @@ async function sendSample(sb: any, me: any, body: any) {
     // everything else links the receipt.
     const reminder = key === "reminder_first" || key === "reminder_second";
     const html = key === "review_request"
-      ? emailHtml(subject, message, { label: "Tip your driver", url: home }, settings.business,
-        { text: "", label: "Leave a review", url: home, asButton: true })
+      ? emailHtml(subject, message, { label: "Tip your driver", url: links.tip }, settings.business,
+        { text: "", label: "Leave a review", url: links.review, asButton: true })
       : emailHtml(subject.split(" — ")[0], message,
         reminder ? undefined : { label: "View receipt", url: home }, settings.business);
     const [r] = await enqueue(sb, [{

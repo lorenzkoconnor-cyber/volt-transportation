@@ -11,7 +11,7 @@ import type { ReviewForm as Form } from "@/lib/reviews-server";
 
 const RATING_WORDS = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
 
-export default function ReviewForm({ token, form }: { token: string; form: Form }) {
+export default function ReviewForm({ token, form, sample = false }: { token: string; form: Form; sample?: boolean }) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [body, setBody] = useState("");
@@ -26,6 +26,8 @@ export default function ReviewForm({ token, form }: { token: string; form: Form 
     e.preventDefault();
     setError("");
     if (!rating) { setError("Tap a star to rate your ride."); return; }
+    // Sample page (Settings → "Send me a sample"): show the thank-you, save nothing.
+    if (sample) { setDone({ held: false }); return; }
     setSaving(true);
     try {
       const res = await fetch("/api/reviews", {
@@ -45,6 +47,7 @@ export default function ReviewForm({ token, form }: { token: string; form: Form 
   };
 
   const openGoogle = () => {
+    if (sample) return;
     // Fire-and-forget: just records that they went to Google.
     fetch("/api/reviews", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, action: "google" }),
@@ -55,6 +58,7 @@ export default function ReviewForm({ token, form }: { token: string; form: Form 
     const text = form.existing?.body ?? body;
     return (
       <div className="glass rounded-2xl p-8 text-center space-y-5">
+        {sample && <SampleNote />}
         <CheckCircle2 className="w-12 h-12 text-[#FCC300] mx-auto" />
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-white">Thank you{form.firstName ? `, ${form.firstName}` : ""}!</h1>
@@ -98,6 +102,7 @@ export default function ReviewForm({ token, form }: { token: string; form: Form 
   const shown = hover || rating;
   return (
     <form onSubmit={submit} className="glass rounded-2xl p-6 sm:p-8 space-y-6">
+      {sample && <SampleNote />}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-white tracking-tight">How was your ride{form.firstName ? `, ${form.firstName}` : ""}?</h1>
         {form.tripLabel && <p className="text-[#A1A1AA] text-sm">{form.tripLabel}</p>}
@@ -142,5 +147,13 @@ export default function ReviewForm({ token, form }: { token: string; form: Form 
         Submit Review
       </Button>
     </form>
+  );
+}
+
+function SampleNote() {
+  return (
+    <p className="rounded-xl border border-[#FCC300]/30 bg-[#FCC300]/10 px-4 py-3 text-sm text-white text-center">
+      <strong>Sample page.</strong> This is what customers see. Nothing you enter here is saved or posted.
+    </p>
   );
 }

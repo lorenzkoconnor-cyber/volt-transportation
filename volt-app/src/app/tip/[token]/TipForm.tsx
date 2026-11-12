@@ -15,7 +15,7 @@ async function post(body: unknown) {
   return data;
 }
 
-export default function TipForm({ token, page }: { token: string; page: TipPage }) {
+export default function TipForm({ token, page, sample = false }: { token: string; page: TipPage; sample?: boolean }) {
   const [cents, setCents] = useState(TIP_PRESETS_CENTS[1]);
   const [paid, setPaid] = useState<number | null>(null);
 
@@ -35,6 +35,14 @@ export default function TipForm({ token, page }: { token: string; page: TipPage 
 
   return (
     <div className="space-y-6">
+      {sample && (
+        <div className="rounded-xl border border-[#FCC300]/30 bg-[#FCC300]/10 px-4 py-3 text-sm text-white text-center space-y-1">
+          <p><strong>Sample page.</strong> This is what customers see. No payment is taken here.</p>
+          <button type="button" onClick={() => setPaid(cents)} className="text-[#FCC300] hover:text-[#FFD54A] font-medium">
+            Preview the thank-you screen →
+          </button>
+        </div>
+      )}
       <div className="text-center space-y-2">
         <Heart className="w-10 h-10 text-[#FCC300] mx-auto" />
         <h1 className="text-3xl font-bold text-white">Tip your driver</h1>
@@ -53,7 +61,9 @@ export default function TipForm({ token, page }: { token: string; page: TipPage 
           label={`Tip ${formatCents(cents)}`}
           walletButton="tip"
           blockedReason={cents < MIN_SEPARATE_TIP_CENTS ? "Tips start at $1." : null}
-          prepare={() => post({ action: "start", token, cents })}
+          prepare={() => sample
+            ? Promise.reject(new Error("This is a sample page — no payment is taken."))
+            : post({ action: "start", token, cents })}
           onPaid={async (paymentIntentId) => {
             await post({ action: "record", paymentIntentId, token, cents });
             setPaid(cents);
