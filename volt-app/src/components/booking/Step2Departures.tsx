@@ -23,7 +23,8 @@ import {
   shiftDate,
   LOCATIONS,
 } from "@/lib/booking";
-import { formatDateShort, noticeWords } from "@/lib/format";
+import { formatDateShort } from "@/lib/format";
+import { onlineNoticeRule } from "@/lib/settings";
 import PriceSummary from "./PriceSummary";
 
 interface Props {
@@ -126,7 +127,8 @@ interface LoadedDepartures {
 export default function Step2Departures({
   search, initialOutbound, initialReturn, onChange, onNext, onBack, heldSeats, nextLabel, staff = false, customTimes = false,
 }: Props) {
-  const { business, onlineCutoffMinutes } = useAppSettings();
+  const appSettings = useAppSettings();
+  const { business } = appSettings;
   const [selectedOutbound, setSelectedOutbound] = useState<DepartureSlot | null>(null);
   const [selectedReturn, setSelectedReturn] = useState<DepartureSlot | null>(null);
   // Restore earlier picks once, against the first load only.
@@ -316,7 +318,7 @@ export default function Step2Departures({
 
       {phoneOnly && (
         <p className="text-[#A1A1AA] text-xs">
-          Online bookings need at least {noticeWords(onlineCutoffMinutes)} notice. Departures marked &ldquo;Call to book&rdquo; leave sooner than that — call Volt at{" "}
+          {onlineNoticeRule(appSettings)}. Departures marked &ldquo;Call to book&rdquo; leave sooner than that — call Volt at{" "}
           <a href={business.phoneHref} className="text-[#FCC300]">{business.phone}</a> and speak with a manager to book.
         </p>
       )}

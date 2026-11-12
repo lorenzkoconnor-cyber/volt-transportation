@@ -7,6 +7,7 @@ import {
 } from "@/lib/booking";
 import { CUSTOM_BOOKING_ROLES, easternInstant } from "@/lib/staff-pricing";
 import { requireStaff } from "@/lib/staff-booking";
+import { onlineCutoffFor, settingsFromRow } from "@/lib/settings";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createClient(): Promise<any> {
@@ -71,6 +72,8 @@ export async function GET(request: NextRequest) {
     //   departed: already left (never offered)
     //   closed:   inside the online cutoff — staff can still book it, riders must call
     const cutoffMinutes = settings?.online_booking_cutoff_minutes ?? DEFAULT_ONLINE_CUTOFF_MINUTES;
+    // Some Columbus → ATL times stay bookable online until shortly before departure.
+    const cutoffRules = { ...settingsFromRow(settings), onlineCutoffMinutes: cutoffMinutes };
     const now = Date.now();
 
     // Format response
@@ -91,7 +94,7 @@ export async function GET(request: NextRequest) {
         totalSeats: trip.total_capacity,
         ...(staffView ? { custom: !!trip.is_custom, private: !!trip.is_private } : {}),
         departed: departsIn <= 0,
-        closed: departsIn < cutoffMinutes * 60_000 || trip.status === "boarding",
+        closed: departsIn < onlineCutoffFor(cutoffRules, originKey, trip.departure_time) * 60_000 || trip.status === "boarding",
       };
     });
 

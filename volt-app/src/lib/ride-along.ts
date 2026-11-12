@@ -23,11 +23,14 @@ import { appUrl } from "@/lib/reservation-messages";
 type Db = any;
 
 export const RIDE_ALONG_MINUTES = 30;
-// Trips staff can open a QR for: not yet left (scheduled / boarding), departing
+// Trips staff can open a QR for: scheduled / boarding / just departed, departing
 // from 45 minutes ago (a van running late) to 12 hours from now.
 const LATE_GRACE_MS = 45 * 60_000;
 const AHEAD_MS = 12 * 3_600_000;
-const BOOKABLE = ["scheduled", "boarding"];
+// "in_progress" too: departures switch to Departed on their own at the departure
+// time (migration 038), but a van running late is still at the curb — the
+// 45-minute grace below decides when ride-alongs stop.
+const BOOKABLE = ["scheduled", "boarding", "in_progress"];
 const TOKEN_RE = /^[0-9a-f-]{36}$/i;
 
 const TRIP_FIELDS =

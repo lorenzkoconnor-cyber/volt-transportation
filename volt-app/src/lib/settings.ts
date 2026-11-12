@@ -6,6 +6,7 @@
 // secret — it's what the public website shows.
 
 import { MILITARY_DISCOUNT_AMOUNT, PRICING } from "@/lib/booking";
+import { earliestOnlineDate, easternToday } from "@/lib/format";
 
 export interface Pricing {
   adult: number;    // dollars
@@ -44,6 +45,9 @@ export interface AppSettings {
   business: BusinessInfo;
   arriveEarlyMinutes: number;
   onlineCutoffMinutes: number;
+  // Columbus → ATL departure times riders can book online even inside the
+  // cutoff above, up to `cutoffMinutes` before departure (owner, 2026-11-12).
+  alwaysOpen: { times: string[]; cutoffMinutes: number };
   cancellationFeeCents: number;
   // Team Portal door-to-door service: flat fee for a pickup / drop-off at an address.
   doorService: { pickupCents: number; dropoffCents: number };
@@ -72,12 +76,15 @@ function business(phone: string, email: string, street: string, cityLine: string
   };
 }
 
+export const DEFAULT_ALWAYS_OPEN_TIMES = ["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
+
 export const DEFAULT_SETTINGS: AppSettings = {
   pricing: { ...PRICING },
   military: { enabled: true, amount: MILITARY_DISCOUNT_AMOUNT },
   business: business("(706) 530-5896", "support@contactvolt.com", "3885 Miller Road, Suite C", "Columbus, GA 31909", "Mon–Sat · 4:00 AM – 12:00 AM · Sun: open for booked trips only"),
   arriveEarlyMinutes: 20,
   onlineCutoffMinutes: 1440,
+  alwaysOpen: { times: [...DEFAULT_ALWAYS_OPEN_TIMES], cutoffMinutes: 60 },
   cancellationFeeCents: 1500,
   doorService: { pickupCents: 5000, dropoffCents: 5000 },
   shortNoticeHours: 36,
@@ -134,6 +141,12 @@ export function settingsFromRow(row: any, announcement: Announcement | null = nu
     ),
     arriveEarlyMinutes: num(row.arrive_early_minutes, d.arriveEarlyMinutes),
     onlineCutoffMinutes: num(row.online_booking_cutoff_minutes, d.onlineCutoffMinutes),
+    alwaysOpen: {
+      times: Array.isArray(row.always_open_times)
+        ? row.always_open_times.map((t: unknown) => String(t).slice(0, 5)).filter((t: string) => /^\d{2}:\d{2}$/.test(t))
+        : d.alwaysOpen.times,
+      cutoffMinutes: num(row.always_open_cutoff_minutes, d.alwaysOpen.cutoffMinutes),
+    },
     cancellationFeeCents: num(row.cancellation_fee_cents, d.cancellationFeeCents),
     doorService: {
       pickupCents: num(row.door_pickup_fee_cents, d.doorService.pickupCents),
@@ -203,4 +216,57 @@ export function snapshotPricing(snap: Partial<PricingSnapshot> | null | undefine
 /** "$59" / "$12.50" */
 export function dollars(n: number): string {
   return Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`;
+}
+
+// ── Online booking cutoff ─────────────────────────────────────────────────────
+type CutoffSettings = Pick<AppSettings, "onlineCutoffMinutes" | "alwaysOpen">;
+
+/** Is this one of the always-bookable Columbus → ATL departures? */
+export function isAlwaysOpen(s: CutoffSettings, originKey: string | null | undefined, time: string): boolean {
+  return originKey === "columbus" && s.alwaysOpen.times.includes(String(time).slice(0, 5));
+}
+
+/** How many minutes before this departure online booking closes. */
+export function onlineCutoffFor(s: CutoffSettings, originKey: string | null | undefined, time: string): number {
+  return isAlwaysOpen(s, originKey, time) ? Math.min(s.alwaysOpen.cutoffMinutes, s.onlineCutoffMinutes) : s.onlineCutoffMinutes;
+}
+
+/**
+ * First date riders may pick online: today when leaving Columbus and one of
+ * today's always-bookable times is still open, otherwise the usual cutoff.
+ */
+export function earliestOnlineDateFrom(s: CutoffSettings, from: string | null | undefined, now: Date = new Date()): string {
+  const usual = earliestOnlineDate(s.onlineCutoffMinutes, now);
+  if (from !== "columbus" || !s.alwaysOpen.times.length) return usual;
+  const [h, m] = now.toLocaleTimeString("en-GB", { timeZone: "America/New_York", hour12: false }).split(":").map(Number);
+  const nowMinutes = (h % 24) * 60 + m;
+  const cutoff = Math.min(s.alwaysOpen.cutoffMinutes, s.onlineCutoffMinutes);
+  const openToday = s.alwaysOpen.times.some((t) => {
+    const [th, tm] = t.split(":").map(Number);
+    return th * 60 + tm - nowMinutes >= cutoff;
+  });
+  return openToday ? easternToday(now) : usual;
+}
+
+// "14:00" → "2 PM", "06:30" → "6:30 AM".
+function shortTime(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const suffix = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m ? `${h12}:${String(m).padStart(2, "0")} ${suffix}` : `${h12} ${suffix}`;
+}
+
+const minutesWords = (m: number) => (m % 60 === 0 ? `${m / 60} hour${m === 60 ? "" : "s"}` : `${m} minutes`);
+
+/**
+ * The online booking rule in one sentence (no trailing period), e.g. "Online
+ * bookings need at least 24 hours' notice, except Columbus → ATL departures at
+ * 6 AM, 8 AM, … 8 PM, which you can book online until 1 hour before departure".
+ */
+export function onlineNoticeRule(s: CutoffSettings): string {
+  const base = `Online bookings need at least ${minutesWords(s.onlineCutoffMinutes)} notice`;
+  const times = [...s.alwaysOpen.times].sort();
+  if (!times.length || s.alwaysOpen.cutoffMinutes >= s.onlineCutoffMinutes) return base;
+  return `${base}, except Columbus → ATL departures at ${times.map(shortTime).join(", ")}, ` +
+    `which you can book online until ${minutesWords(s.alwaysOpen.cutoffMinutes)} before departure`;
 }

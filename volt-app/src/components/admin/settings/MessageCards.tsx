@@ -29,6 +29,26 @@ export function TemplatesCard({ overrides, onSaved }: { overrides: TemplateOverr
   const customized = overrides.some((o) => o.key === key);
 
   const pick = (k: TemplateKey) => { setKey(k); setText(load(k)); setMsg(null); };
+
+  // "Send me a sample": this message, as worded on screen (saved or not),
+  // filled in with sample details, to your own phone / email.
+  const [sending, setSending] = useState<"sms" | "email" | null>(null);
+  const sendSample = async (channel: "sms" | "email") => {
+    setSending(channel);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/settings/health", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel, template: key, sms: text.sms, emailSubject: text.emailSubject, emailBody: text.emailBody }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error ?? "It didn't send.");
+      setMsg({ ok: true, text: `Sample ${channel === "sms" ? "text" : "email"} of "${info.label}" sent to ${d.to}.` });
+    } catch (err) {
+      setMsg({ ok: false, text: err instanceof Error ? err.message : "It didn't send." });
+    }
+    setSending(null);
+  };
   const sample = { ...info.sample, phone: settings.business.phone, arrive_minutes: String(settings.arriveEarlyMinutes) };
   const unknown = unknownPlaceholders(key, `${text.sms}\n${text.emailSubject}\n${text.emailBody}`);
 
@@ -118,6 +138,16 @@ export function TemplatesCard({ overrides, onSaved }: { overrides: TemplateOverr
       <Notice msg={msg} />
       <div className="flex gap-2 flex-wrap">
         <SaveButton saving={saving} onClick={save} label="Save Wording" />
+        {info.hasSms !== false && (
+          <Button variant="outline" disabled={!!sending} onClick={() => sendSample("sms")} className="border-white/15 text-white hover:bg-white/5">
+            {sending === "sms" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />} Send me a sample text
+          </Button>
+        )}
+        {info.hasEmail && (
+          <Button variant="outline" disabled={!!sending} onClick={() => sendSample("email")} className="border-white/15 text-white hover:bg-white/5">
+            {sending === "email" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />} Send me a sample email
+          </Button>
+        )}
         {customized && (
           <Button variant="outline" onClick={reset} className="border-white/15 text-white hover:bg-white/5">
             <RotateCcw className="w-4 h-4 mr-2" /> Reset to default

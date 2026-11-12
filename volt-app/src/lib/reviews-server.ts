@@ -1,11 +1,13 @@
 // ─── Customer reviews (server-only) ───────────────────────────────────────────
-//   • queueReviewRequests() — called by the cron worker: emails riders whose
-//     first leg arrived 2+ hours ago (due_review_requests(), migration 030).
+//   • queueReviewRequests() — called by the cron worker: emails (and texts,
+//     with consent) a tip + review request 2+ hours after the first leg arrives
+//     (due_post_trip_messages(), migration 038).
 //   • loadReviewForm() / submitReview() — the /review/<token> page.
 //   • getPublishedReviews() — the homepage carousel.
 
 import { createAdminDb } from "@/lib/checkout";
 import { emailHtml, isEmailConfigured } from "@/lib/notifications/email";
+import { isSmsConfigured } from "@/lib/notifications/sms";
 import { enqueue } from "@/lib/notifications/queue";
 import { appUrl, renderMessage } from "@/lib/reservation-messages";
 import { loadAppSettings } from "@/lib/settings-server";
@@ -27,42 +29,77 @@ export function tipUrl(token: string): string {
   return `${appUrl()}/tip/${token}`;
 }
 
-// ── Review request emails (cron) ─────────────────────────────────────────────
+// ── Thank-you messages: tip + review (cron) ──────────────────────────────────
+// 2 hours after the first leg's drop-off: an email with "Tip your driver" and
+// "Leave a review" buttons, and a text to riders who agreed to texts. Each
+// channel goes once per booking (due_post_trip_messages(), migration 038).
 export async function queueReviewRequests(sb: Db): Promise<Record<string, number | string>> {
   const settings = await loadAppSettings();
   if (!settings.reviews.requestsEnabled) return { skipped: "Review requests are turned off" };
-  // Without SMTP the email would only be simulated — wait so the request isn't used up.
-  if (!isEmailConfigured()) return { skipped: "Email isn't set up" };
+  // A channel that isn't set up would only be simulated — wait so it isn't used up.
+  const email = isEmailConfigured();
+  const sms = isSmsConfigured();
+  if (!email && !sms) return { skipped: "Neither email nor texts are set up" };
 
-  const { data: due, error } = await sb.rpc("due_review_requests", { p_delay_minutes: REVIEW_REQUEST_DELAY_MINUTES });
-  if (error) {
-    console.error("[reviews] due_review_requests", error);
-    return { error: error.message };
+  let due: any[] = [];
+  const res = await sb.rpc("due_post_trip_messages", { p_delay_minutes: REVIEW_REQUEST_DELAY_MINUTES });
+  if (res.error) {
+    // Migration 038 not applied yet: email only, the old way.
+    const old = await sb.rpc("due_review_requests", { p_delay_minutes: REVIEW_REQUEST_DELAY_MINUTES });
+    if (old.error) {
+      console.error("[reviews] due_post_trip_messages", res.error, old.error);
+      return { error: old.error.message };
+    }
+    due = (old.data ?? []).map((r: any) => ({ ...r, email_due: true, sms_due: false }));
+  } else {
+    due = res.data ?? [];
   }
+
   let sent = 0;
   let failed = 0;
-  for (const r of due ?? []) {
-    const m = await renderMessage(sb, "review_request", { name: r.first_name, confirmation: r.confirmation_number });
-    if (!m.emailSubject || !m.emailBody) continue;
-    const link = reviewUrl(r.review_token);
+  let texted = 0;
+  for (const r of due) {
+    const review = reviewUrl(r.review_token);
     const tip = tipUrl(r.review_token);
-    const tipText = "Want to thank your driver?";
-    const [res] = await enqueue(sb, [{
-      channel: "email",
-      to: r.email,
-      subject: m.emailSubject,
-      text: `${m.emailBody}\n\nLeave a review: ${link}\n\n${tipText} Leave a tip: ${tip}`,
-      html: emailHtml(m.emailSubject, m.emailBody, { label: "Leave a review", url: link }, settings.business,
-        { text: tipText, label: "Leave a tip", url: tip }),
-      reservationId: r.reservation_id,
-      kind: "review_request",
-      dedupeKey: `review_request:${r.reservation_id}`,
-    }]);
-    if (res.duplicate) continue;
-    if (res.sent) sent++;
-    else failed++;
+    const m = await renderMessage(sb, "review_request", {
+      name: r.first_name, confirmation: r.confirmation_number, tip_link: tip, review_link: review,
+    });
+
+    if (email && r.email_due && r.email && m.emailSubject && m.emailBody) {
+      const [res] = await enqueue(sb, [{
+        channel: "email",
+        to: r.email,
+        subject: m.emailSubject,
+        text: `${m.emailBody}\n\nTip your driver: ${tip}\n\nLeave a review: ${review}`,
+        html: emailHtml(m.emailSubject, m.emailBody, { label: "Tip your driver", url: tip }, settings.business,
+          { text: "", label: "Leave a review", url: review, asButton: true }),
+        reservationId: r.reservation_id,
+        kind: "review_request",
+        dedupeKey: `review_request:${r.reservation_id}`,
+      }]);
+      if (!res.duplicate) {
+        if (res.sent) sent++;
+        else failed++;
+      }
+    }
+
+    // enqueue() also re-checks the rider's text opt-in (reservations.sms_consent).
+    if (sms && r.sms_due && r.phone && m.sms) {
+      const [res] = await enqueue(sb, [{
+        channel: "sms",
+        to: r.phone,
+        text: m.sms,
+        reservationId: r.reservation_id,
+        kind: "review_request_sms",
+        dedupeKey: `review_request_sms:${r.reservation_id}`,
+      }]);
+      if (!res.duplicate) {
+        if (res.sent) texted++;
+        else failed++;
+      }
+    }
   }
-  return { due: due?.length ?? 0, sent, failed };
+  return { due: due.length, sent, texted, failed };
 }
 
 // ── The review page ───────────────────────────────────────────────────────────

@@ -88,7 +88,10 @@ export async function POST(request: NextRequest) {
           if (!f) continue;
           const parsed = parseField(f, raw);
           if ("error" in parsed) return bad(parsed.error);
-          if (parsed.value !== current[col]) update[col] = parsed.value;
+          const same = Array.isArray(parsed.value)
+            ? JSON.stringify(parsed.value) === JSON.stringify((current[col] ?? []).map((t: unknown) => String(t).slice(0, 5)))
+            : parsed.value === current[col];
+          if (!same) update[col] = parsed.value;
         }
         const merged = { ...current, ...update };
         const crossErr = crossFieldError(merged);

@@ -7,9 +7,8 @@ import {
 } from "@/lib/checkout";
 import { CODE_ERRORS } from "@/lib/discount-codes";
 import { easternInstant } from "@/lib/staff-pricing";
-import { noticeWords } from "@/lib/format";
 import { loadAppSettings } from "@/lib/settings-server";
-import { snapshotFrom } from "@/lib/settings";
+import { onlineCutoffFor, onlineNoticeRule, snapshotFrom } from "@/lib/settings";
 import { rateLimit, breakerTripped, recordFailure, DISCOUNT_BREAKER, DISCOUNT_PAUSED_ERROR } from "@/lib/rate-limit";
 
 // POST /api/payments/create-intent
@@ -42,11 +41,10 @@ export async function POST(request: NextRequest) {
     const tripIds = [payload.tripId, ...(payload.isRoundTrip && payload.returnTripId ? [payload.returnTripId] : [])];
     const { data: trips } = await sb
       .from("trips")
-      .select("id, status, total_capacity, seats_booked, departure_date, departure_time, is_custom, is_private, route:routes(origin_label, destination_label)")
+      .select("id, status, total_capacity, seats_booked, departure_date, departure_time, is_custom, is_private, route:routes(origin_key, origin_label, destination_label)")
       .in("id", tripIds);
     const seats = payload.adults + payload.children;
     const settings = await loadAppSettings();
-    const cutoffMs = settings.onlineCutoffMinutes * 60_000;
     for (const id of tripIds) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const t = (trips ?? []).find((x: any) => x.id === id);
@@ -55,9 +53,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "That departure is no longer available. Please pick another time." }, { status: 409 });
       }
       // Online booking closes before departure (Eastern time) — staff book these.
+      // Always-bookable Columbus → ATL times close later (settings.alwaysOpen).
+      const cutoffMs = onlineCutoffFor(settings, t.route?.origin_key, t.departure_time) * 60_000;
       if (easternInstant(t.departure_date, t.departure_time.slice(0, 5)) - Date.now() < cutoffMs) {
         return NextResponse.json(
-          { error: `Online bookings need at least ${noticeWords(settings.onlineCutoffMinutes)} notice. To book this departure, call Volt at ${settings.business.phone} and speak with a manager.` },
+          { error: `${onlineNoticeRule(settings)}. To book this departure, call Volt at ${settings.business.phone} and speak with a manager.` },
           { status: 409 },
         );
       }

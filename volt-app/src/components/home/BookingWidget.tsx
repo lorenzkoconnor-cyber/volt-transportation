@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeftRight, ArrowRight, Calendar, Users } from "lucide-react";
 import { useAppSettings } from "@/context/SettingsContext";
-import { earliestOnlineDate } from "@/lib/format";
+import { earliestOnlineDateFrom } from "@/lib/settings";
 
 const LOCATIONS = [
   { value: "columbus", label: "Volt Columbus" },
@@ -21,9 +21,11 @@ const LOCATIONS = [
 ];
 
 export default function BookingWidget() {
-  const earliest = earliestOnlineDate(useAppSettings().onlineCutoffMinutes);
+  const appSettings = useAppSettings();
   const router = useRouter();
   const [from,      setFrom]      = useState("columbus");
+  // Leaving Columbus, some departures stay bookable online today (settings.alwaysOpen).
+  const earliest = earliestOnlineDateFrom(appSettings, from);
   const [to,        setTo]        = useState("atl");
   const [date,       setDate]       = useState("");
   const [returnDate, setReturnDate] = useState("");

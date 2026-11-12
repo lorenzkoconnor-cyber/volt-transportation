@@ -17,6 +17,7 @@ import FlightFields from "@/components/booking/FlightFields";
 import { StaffCardPayment, type StaffCardHandle } from "@/components/admin/StaffCardPayment";
 import { SquareTerminalPayment } from "@/components/admin/SquareTerminalPayment";
 import TipPicker from "@/components/booking/TipPicker";
+import SavedCustomerPicker, { type SavedCustomer } from "@/components/admin/SavedCustomerPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,6 +82,9 @@ interface Props {
   returnOnly?: boolean;
   // Edit: the prices the booking was made at (reservations.pricing_snapshot).
   pricingSnapshot?: Partial<PricingSnapshot> | null;
+  // New booking for a saved customer (Customers → "Book new trip"): start
+  // fresh with their details instead of picking up an earlier draft.
+  skipDraft?: boolean;
 }
 
 interface Quote {
@@ -170,7 +174,7 @@ async function postJson(url: string, body: unknown) {
 }
 
 export default function StaffBookingForm({
-  mode, initial, reservationId, oldTotalCents = 0, heldSeats, returnOnly = false, pricingSnapshot = null,
+  mode, initial, reservationId, oldTotalCents = 0, heldSeats, returnOnly = false, pricingSnapshot = null, skipDraft = false,
 }: Props) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -185,7 +189,13 @@ export default function StaffBookingForm({
   const P = rates.pricing;
 
   // A New Reservation in progress from earlier in this tab (Back / refresh).
-  const [restored] = useState<StaffDraft | null>(() => (isEdit ? null : loadDraft()));
+  const [restored] = useState<StaffDraft | null>(() => {
+    if (isEdit) return null;
+    const d = loadDraft();
+    // Booking a saved customer: keep a draft only if it's for that same person (a refresh).
+    if (d && skipDraft && d.customer.phone !== initial.customer.phone) return null;
+    return d;
+  });
   const [showRestored, setShowRestored] = useState(() => !!restored && draftHasContent(restored));
   // A departure that has since left can't be booked: pick again.
   const restoredSlotsValid = !!restored && !slotHasLeft(restored.outbound) && !slotHasLeft(restored.returnSlot);
@@ -302,6 +312,14 @@ export default function StaffBookingForm({
 
   // Any change to the form invalidates the edit quote.
   const touch = () => setQuote(null);
+
+  // "Find a saved customer": fill in their details (and the military discount
+  // when their ID was verified and no other discount is picked).
+  const pickSavedCustomer = (c: SavedCustomer) => {
+    setCustomer({ firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email });
+    if (c.militaryVerified && settings.military.enabled && discountTab === "none") setDiscountTab("military");
+    touch();
+  };
 
   // Effective discount from the tab + fields.
   const activeDiscount: StaffDiscount = useMemo(() => {
@@ -662,12 +680,13 @@ export default function StaffBookingForm({
           </p>
         </div>
 
-        {/* Customer */}
-        <div className="glass rounded-2xl p-6 space-y-4">
+        {/* Customer — raised so the saved-customer dropdown sits above the next card */}
+        <div className="glass rounded-2xl p-6 space-y-4 relative z-10">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-[#FCC300]" />
             <h2 className="text-white font-semibold">Customer</h2>
           </div>
+          {!isEdit && <SavedCustomerPicker onPick={pickSavedCustomer} />}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {([
               ["firstName", "First Name *", "First name", "text"],

@@ -3,7 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Shield } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
-import { dollars, type AppSettings } from "@/lib/settings";
+import { dollars, onlineNoticeRule, type AppSettings } from "@/lib/settings";
 import { CANCEL_NOTICE_HOURS } from "@/lib/booking";
 
 export const metadata: Metadata = {
@@ -14,7 +14,6 @@ export const metadata: Metadata = {
 };
 
 // Prices, fee, cutoff, arrive-early time and contact details come from Settings.
-const cutoffWords = (m: number) => (m % 60 === 0 ? `${m / 60} hour${m === 60 ? "" : "s"}` : `${m} minutes`);
 const sectionsFor = (s: AppSettings): { id?: string; title: string; items: string[] }[] => [
   {
     title: "Passenger Conduct",
@@ -71,7 +70,7 @@ const sectionsFor = (s: AppSettings): { id?: string; title: string; items: strin
     items: [
       `Passengers may cancel their reservation up to ${CANCEL_NOTICE_HOURS} hours before the scheduled departure for a refund of the fare${s.cancellationFeeCents > 0 ? ` minus a ${dollars(s.cancellationFeeCents / 100)} cancellation fee per reservation` : ""}.`,
       `Cancellations made with less than ${CANCEL_NOTICE_HOURS} hours' notice before departure are non-refundable.`,
-      `Online booking closes ${cutoffWords(s.onlineCutoffMinutes)} before each departure; to book a departure leaving sooner, call Volt at ${s.business.phone} and speak with a manager.`,
+      `${onlineNoticeRule(s)}. To book a departure leaving sooner, call Volt at ${s.business.phone} and speak with a manager.`,
       "To cancel or modify, use the Manage Reservation page or contact us directly.",
       "No-shows forfeit their fare and are not eligible for a refund.",
     ],

@@ -77,12 +77,15 @@ export interface FieldRow {
   help?: string;
   suffix?: React.ReactNode;
   step?: number;
+  // "times" fields: the departure times to tick on or off ("HH:MM" + label).
+  options?: { value: string; label: string }[];
 }
 
 /** booking_settings value → what the form edits (money in dollars). */
 export function toFormValue(column: string, v: any): any {
   const f = FIELD_BY_COLUMN.get(column);
   if (f?.kind === "money") return typeof v === "number" ? v / 100 : 0;
+  if (f?.kind === "times") return Array.isArray(v) ? v.map((t) => String(t).slice(0, 5)) : [];
   return v;
 }
 
@@ -137,6 +140,21 @@ export function FieldsCard({
             <div className="flex items-center gap-2 flex-wrap text-sm text-[#A1A1AA]">
               {f.kind === "bool" ? (
                 <Toggle on={!!v} onChange={(x) => set(r.column, x)} label={r.title} />
+              ) : f.kind === "times" ? (
+                <div className="flex flex-wrap gap-2">
+                  {(r.options ?? []).map((o) => {
+                    const on = Array.isArray(v) && v.includes(o.value);
+                    return (
+                      <button key={o.value} type="button" aria-pressed={on}
+                        onClick={() => set(r.column, on ? v.filter((t: string) => t !== o.value) : [...(v ?? []), o.value].sort())}
+                        className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                          on ? "bg-[#FCC300]/15 border-[#FCC300]/40 text-[#FCC300]" : "bg-white/5 border-white/10 text-[#A1A1AA] hover:text-white"
+                        }`}>
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
               ) : f.kind === "money" || f.kind === "int" ? (
                 <>
                   {f.kind === "money" && <span>$</span>}

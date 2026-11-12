@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import StatCard from "@/components/admin/StatCard";
 import {
   Search, Loader2, Users, Repeat, DollarSign, ShieldCheck, ChevronDown,
-  Mail, Phone, Download, UserCheck, Calendar,
+  Mail, Phone, Download, UserCheck, Calendar, CalendarPlus,
 } from "lucide-react";
 import { STATUS_STYLES, statusLabel } from "@/lib/reservation-status";
 
@@ -324,6 +324,10 @@ function CustomerDetail({ profile: p }: { profile: CustomerProfile }) {
   return (
     <div className="bg-white/[0.02] px-5 py-5 grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="space-y-2 text-sm">
+        <Link href={`/dashboard/reservations/new?customer=${p.id}`}
+          className="mb-3 inline-flex items-center gap-2 rounded-xl bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold text-sm px-4 py-2 transition-colors">
+          <CalendarPlus className="w-4 h-4" /> Book new trip
+        </Link>
         <h3 className="text-white font-semibold mb-2">Profile</h3>
         {p.phone && (
           <a href={`tel:${p.phone.replace(/[^\d+]/g, "")}`} className="flex items-center gap-2 text-[#A1A1AA] hover:text-white">

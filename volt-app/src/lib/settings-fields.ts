@@ -3,7 +3,8 @@
 // and the wording of the change history ("Adult fare: $59.00 → $65.00").
 
 // "url": an optional https:// link — blank clears it.
-export type FieldKind = "money" | "int" | "bool" | "text" | "email" | "phone" | "url";
+// "times": a list of "HH:MM" departure times (stored as text[]).
+export type FieldKind = "money" | "int" | "bool" | "text" | "email" | "phone" | "url" | "times";
 
 export interface FieldDef {
   column: string;
@@ -24,6 +25,8 @@ export const SETTINGS_FIELDS: FieldDef[] = [
   { column: "door_dropoff_fee_cents", label: "Door drop-off fee", kind: "money", min: 0, max: 1000 },
   // Booking rules
   { column: "online_booking_cutoff_minutes", label: "Online booking cutoff (minutes)", kind: "int", min: 0, max: 1440 },
+  { column: "always_open_times", label: "Always bookable online (Columbus → ATL)", kind: "times" },
+  { column: "always_open_cutoff_minutes", label: "Always-bookable times close (minutes)", kind: "int", min: 0, max: 1440 },
   { column: "short_notice_hours", label: "Short-notice window (hours)", kind: "int", min: 0, max: 72 },
   { column: "cancellation_fee_cents", label: "Cancellation fee", kind: "money", min: 0, max: 1000 },
   { column: "arrive_early_minutes", label: "Arrive early (minutes)", kind: "int", min: 0, max: 120 },
@@ -63,6 +66,7 @@ export function displayValue(f: FieldDef, v: unknown): string {
   if (v == null || v === "") return "(blank)";
   if (f.kind === "money") return `$${(Number(v) / 100).toFixed(2)}`;
   if (f.kind === "bool") return v ? "on" : "off";
+  if (f.kind === "times") return Array.isArray(v) && v.length ? v.map((t) => String(t).slice(0, 5)).join(", ") : "(none)";
   return String(v);
 }
 
@@ -88,6 +92,12 @@ export function parseField(f: FieldDef, raw: unknown): { value: unknown } | { er
         return { error: `${f.label} must be a whole number between ${f.min} and ${f.max}.` };
       }
       return { value: n };
+    }
+    case "times": {
+      if (!Array.isArray(raw) || raw.length > 48) return { error: `${f.label}: pick the departure times.` };
+      const times = [...new Set(raw.map((t) => String(t).slice(0, 5)))].sort();
+      if (times.some((t) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(t))) return { error: `${f.label}: one of the times isn't valid.` };
+      return { value: times };
     }
     case "email": {
       const v = String(raw ?? "").trim();

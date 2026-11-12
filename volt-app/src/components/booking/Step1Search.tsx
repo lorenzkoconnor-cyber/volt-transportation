@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { ArrowRight, ArrowLeftRight } from "lucide-react";
 import { type BookingSearch, type FlightInfo, LOCATIONS, flightDirection } from "@/lib/booking";
-import { earliestOnlineDate, localDateString, noticeWords } from "@/lib/format";
+import { localDateString } from "@/lib/format";
+import { earliestOnlineDateFrom, onlineNoticeRule } from "@/lib/settings";
 import { useAppSettings } from "@/context/SettingsContext";
 import FlightFields from "./FlightFields";
 import ChoiceSwitch from "./ChoiceSwitch";
@@ -37,8 +38,10 @@ export default function Step1Search({ initial, onChange, onNext, staff = false }
   const set = (key: keyof BookingSearch, value: string | number | boolean) =>
     setSearch((prev) => ({ ...prev, [key]: value }));
 
-  const { onlineCutoffMinutes, business } = useAppSettings();
-  const today = staff ? localDateString() : earliestOnlineDate(onlineCutoffMinutes);
+  const appSettings = useAppSettings();
+  const { business } = appSettings;
+  // Leaving Columbus, some departures stay bookable online today (settings.alwaysOpen).
+  const today = staff ? localDateString() : earliestOnlineDateFrom(appSettings, search.from);
 
   // Switching flight mode on/off carries the dates already chosen across
   // (travel dates ⇄ flight dates) so the rider doesn't re-enter them.
@@ -105,7 +108,7 @@ export default function Step1Search({ initial, onChange, onNext, staff = false }
     }
     const travelDate = search.hasFlight ? search.outboundFlight.date : search.date;
     if (travelDate && travelDate < today) {
-      setError(`Online bookings need at least ${noticeWords(onlineCutoffMinutes)} notice. To book a trip sooner, call Volt at ${business.phone} and speak with a manager.`);
+      setError(`${onlineNoticeRule(appSettings)}. To book a trip sooner, call Volt at ${business.phone} and speak with a manager.`);
       return;
     }
     if (search.hasFlight) {

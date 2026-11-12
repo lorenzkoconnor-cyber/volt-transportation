@@ -21,8 +21,10 @@ import { queueReviewRequests } from "@/lib/reviews-server";
 //   2. Retries queued texts/emails that failed earlier (src/lib/notifications/queue.ts).
 //   3. Runs the staff-alert scans (src/lib/notifications/alerts.ts).
 //   4. Applies active blackouts to newly generated departures.
-//   5. Emails review requests 2 hours after a rider's first completed leg
-//      (src/lib/reviews-server.ts; one per booking).
+//   5. Sends the thank-you (tip + review) 2 hours after a rider's first
+//      completed leg — email, plus a text with consent (src/lib/reviews-server.ts;
+//      once per booking per channel). Departure statuses (boarding / departed /
+//      completed) advance every minute in the database (migration 038).
 //   6. Records a heartbeat (system_status 'worker') for Settings → Message Health.
 
 function authorized(request: NextRequest): boolean {

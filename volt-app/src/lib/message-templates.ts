@@ -119,13 +119,18 @@ export const TEMPLATES: TemplateInfo[] = [
   },
   {
     key: "review_request",
-    label: "Review request",
-    description: "Emailed 2 hours after a customer's first completed trip leg (turn it off under Settings → Reviews). Email only.",
+    label: "Thank-you: tip & review",
+    description:
+      "Sent 2 hours after a customer's first completed trip leg (turn it off under Settings → Reviews): an email with " +
+      "\"Tip your driver\" and \"Leave a review\" buttons, plus a text to riders who agreed to texts.",
     hasEmail: true,
-    hasSms: false,
-    button: "Leave a review",
-    placeholders: COMMON,
-    sample: SAMPLE_COMMON,
+    button: "Tip your driver” and “Leave a review",
+    placeholders: [
+      ...COMMON,
+      { name: "tip_link", help: "Link to the tip page" },
+      { name: "review_link", help: "Link to the review form" },
+    ],
+    sample: { ...SAMPLE_COMMON, tip_link: "https://volt-transportation.com/tip/…", review_link: "https://volt-transportation.com/review/…" },
   },
 ];
 
@@ -187,11 +192,16 @@ export const DEFAULT_TEMPLATES: Record<TemplateKey, TemplateText> = {
     emailBody: "Hi {name},\n\nThank you for riding with Volt Transportation. Your receipt for {confirmation} is linked below.",
   },
   review_request: {
-    sms: "",
-    emailSubject: "How was your Volt ride, {name}?",
+    sms:
+      "Volt Transportation: Thanks for riding with us, {name}!\n\n" +
+      "Want to thank your driver? Leave a tip: {tip_link}\n\n" +
+      "How was your ride? Leave a review: {review_link}\n\n" +
+      "Reply STOP to opt out.",
+    emailSubject: "Thanks for riding with Volt, {name}!",
     emailBody:
-      "Hi {name},\n\nThanks for riding with Volt Transportation! We'd love to hear how your trip went.\n\n" +
-      "It takes less than a minute, and your review helps other travelers find a reliable ride to and from the airport.\n\n" +
+      "Hi {name},\n\nThanks for riding with Volt Transportation — we hope your trip went smoothly.\n\n" +
+      "If your driver made your day a little easier, you can leave them a tip below. " +
+      "And we'd love to hear how it went: a quick review helps other travelers find a reliable ride to and from the airport.\n\n" +
       "Questions or a problem with your trip? Reply to this email or call us at {phone}.",
   },
 };

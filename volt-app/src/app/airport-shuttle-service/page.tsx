@@ -10,7 +10,7 @@ import {
   ArrowRight, Plane, Users, Shield, Clock, Car, Coffee, Luggage, CalendarCheck, MapPin, Phone,
 } from "lucide-react";
 import { getAppSettings } from "@/lib/settings-server";
-import { dollars, type AppSettings } from "@/lib/settings";
+import { dollars, onlineNoticeRule, type AppSettings } from "@/lib/settings";
 import { displayTime12h } from "@/lib/booking";
 import { aroundTheClock, departureWindow } from "@/lib/site-copy";
 
@@ -97,7 +97,7 @@ const faqFor = (s: AppSettings) => {
     },
     {
       question: "Do I need to book the airport shuttle in advance?",
-      answer: `Booking ahead is the best way to guarantee your seat, since each van carries at most 8 passengers. You can book online up to ${Math.round(s.onlineCutoffMinutes / 60)} hours before departure; for anything sooner, call ${s.business.phone} and speak with a manager.`,
+      answer: `Booking ahead is the best way to guarantee your seat, since each van carries at most 8 passengers. ${onlineNoticeRule(s)}. For anything sooner, call ${s.business.phone} and speak with a manager.`,
     },
   ];
 };

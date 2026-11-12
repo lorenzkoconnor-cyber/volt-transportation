@@ -14,6 +14,7 @@ import { BannerCard } from "@/components/admin/settings/WebsiteCards";
 import { TemplatesCard, HealthCard, HistoryCard } from "@/components/admin/settings/MessageCards";
 import { SquareTerminalsCard } from "@/components/admin/settings/PaymentCards";
 import { formatDuration, displayTime12h } from "@/lib/booking";
+import { DEFAULT_ALWAYS_OPEN_TIMES, DEFAULT_SETTINGS } from "@/lib/settings";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -27,6 +28,21 @@ const TABS = [
   { key: "history", label: "History" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
+
+// Columbus → ATL departure times from the route schedule, for the
+// "Always bookable online" picker.
+function toAtlDepartureOptions(routes: any[] | undefined): { value: string; label: string }[] {
+  const r = (routes ?? []).find((x) => x.origin_key === "columbus");
+  if (!r) return [];
+  const mins = (t: string) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + m; };
+  const step = Number(r.departure_interval_minutes) || 120;
+  const out: { value: string; label: string }[] = [];
+  for (let m = mins(r.first_departure_time); m <= mins(r.last_departure_time); m += step) {
+    const value = `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+    out.push({ value, label: displayTime12h(value) });
+  }
+  return out;
+}
 
 const hrs = (n: unknown) => (Number.isFinite(Number(n)) ? formatDuration(Number(n) * 60) : "");
 
@@ -48,7 +64,14 @@ export default function SettingsPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  const s = data?.settings ?? {};
+  // Before migration 039 the always-bookable columns don't exist: show the defaults the website uses.
+  const s = data?.settings
+    ? {
+      always_open_times: DEFAULT_ALWAYS_OPEN_TIMES,
+      always_open_cutoff_minutes: DEFAULT_SETTINGS.alwaysOpen.cutoffMinutes,
+      ...data.settings,
+    }
+    : {};
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -98,6 +121,12 @@ export default function SettingsPage() {
                   { column: "online_booking_cutoff_minutes", title: "Online booking closes", step: 15,
                     help: "How long before a departure the website stops selling seats on it. Riders are asked to call instead.",
                     suffix: `min before departure · ${formatDuration(Number(s.online_booking_cutoff_minutes) || 0)}` },
+                  { column: "always_open_times", title: "Always bookable online — Columbus → ATL",
+                    help: "Riders can book these departures from Volt Columbus on the website even inside the cutoff above. Tap a time to turn it on or off.",
+                    options: toAtlDepartureOptions(data.routes) },
+                  { column: "always_open_cutoff_minutes", title: "Those times close", step: 15,
+                    help: "How long before departure the website stops selling seats on the times above.",
+                    suffix: `min before departure · ${formatDuration(Number(s.always_open_cutoff_minutes) || 0)}` },
                   { column: "short_notice_hours", title: "Short-notice window",
                     help: "A booking whose first ride leaves within this many hours alerts staff.", suffix: "hours" },
                   { column: "cancellation_fee_cents", title: "Cancellation fee", step: 1,

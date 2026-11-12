@@ -4,6 +4,8 @@ import { smsProvider } from "@/lib/notifications/sms";
 import { isDeliverableEmail, isEmailConfigured, emailHtml } from "@/lib/notifications/email";
 import { enqueue } from "@/lib/notifications/queue";
 import { loadAppSettings } from "@/lib/settings-server";
+import { appUrl } from "@/lib/reservation-messages";
+import { TEMPLATES, mergeTemplate, renderTemplate, type TemplateKey } from "@/lib/message-templates";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -11,6 +13,9 @@ import { loadAppSettings } from "@/lib/settings-server";
 // GET  → is texting/email connected, when the background worker last ran (and
 //        what Supabase got back calling it), and the last day's outbox counts.
 // POST { channel: "sms" | "email" } → send a test to the signed-in employee.
+// POST { channel, template, sms?, emailSubject?, emailBody? } → send a SAMPLE of
+//      that customer message (the wording on screen, or the saved wording),
+//      filled in with sample details, to the signed-in employee.
 
 async function ownerOrManager() {
   const ctx = await requireStaff();
@@ -54,8 +59,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const ctx = await ownerOrManager();
   if (ctx instanceof NextResponse) return ctx;
-  const { channel } = await request.json().catch(() => ({}));
+  const body = await request.json().catch(() => ({}));
+  const { channel } = body;
   const { data: me } = await ctx.sb.from("employees").select("first_name, phone, email").eq("id", ctx.employee.id).maybeSingle();
+  if (body.template) return sendSample(ctx.sb, me, body);
   const when = new Date().toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
 
   if (channel === "sms") {
@@ -75,6 +82,64 @@ export async function POST(request: NextRequest) {
       subject: "Volt test email", text, html: emailHtml("Test email", text, undefined, business),
     }]);
     return NextResponse.json(r.sent ? { ok: true, to: me!.email } : { error: r.error ?? "The email didn't send." }, { status: r.sent ? 200 : 502 });
+  }
+  return NextResponse.json({ error: "Choose text or email." }, { status: 400 });
+}
+
+// ── Sample customer messages (Settings → Message Wording) ────────────────────
+const clip = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : null);
+
+async function sendSample(sb: any, me: any, body: any) {
+  const info = TEMPLATES.find((t) => t.key === body.template);
+  if (!info) return NextResponse.json({ error: "Unknown message." }, { status: 400 });
+  const key = info.key as TemplateKey;
+  const { data: saved } = await sb.from("message_templates").select("*").eq("key", key).maybeSingle();
+  const base = mergeTemplate(key, saved);
+  // The wording on screen (maybe unsaved), else what's saved, else the default.
+  const text = {
+    sms: clip(body.sms, 1600) ?? base.sms,
+    emailSubject: clip(body.emailSubject, 300) ?? base.emailSubject,
+    emailBody: clip(body.emailBody, 5000) ?? base.emailBody,
+  };
+  const settings = await loadAppSettings();
+  const home = appUrl();
+  const vars = {
+    ...info.sample,
+    phone: settings.business.phone,
+    arrive_minutes: String(settings.arriveEarlyMinutes),
+    name: me?.first_name || info.sample.name,
+    // Links in a sample go to the homepage — there's no real booking behind them.
+    ...Object.fromEntries(Object.keys(info.sample).filter((k) => k.endsWith("_link")).map((k) => [k, home])),
+  };
+
+  if (body.channel === "sms") {
+    if (info.hasSms === false) return NextResponse.json({ error: "This message is email only." }, { status: 400 });
+    if (!me?.phone) return NextResponse.json({ error: "Add a phone number to your employee profile first." }, { status: 400 });
+    const sms = renderTemplate(text.sms, vars).trim();
+    if (!sms) return NextResponse.json({ error: "This message has no text wording." }, { status: 400 });
+    const [r] = await enqueue(sb, [{ channel: "sms", audience: "staff", kind: `sample:${key}`, to: me.phone, text: `[Sample] ${sms}` }]);
+    return NextResponse.json(r.sent ? { ok: true, to: me.phone } : { error: r.error ?? "The text didn't send." }, { status: r.sent ? 200 : 502 });
+  }
+
+  if (body.channel === "email") {
+    if (!info.hasEmail) return NextResponse.json({ error: "This message is text only." }, { status: 400 });
+    if (!isDeliverableEmail(me?.email)) return NextResponse.json({ error: "Add an email address to your employee profile first." }, { status: 400 });
+    const subject = renderTemplate(text.emailSubject, vars).trim();
+    const message = renderTemplate(text.emailBody, vars).trim();
+    if (!subject || !message) return NextResponse.json({ error: "This message has no email wording." }, { status: 400 });
+    // Same buttons customers get: reminders have none, the thank-you has two,
+    // everything else links the receipt.
+    const reminder = key === "reminder_first" || key === "reminder_second";
+    const html = key === "review_request"
+      ? emailHtml(subject, message, { label: "Tip your driver", url: home }, settings.business,
+        { text: "", label: "Leave a review", url: home, asButton: true })
+      : emailHtml(subject.split(" — ")[0], message,
+        reminder ? undefined : { label: "View receipt", url: home }, settings.business);
+    const [r] = await enqueue(sb, [{
+      channel: "email", audience: "staff", kind: `sample:${key}`, to: me.email,
+      subject: `[Sample] ${subject}`, text: message, html,
+    }]);
+    return NextResponse.json(r.sent ? { ok: true, to: me.email } : { error: r.error ?? "The email didn't send." }, { status: r.sent ? 200 : 502 });
   }
   return NextResponse.json({ error: "Choose text or email." }, { status: 400 });
 }

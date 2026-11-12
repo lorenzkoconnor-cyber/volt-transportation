@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Heart } from "lucide-react";
+import { CheckCircle2, Heart, Star } from "lucide-react";
 import TipPicker from "@/components/booking/TipPicker";
 import QuickCardPay from "@/components/booking/QuickCardPay";
 import { formatCents } from "@/lib/format";
@@ -25,6 +25,10 @@ export default function TipForm({ token, page }: { token: string; page: TipPage 
         <CheckCircle2 className="w-12 h-12 text-[#FCC300] mx-auto" />
         <h1 className="text-2xl font-bold text-white">Thank you{page.firstName ? `, ${page.firstName}` : ""}!</h1>
         <p className="text-[#A1A1AA]">Your {formatCents(paid)} tip has been received. We&apos;ll pass your thanks along.</p>
+        <a href={`/review/${token}`}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] font-semibold px-5 py-2.5 transition-colors">
+          <Star className="w-4 h-4" /> How was your ride? Leave a review
+        </a>
       </div>
     );
   }
@@ -47,6 +51,7 @@ export default function TipForm({ token, page }: { token: string; page: TipPage 
         <QuickCardPay
           amountCents={cents}
           label={`Tip ${formatCents(cents)}`}
+          walletButton="tip"
           blockedReason={cents < MIN_SEPARATE_TIP_CENTS ? "Tips start at $1." : null}
           prepare={() => post({ action: "start", token, cents })}
           onPaid={async (paymentIntentId) => {
