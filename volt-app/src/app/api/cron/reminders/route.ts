@@ -9,6 +9,7 @@ import { enforceBlackouts } from "@/lib/blackouts";
 import { reminderMessage } from "@/lib/reservation-messages";
 import { loadAppSettings } from "@/lib/settings-server";
 import { queueReviewRequests } from "@/lib/reviews-server";
+import { scanRunAlerts } from "@/lib/driver-runs-server";
 
 // POST /api/cron/reminders — the background worker. Called every 10 minutes by
 // Supabase pg_cron (migration 019) with "Authorization: Bearer <CRON_SECRET>".
@@ -57,7 +58,13 @@ export async function POST(request: NextRequest) {
     return "error";
   });
 
-  const result = { reminders, staffReminders, queue, alerts, blackouts, reviews };
+  // Vans late leaving, overdue at ATL, or waiting too long at the curb (driver runs, migration 040).
+  const driverRuns = await scanRunAlerts(sb).catch((err) => {
+    console.error("[cron] driver runs", err);
+    return "error";
+  });
+
+  const result = { reminders, staffReminders, queue, alerts, blackouts, reviews, driverRuns };
   await sb.from("system_status").upsert({ key: "worker", value: result, updated_at: new Date().toISOString() });
   return NextResponse.json(result);
 }

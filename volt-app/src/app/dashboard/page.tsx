@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { canViewFinancials, canAccessRoute } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
@@ -41,6 +42,9 @@ interface DashReservation {
 export default function AdminDashboardPage() {
   const { employee, loading: authLoading } = useAuth();
   const role = useDashboardRole();
+  const router = useRouter();
+  // Drivers start on their own trips.
+  useEffect(() => { if (role === "driver") router.replace("/dashboard/my-trips"); }, [role, router]);
   const showMoney = canViewFinancials(role);
   // Stat cards link to their detail page, but only for roles allowed to open it.
   const linkIfAllowed = (href: string) => (canAccessRoute(href.split("?")[0], role) ? href : undefined);

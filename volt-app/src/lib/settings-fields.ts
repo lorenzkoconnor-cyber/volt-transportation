@@ -52,6 +52,13 @@ export const SETTINGS_FIELDS: FieldDef[] = [
   // Reviews
   { column: "review_requests_enabled", label: "Review request emails on", kind: "bool" },
   { column: "google_review_url", label: "Google review link", kind: "url", maxLength: 300 },
+  // Driver trips & ATL pickups (migration 040)
+  { column: "atl_wait_minutes", label: "Driver can mark a no-show after (minutes)", kind: "int", min: 5, max: 60 },
+  { column: "atl_wait_max_minutes", label: "Office is alerted after waiting (minutes)", kind: "int", min: 5, max: 90 },
+  { column: "driver_max_shift_hours", label: "Driver shift limit (hours)", kind: "int", min: 4, max: 16 },
+  { column: "atl_spot_domestic_south", label: "Pickup spot: Domestic South", kind: "text", maxLength: 300 },
+  { column: "atl_spot_domestic_north", label: "Pickup spot: Domestic North", kind: "text", maxLength: 300 },
+  { column: "atl_spot_international", label: "Pickup spot: International", kind: "text", maxLength: 300 },
   // Flight matching (existing)
   { column: "depart_min_buffer_minutes", label: "Flying out: at least (min before flight)", kind: "int", min: 0, max: 720 },
   { column: "depart_max_buffer_minutes", label: "Flying out: at most (min before flight)", kind: "int", min: 0, max: 720 },
@@ -130,6 +137,9 @@ export function crossFieldError(s: Record<string, unknown>): string | null {
   const n = (k: string) => Number(s[k]);
   if (n("depart_max_buffer_minutes") <= n("depart_min_buffer_minutes")) return "For departing flights, the latest arrival must be more than the earliest.";
   if (n("arrive_max_wait_minutes") <= n("arrive_min_wait_minutes")) return "For arriving flights, the longest wait must be more than the shortest.";
+  if (s.atl_wait_minutes != null && s.atl_wait_max_minutes != null && n("atl_wait_max_minutes") < n("atl_wait_minutes")) {
+    return "The office alert time can't be shorter than the no-show time.";
+  }
   if (s.reminder_first_enabled && s.reminder_second_enabled && n("reminder_second_hours") >= n("reminder_first_hours")) {
     return "The second reminder must be closer to departure than the first.";
   }

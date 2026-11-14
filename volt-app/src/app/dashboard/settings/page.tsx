@@ -13,6 +13,7 @@ import { ScheduleCard, BlackoutsCard } from "@/components/admin/settings/Schedul
 import { BannerCard } from "@/components/admin/settings/WebsiteCards";
 import { TemplatesCard, HealthCard, HistoryCard } from "@/components/admin/settings/MessageCards";
 import { SquareTerminalsCard } from "@/components/admin/settings/PaymentCards";
+import { DriverTripsCard } from "@/components/admin/settings/DriverTripsCard";
 import { formatDuration, displayTime12h } from "@/lib/booking";
 import { DEFAULT_ALWAYS_OPEN_TIMES, DEFAULT_SETTINGS } from "@/lib/settings";
 
@@ -159,6 +160,7 @@ export default function SettingsPage() {
               <BlackoutsCard blackouts={data.blackouts} onSaved={load} />
               <VanSizeCard settings={s} onSaved={load} />
               <RouteTimingCard settings={s} routes={data.routes} onSaved={load} />
+              <DriverTripsCard settings={s} onSaved={load} />
             </>
           )}
 

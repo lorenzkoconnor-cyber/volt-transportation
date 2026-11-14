@@ -24,6 +24,7 @@ import {
   Star,
   QrCode,
   Contact,
+  Route,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",             label: "Dashboard",     icon: LayoutDashboard, roles: ["owner","manager","office_staff","driver"] },
+  { href: "/dashboard/my-trips",    label: "My Trips",      icon: Route,           roles: ["owner","manager","driver"] },
   { href: "/dashboard/calendar",    label: "Calendar",      icon: CalendarRange,   roles: ["owner","manager","office_staff","driver"] },
   { href: "/dashboard/reservations",label: "Reservations",  icon: CalendarDays,    roles: ["owner","manager","office_staff"] },
   { href: "/dashboard/customers",   label: "Customers",     icon: Contact,         roles: ["owner","manager"] },

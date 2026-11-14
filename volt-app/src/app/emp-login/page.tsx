@@ -90,7 +90,7 @@ export default function EmpLoginPage() {
 
           {idleNotice && !error && (
             <div className="mb-4 p-3 rounded-xl bg-[#FCC300]/10 border border-[#FCC300]/20">
-              <p className="text-[#FFE08A] text-sm">You were signed out after 15 minutes of inactivity. Sign in again to continue.</p>
+              <p className="text-[#FFE08A] text-sm">You were signed out after 2 hours 15 minutes of inactivity. Sign in again to continue.</p>
             </div>
           )}
 

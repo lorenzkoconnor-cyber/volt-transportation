@@ -23,7 +23,7 @@ export interface SMSResult {
 
 const set = (v: string | undefined) => !!v && v.length > 8 && !v.includes("placeholder") && !v.includes("your-");
 
-function isRingCentralConfigured(): boolean {
+export function isRingCentralConfigured(): boolean {
   const from = process.env.RINGCENTRAL_FROM_NUMBER ?? "";
   return (
     set(process.env.RINGCENTRAL_CLIENT_ID) &&
@@ -148,6 +148,37 @@ async function sendViaTwilio(e164: string, message: string): Promise<SMSResult> 
     const error = err instanceof Error ? err.message : String(err);
     console.error(`❌ SMS failed to ${e164}:`, error);
     return { success: false, error };
+  }
+}
+
+// ── Calls through Volt's number (RingCentral RingOut) ────────────────────────
+// Rings `driverPhone` first; when the driver picks up, RingCentral dials the
+// rider and shows Volt's number as caller ID. Neither side sees the other's
+// personal number.
+export async function callThroughVolt(driverPhone: string, riderPhone: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isRingCentralConfigured()) return { ok: false, error: "Calling through Volt's number isn't set up yet." };
+  try {
+    const body = JSON.stringify({
+      from: { phoneNumber: toE164(driverPhone) },
+      to: { phoneNumber: toE164(riderPhone) },
+      callerId: { phoneNumber: process.env.RINGCENTRAL_FROM_NUMBER },
+      playPrompt: false,
+    });
+    const call = async () =>
+      fetch(`${rcServer()}/restapi/v1.0/account/~/extension/~/ring-out`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${await ringCentralToken()}`, "Content-Type": "application/json" },
+        body,
+      });
+    let res = await call();
+    if (res.status === 401) { rcToken = null; res = await call(); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message ?? `RingCentral error ${res.status}`);
+    return { ok: true };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    console.error("❌ RingOut failed:", error);
+    return { ok: false, error };
   }
 }
 

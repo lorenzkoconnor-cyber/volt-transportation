@@ -43,6 +43,11 @@ export const ALERT_TYPES = [
     label: "Customer message failed",
     description: "A text or email to a customer still failed after every retry.",
   },
+  {
+    type: "driver_run",
+    label: "Problems on a driver's trip",
+    description: "A van hasn't left on time or is overdue at ATL, a long wait at the curb, a no-show, or a rider says their flight is late or they can't make the ride.",
+  },
 ] as const;
 
 export type AlertType = (typeof ALERT_TYPES)[number]["type"];

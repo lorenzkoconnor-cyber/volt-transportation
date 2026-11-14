@@ -7,6 +7,7 @@ import { TrendingUp, Users, Truck, DollarSign, Loader2, Download, HeartHandshake
 import StatCard from "@/components/admin/StatCard";
 import HowRidersFoundUsCard from "@/components/admin/HowRidersFoundUsCard";
 import BookingTimesCard from "@/components/admin/BookingTimesCard";
+import OnTimeCard from "@/components/admin/OnTimeCard";
 import { useAppSettings } from "@/context/SettingsContext";
 import { DONATION_PARTNER } from "@/lib/military";
 import { dollars, snapshotPricing } from "@/lib/settings";
@@ -213,6 +214,8 @@ export default function ReportsPage() {
       <HowRidersFoundUsCard days={PERIOD_DAYS[period]} />
 
       <BookingTimesCard />
+
+      <OnTimeCard days={PERIOD_DAYS[period]} />
 
       {/* Military discount + giving back */}
       <div className="glass rounded-2xl overflow-hidden">

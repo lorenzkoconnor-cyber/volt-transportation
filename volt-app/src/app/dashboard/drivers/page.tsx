@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { localDateString } from "@/lib/format";
-import { Plus, Phone, Mail, CheckCircle2, XCircle, X, Loader2, AlertCircle, Trash2 } from "lucide-react";
+import { Plus, Phone, Mail, CheckCircle2, XCircle, X, Loader2, AlertCircle, Trash2, Camera, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,8 @@ export default function DriversPage() {
   const [formError, setFormError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [logins, setLogins] = useState<any[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data, error: err } = await sb
@@ -46,6 +48,9 @@ export default function DriversPage() {
       .order("created_at");
     if (err) setError(err.message);
     setDrivers(data ?? []);
+    // Driver-role logins, to connect each driver profile to the person who signs in (My Trips).
+    const { data: emps } = await sb.from("employees").select("id, first_name, last_name, email").eq("role", "driver").eq("is_active", true);
+    setLogins(emps ?? []);
 
     // Trips assigned this week per driver
     const weekStart = new Date();
@@ -142,6 +147,29 @@ export default function DriversPage() {
 
   const inputCls = "bg-white/5 border-white/10 text-white placeholder:text-[#A1A1AA]/40 h-10 rounded-xl focus:border-[#FCC300]";
 
+  const uploadPhoto = async (driverId: string, file: File | undefined) => {
+    if (!file) return;
+    setUploading(driverId);
+    setError("");
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("kind", "driver");
+    fd.append("driverId", driverId);
+    const res = await fetch("/api/driver-runs/photo", { method: "POST", body: fd });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) setError(json.error ?? "Upload failed.");
+    await load();
+    setUploading(null);
+  };
+
+  const linkLogin = async (driverId: string, employeeId: string) => {
+    setError("");
+    if (employeeId) await sb.from("drivers").update({ employee_id: null }).eq("employee_id", employeeId);
+    const { error: err } = await sb.from("drivers").update({ employee_id: employeeId || null }).eq("id", driverId);
+    if (err) setError(err.message);
+    await load();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -174,9 +202,17 @@ export default function DriversPage() {
             <div key={d.id} className="glass rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between p-5 border-b border-white/8">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-white font-bold">
-                    {d.first_name[0]}{d.last_name[0]}
-                  </div>
+                  <label className="relative w-12 h-12 rounded-full bg-[#FCC300]/20 flex items-center justify-center text-white font-bold cursor-pointer overflow-hidden group" title="Upload photo (riders see it on their tracking page)">
+                    {d.photo_url
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={d.photo_url} alt="" className="w-full h-full object-cover" />
+                      : <>{d.first_name[0]}{d.last_name[0]}</>}
+                    <span className="absolute inset-0 bg-black/60 hidden group-hover:flex items-center justify-center">
+                      {uploading === d.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                    </span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                      onChange={(e) => uploadPhoto(d.id, e.target.files?.[0])} />
+                  </label>
                   <div>
                     <div className="text-white font-bold">{d.first_name} {d.last_name}</div>
                     <div className="text-[#A1A1AA] text-xs">Driver</div>
@@ -209,6 +245,17 @@ export default function DriversPage() {
                       <Mail className="w-3.5 h-3.5 text-[#FCC300]" />{d.email}
                     </a>
                   )}
+                </div>
+                <div className="space-y-1">
+                  <div className="text-[#A1A1AA] text-xs flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5 text-[#FCC300]" /> Signs in to My Trips as</div>
+                  <select value={d.employee_id ?? ""} onChange={(e) => linkLogin(d.id, e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-2 py-2 focus:outline-none focus:border-[#FCC300]">
+                    <option value="" className="bg-[#171717]">Not connected</option>
+                    {logins.map((e) => (
+                      <option key={e.id} value={e.id} className="bg-[#171717]">{e.first_name} {e.last_name} ({e.email})</option>
+                    ))}
+                  </select>
+                  {!d.photo_url && <p className="text-[#71717A] text-xs">Tap the initials to add a photo. Riders see it when you&apos;re on the way.</p>}
                 </div>
                 <div className="flex gap-2 pt-1">
                   <Button variant="outline" size="sm" onClick={() => openForm(d)}

@@ -1,6 +1,7 @@
 "use client";
 
-// Signs staff out after 15 minutes without any activity. Two minutes before,
+// Signs staff out after 2 hours 15 minutes without any activity (owner,
+// 2026-11-13; was 15 minutes). Five minutes before,
 // a warning counts down; only "Keep Using" dismisses it (moving the mouse
 // doesn't), so someone walking past an unattended screen can't keep it open by
 // accident. Last activity is shared across tabs through localStorage, so
@@ -12,8 +13,8 @@ import { useAuth } from "@/context/AuthContext";
 import { Clock } from "lucide-react";
 import { IDLE_SIGNOUT_FLAG, readIdleClock, writeIdleClock } from "@/lib/idle-clock";
 
-const IDLE_LIMIT_MS = 15 * 60 * 1000;
-const WARNING_MS = 2 * 60 * 1000;
+const IDLE_LIMIT_MS = (2 * 60 + 15) * 60 * 1000;
+const WARNING_MS = 5 * 60 * 1000;
 const ACTIVITY_EVENTS = ["pointerdown", "pointermove", "keydown", "scroll", "touchstart", "wheel"] as const;
 
 export default function IdleSignOut() {

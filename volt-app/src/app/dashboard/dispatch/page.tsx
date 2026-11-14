@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import LiveBoard from "@/components/admin/LiveBoard";
 
 const HALF_HOUR = /^([01]\d|2[0-3]):(00|30)$/;
 
@@ -40,7 +41,9 @@ const STATUS_MAP: Record<string, { label: string; class: string }> = {
 export default function DispatchPage() {
   const supabase = createClient();
   const sb = supabase as any;
-  const { isOwner, isManager } = useAuth();
+  const { isOwner, isManager, isDriver } = useAuth();
+  // Office staff, managers and owners pick the driver and van; drivers just see it.
+  const canAssign = !isDriver;
   // Adding departures and changing their time, seats or privacy: owners & managers only.
   const canSchedule = isOwner || isManager;
 
@@ -263,6 +266,9 @@ export default function DispatchPage() {
         </div>
       )}
 
+      {/* Live board: where each van is right now (today only, office) */}
+      {canAssign && date === localDateString() && <LiveBoard />}
+
       {/* Dispatch cards */}
       {loading ? (
         <div className="glass rounded-2xl p-16 flex justify-center">
@@ -379,7 +385,7 @@ export default function DispatchPage() {
                           <span className="text-white text-sm font-medium">{a.vehicle?.name ?? "—"}</span>
                           <select
                             value={a.driver_id ?? ""}
-                            disabled={busy}
+                            disabled={busy || !canAssign}
                             onChange={(e) => changeAssignmentDriver(a.id, e.target.value)}
                             className="bg-white/5 border border-white/10 text-[#A1A1AA] text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-[#FCC300]"
                           >
@@ -403,36 +409,36 @@ export default function DispatchPage() {
                               {dep.seats_booked}/{dep.total_capacity}
                             </span>
                           </div>
-                          <button
+                          {canAssign && <button
                             onClick={() => removeAssignment(a.id)}
                             disabled={busy}
                             className="text-[#A1A1AA] hover:text-red-400 transition-colors"
                             title="Remove vehicle"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          </button>}
                         </div>
                       </div>
                     ))}
-                    <div className="px-5 py-2.5">
+                    {canAssign && <div className="px-5 py-2.5">
                       <button
                         onClick={() => { setAssignTrip(dep); setAssignVehicleId(vehicles[0]?.id ?? ""); setAssignDriverId(""); }}
                         className="flex items-center gap-1 text-[#FCC300] hover:text-[#FFD54A] text-xs font-medium transition-colors"
                       >
                         <Plus className="w-3.5 h-3.5" /> Add another vehicle
                       </button>
-                    </div>
+                    </div>}
                   </div>
                 ) : (
                   <div className="px-5 py-3 flex items-center justify-between">
                     <span className="text-[#A1A1AA] text-sm italic">
                       {dep.seats_booked > 0 ? `${dep.seats_booked} passengers · No vehicle assigned` : "No passengers booked · No vehicles assigned"}
                     </span>
-                    <Button variant="ghost" size="sm" disabled={busy}
+                    {canAssign && <Button variant="ghost" size="sm" disabled={busy}
                       onClick={() => { setAssignTrip(dep); setAssignVehicleId(vehicles[0]?.id ?? ""); setAssignDriverId(""); }}
                       className="text-[#FCC300] hover:text-[#FFD54A] hover:bg-[#FCC300]/10 text-xs">
                       Assign Vehicle
-                    </Button>
+                    </Button>}
                   </div>
                 )}
               </div>
