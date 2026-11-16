@@ -7,20 +7,25 @@ import { useAuth } from "@/context/AuthContext";
 import { canViewFinancials, canAccessRoute } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
 import { createClient } from "@/lib/supabase/client";
-import { formatTime12h, formatCents, formatDateShort, localDateString } from "@/lib/format";
+import { formatCents, formatDateShort, localDateString } from "@/lib/format";
 import StatCard from "@/components/admin/StatCard";
 import {
   Users, DollarSign, Truck, CalendarDays,
   ArrowRight, Clock, MapPin, CheckCircle2, AlertCircle, Loader2, Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TripTime, HouseTag } from "@/components/admin/TripTags";
+import { loadHouseStops } from "@/lib/house-stops";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Today's Trip Revenue / Passengers cards open the reservations on today's trips.
 const TODAY_RESERVATIONS = "/dashboard/reservations?day=today";
 
 interface DashTrip {
   id: string;
-  time: string;
+  trip: any;           // for <TripTime>
+  houseStops: number;
   route: string;
   passengers: number;
   capacity: number;
@@ -34,6 +39,9 @@ interface DashReservation {
   name: string;
   route: string;
   date: string;
+  trip: any;
+  housePickup: boolean;
+  houseDropoff: boolean;
   total: string;
   status: string;
   paymentStatus: string | null;
@@ -79,8 +87,8 @@ export default function AdminDashboardPage() {
         // Today's trips with any bookings + their vehicle/driver assignments
         sb.from("trips")
           .select(
-            "id, departure_time, total_capacity, seats_booked, status, " +
-            "route:routes(name), " +
+            "id, departure_date, departure_time, total_capacity, seats_booked, status, " +
+            "route:routes(name, origin_key, duration_minutes), " +
             "trip_vehicles(vehicle:vehicles(name), driver:drivers(first_name, last_name))"
           )
           .eq("departure_date", todayStr)
@@ -94,9 +102,9 @@ export default function AdminDashboardPage() {
         // Latest bookings
         sb.from("reservations")
           .select(
-            "id, status, total_cents, created_at, " +
+            "id, status, total_cents, created_at, pickup_address, dropoff_address, " +
             "customer:customers(first_name, last_name), " +
-            "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, route:routes(name)), " +
+            "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, route:routes(name, origin_key, duration_minutes)), " +
             "payments(status)"
           )
           .is("deleted_at", null)
@@ -112,6 +120,8 @@ export default function AdminDashboardPage() {
       ]);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const house = await loadHouseStops(sb, (tripsRes.data ?? []).map((t: any) => t.id));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setTrips((tripsRes.data ?? []).map((t: any) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const drivers = (t.trip_vehicles ?? [])
@@ -120,7 +130,8 @@ export default function AdminDashboardPage() {
           .filter(Boolean);
         return {
           id: t.id,
-          time: formatTime12h(t.departure_time),
+          trip: t,
+          houseStops: (house[t.id]?.pickups ?? 0) + (house[t.id]?.dropoffs ?? 0),
           route: t.route?.name ?? "—",
           passengers: t.seats_booked,
           capacity: t.total_capacity,
@@ -142,7 +153,10 @@ export default function AdminDashboardPage() {
         id: r.id,
         name: r.customer ? `${r.customer.first_name} ${r.customer.last_name[0]}.` : "—",
         route: r.trip?.route?.name ?? "—",
-        date: r.trip ? `${formatDateShort(r.trip.departure_date)} · ${formatTime12h(r.trip.departure_time)}` : "—",
+        date: r.trip ? formatDateShort(r.trip.departure_date) : "—",
+        trip: r.trip,
+        housePickup: !!r.pickup_address,
+        houseDropoff: !!r.dropoff_address,
         total: formatCents(r.total_cents),
         status: r.status,
         // A split booking has several payments — show "pending" until all are in.
@@ -236,8 +250,9 @@ export default function AdminDashboardPage() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-white font-semibold text-sm">{trip.time}</span>
+                          <TripTime trip={trip.trip} className="text-white font-semibold text-sm" />
                           <span className="text-[#A1A1AA] text-sm truncate">{trip.route}</span>
+                          <HouseTag count={trip.houseStops} />
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-[#A1A1AA] flex-wrap">
                           <span className="flex items-center gap-1">
@@ -308,7 +323,10 @@ export default function AdminDashboardPage() {
                     <div className="min-w-0">
                       <div className="text-white text-sm font-medium truncate">{r.name}</div>
                       <div className="text-[#A1A1AA] text-xs truncate">{r.route}</div>
-                      <div className="text-[#A1A1AA] text-xs">{r.date}</div>
+                      <div className="text-[#A1A1AA] text-xs">
+                        {r.date}{r.trip && <> · <TripTime trip={r.trip} /></>}
+                      </div>
+                      {(r.housePickup || r.houseDropoff) && <HouseTag pickup={r.housePickup} dropoff={r.houseDropoff} className="mt-1" />}
                     </div>
                     <div className="text-right flex-shrink-0">
                       {showMoney && <div className="text-white font-semibold text-sm">{r.total}</div>}

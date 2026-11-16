@@ -150,8 +150,12 @@ export function groupByDay(items: CalendarItem[]): Map<string, CalendarItem[]> {
     list.push(it);
     map.set(it.date, list);
   }
+  // Trips sort by when the van leaves Volt (the time each card leads with);
+  // one that leaves the day before comes first. All-day events stay on top.
+  const key = (it: CalendarItem) =>
+    it.type === "staff" ? it.time ?? "" : `${it.leaveVolt.date < it.date ? "!" : ""}${it.leaveVolt.time}`;
   for (const list of map.values()) {
-    list.sort((a, b) => (a.time ?? "") .localeCompare(b.time ?? ""));
+    list.sort((a, b) => key(a).localeCompare(key(b)));
   }
   return map;
 }

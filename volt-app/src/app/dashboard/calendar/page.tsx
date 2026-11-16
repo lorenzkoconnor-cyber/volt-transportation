@@ -13,10 +13,12 @@ import {
   type CalendarItem, type TripItem, type StaffItem,
 } from "@/lib/calendar";
 import { CalendarEventModal } from "@/components/admin/CalendarEventModal";
+import { HouseTag } from "@/components/admin/TripTags";
+import { houseStopsForTrip, loadHouseStops, type HouseStops } from "@/lib/house-stops";
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, Plus, Loader2, AlertTriangle, Truck, Plane, Sparkles, Wrench, Users2,
-  ClipboardList, StickyNote, ChevronDown, Pencil, Radio,
+  ClipboardList, StickyNote, ChevronDown, Pencil, Radio, Home,
 } from "lucide-react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -62,6 +64,9 @@ export default function CalendarPage() {
   const [monthAnchor, setMonthAnchor] = useState(today);
   const [selected, setSelected] = useState(today);
   const [items, setItems] = useState<CalendarItem[]>([]);
+  // House (door-to-door) stops per trip id.
+  const [house, setHouse] = useState<Record<string, HouseStops>>({});
+  const houseCount = (id: string) => (house[id]?.pickups ?? 0) + (house[id]?.dropoffs ?? 0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [live, setLive] = useState(false);
@@ -99,6 +104,7 @@ export default function CalendarPage() {
         ...(tripsRes.data ?? []).map((t: any) => tripItem(t, settings.schedule.toAtl.durationMinutes)),
         ...(eventsRes.data ?? []).map(staffItem),
       ]);
+      setHouse(await loadHouseStops(sb, (tripsRes.data ?? []).map((t: any) => t.id)).catch(() => ({})));
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,6 +124,7 @@ export default function CalendarPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "calendar_events" }, soon)
       .on("postgres_changes", { event: "*", schema: "public", table: "trips" }, soon)
       .on("postgres_changes", { event: "*", schema: "public", table: "trip_vehicles" }, soon)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, soon)
       .subscribe((status: string) => setLive(status === "SUBSCRIBED"));
     const poll = setInterval(() => loadRef.current(), 120_000);
     const onFocus = () => { if (document.visibilityState === "visible") loadRef.current(); };
@@ -232,24 +239,33 @@ export default function CalendarPage() {
                     return (
                       <button key={it.id} onClick={() => openItem(it)}
                         className={`w-full text-left rounded-lg px-2 py-1.5 ${s.card} hover:brightness-110 transition`}>
-                        <div className="flex items-center gap-1.5">
-                          <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span className="text-sm font-semibold tabular-nums">{it.time ? formatTime12h(it.time) : "All day"}</span>
-                        </div>
                         {it.type === "staff" ? (
                           <>
+                            <div className="flex items-center gap-1.5">
+                              <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="text-sm font-semibold tabular-nums">{it.time ? formatTime12h(it.time) : "All day"}</span>
+                            </div>
                             <div className="text-xs font-medium leading-snug">{it.title}</div>
                             <div className={`text-[11px] ${s.sub}`}>{categoryLabel(it.category)}</div>
                           </>
                         ) : (
                           <>
-                            <div className="text-xs font-medium leading-snug">{it.type === "departure" ? "Depart from Volt" : "Pick up at ATL"}</div>
-                            <div className={`text-[11px] leading-snug ${s.sub}`}>
-                              {it.passengers} passenger{it.passengers !== 1 ? "s" : ""}
-                              {it.type === "pickup"
-                                ? ` · leave Volt ${formatTime12h(it.leaveVolt.time)}`
-                                : ` · ATL ~${formatTime12h(it.atAtl.time)}`}
+                            {/* Leave Volt first, then the ATL time — each labeled */}
+                            {it.leaveVolt.date < it.date && <div className={`text-[10px] font-semibold leading-none ${s.sub}`}>(Day before)</div>}
+                            <div className="flex items-center gap-1.5">
+                              <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="text-sm font-semibold tabular-nums">{formatTime12h(it.leaveVolt.time)}</span>
                             </div>
+                            <div className="text-xs font-medium leading-snug">Leave Volt</div>
+                            <div className="mt-1 pt-1 border-t border-white/25">
+                              <span className="text-sm font-semibold tabular-nums">{formatTime12h(it.atAtl.time)}</span>
+                              {it.atAtl.date > it.date && <span className={`text-[10px] ${s.sub}`}> (next day)</span>}
+                            </div>
+                            <div className="text-xs font-medium leading-snug">{it.type === "departure" ? "Drop off at ATL" : "Pick up at ATL"}</div>
+                            <div className={`text-[11px] leading-snug mt-0.5 ${s.sub}`}>
+                              {it.passengers} passenger{it.passengers !== 1 ? "s" : ""}
+                            </div>
+                            {houseCount(it.id) > 0 && <HouseTag count={houseCount(it.id)} solid className="mt-1" />}
                           </>
                         )}
                       </button>
@@ -288,6 +304,7 @@ export default function CalendarPage() {
               const dep = list.filter((i) => i.type === "departure").length;
               const pu = list.filter((i) => i.type === "pickup").length;
               const st = list.filter((i) => i.type === "staff").length;
+              const hs = list.reduce((n, i) => n + (i.type === "staff" ? 0 : houseCount(i.id)), 0);
               const inMonth = d.slice(0, 7) === monthAnchor.slice(0, 7);
               const isSel = d === selected;
               const isToday = d === today;
@@ -301,6 +318,7 @@ export default function CalendarPage() {
                     {dep > 0 && <div className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full flex-shrink-0 ${STYLE.departure.dot}`} />{dep}<span className="hidden md:inline"> depart{dep !== 1 ? "s" : ""}</span></div>}
                     {pu > 0 && <div className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full flex-shrink-0 ${STYLE.pickup.dot}`} />{pu}<span className="hidden md:inline"> pickup{pu !== 1 ? "s" : ""}</span></div>}
                     {st > 0 && <div className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full flex-shrink-0 ${STYLE.staff.dot}`} />{st}<span className="hidden md:inline"> task{st !== 1 ? "s" : ""}</span></div>}
+                    {hs > 0 && <div className="flex items-center gap-1 text-orange-300 font-semibold"><Home className="w-2.5 h-2.5 flex-shrink-0" />{hs}<span className="hidden md:inline"> house</span></div>}
                   </div>
                 </button>
               );
@@ -327,7 +345,7 @@ export default function CalendarPage() {
             {dayItems.map((it) =>
               it.type === "staff"
                 ? <StaffRow key={it.id} item={it} canEdit={canEdit} onEdit={() => setModal({ event: it, date: it.date })} />
-                : <TripRow key={it.id} item={it} open={expanded === it.id} canOpenBookings={canOpenBookings}
+                : <TripRow key={it.id} item={it} houseStops={houseCount(it.id)} open={expanded === it.id} canOpenBookings={canOpenBookings}
                     onToggle={() => setExpanded(expanded === it.id ? null : it.id)} />
             )}
           </div>
@@ -372,8 +390,8 @@ function StaffRow({ item, canEdit, onEdit }: { item: StaffItem; canEdit: boolean
   );
 }
 
-function TripRow({ item, open, onToggle, canOpenBookings }: {
-  item: TripItem; open: boolean; onToggle: () => void; canOpenBookings: boolean;
+function TripRow({ item, houseStops, open, onToggle, canOpenBookings }: {
+  item: TripItem; houseStops: number; open: boolean; onToggle: () => void; canOpenBookings: boolean;
 }) {
   const isPickup = item.type === "pickup";
   const Icon = isPickup ? Plane : Truck;
@@ -384,17 +402,22 @@ function TripRow({ item, open, onToggle, canOpenBookings }: {
           <Icon className="w-4 h-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-white font-semibold">
-            {formatTime12h(item.time)} · {isPickup ? "Pick up at ATL" : "Depart from Volt"}
-          </div>
-          <div className="text-[#D4D4D8] text-sm">
-            {isPickup
-              ? <>Leave Volt by <b className="text-white">{formatTime12h(item.leaveVolt.time)}</b>{item.leaveVolt.date !== item.date && " (day before)"} · back ~{formatTime12h(item.backAtVolt!.time)}</>
-              : <>Drop off at ATL ~<b className="text-white">{formatTime12h(item.atAtl.time)}</b>{item.atAtl.date !== item.date && " (next day)"}</>}
+          {/* Both times, each with its label: leave Volt | at ATL */}
+          <div className="flex flex-wrap items-end gap-x-3 gap-y-1 text-white font-semibold">
+            <span className="flex flex-col">
+              {item.leaveVolt.date < item.date && <span className="text-[11px] font-medium text-[#FCC300] leading-none mb-0.5">(Day before)</span>}
+              <span>{formatTime12h(item.leaveVolt.time)} · Leave Volt</span>
+            </span>
+            <span className="text-[#52525B] font-normal" aria-hidden>|</span>
+            <span className="flex flex-col">
+              {item.atAtl.date > item.date && <span className="text-[11px] font-medium text-[#FCC300] leading-none mb-0.5">(Next day)</span>}
+              <span>{formatTime12h(item.atAtl.time)} · {isPickup ? "Pick up at ATL" : "Drop off at ATL"}</span>
+            </span>
           </div>
           <div className="text-[#A1A1AA] text-xs mt-0.5">
             {item.passengers}/{item.capacity} passengers · {vanLine(item)}
           </div>
+          {houseStops > 0 && <HouseTag count={houseStops} className="mt-1.5" />}
         </div>
         <ChevronDown className={`w-4 h-4 text-[#A1A1AA] mt-1 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -414,7 +437,7 @@ function TripRiders({ item, canOpenBookings }: { item: TripItem; canOpenBookings
     (createClient() as any)
       .from("reservations")
       .select(
-        "id, confirmation_number, adults, children, status, trip_id, return_trip_id, " +
+        "id, confirmation_number, adults, children, status, trip_id, return_trip_id, is_round_trip, pickup_address, dropoff_address, " +
         "customer:customers(first_name, last_name, phone), " +
         "reservation_flights(leg, airline, flight_number, terminal, flight_date, flight_time)"
       )
@@ -435,7 +458,8 @@ function TripRiders({ item, canOpenBookings }: { item: TripItem; canOpenBookings
   const riders = rows.map((r) => {
     const leg = r.trip_id === item.id ? "outbound" : "return";
     const flight = (r.reservation_flights ?? []).find((f: any) => f.leg === leg) ?? null;
-    return { r, flight, spot: atlSpot(flight?.terminal) };
+    const h = houseStopsForTrip(item.id, r);
+    return { r, flight, spot: atlSpot(flight?.terminal), pickupAt: h.pickups ? r.pickup_address : "", dropoffAt: h.dropoffs ? r.dropoff_address : "" };
   });
   const spots = new Map<string, number>();
   for (const x of riders) {
@@ -458,7 +482,7 @@ function TripRiders({ item, canOpenBookings }: { item: TripItem; canOpenBookings
         </div>
       )}
       <ul className="space-y-2">
-        {riders.map(({ r, flight, spot }) => {
+        {riders.map(({ r, flight, spot, pickupAt, dropoffAt }) => {
           const name = `${r.customer?.first_name ?? ""} ${r.customer?.last_name ?? ""}`.trim() || "Customer";
           const party = r.adults + r.children;
           return (
@@ -475,6 +499,12 @@ function TripRiders({ item, canOpenBookings }: { item: TripItem; canOpenBookings
                   : "No flight given"}
                 {r.customer?.phone ? ` · ${r.customer.phone}` : ""}
               </div>
+              {[["House pickup", pickupAt], ["House drop-off", dropoffAt]].filter(([, a]) => a).map(([label, a]) => (
+                <a key={label} href={`https://maps.google.com/?q=${encodeURIComponent(a)}`} target="_blank" rel="noreferrer"
+                  className="mt-0.5 flex items-center gap-1 text-orange-300 hover:text-orange-200 text-xs font-medium">
+                  <Home className="w-3 h-3 flex-shrink-0" />{label}: {a}
+                </a>
+              ))}
             </li>
           );
         })}

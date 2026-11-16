@@ -15,6 +15,7 @@ import {
   type RunIssue,
 } from "@/lib/driver-run";
 import type { OpsSettings, RunPayload } from "@/lib/driver-runs-server";
+import { staffTripTime } from "@/lib/trip-timeline";
 
 interface Loaded { runs: RunPayload[]; settings: OpsSettings; shifts: Record<string, string | null> }
 
@@ -145,7 +146,7 @@ export default function LiveBoard() {
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <div className="text-white font-semibold">
-                      {to12h(run.trip.time)} · {run.trip.kind === "from_atl" ? "ATL → Columbus" : "Columbus → ATL"}
+                      {staffTripTime(run.trip.kind === "from_atl" ? "atl" : "columbus", run.trip.date, run.trip.time, run.trip.routeMinutes).text} · {run.trip.kind === "from_atl" ? "ATL → Columbus" : "Columbus → ATL"}
                     </div>
                     <div className="text-[#A1A1AA] text-xs">
                       {run.driver?.name ?? "No driver"} · {run.vehicle?.name ?? "no van"} · {boarded}/{riders} boarded{noShow ? ` · ${noShow} no-show` : ""}

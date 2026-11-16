@@ -31,6 +31,7 @@ import {
   staffFareCents, staffSubtotalCents, type StaffDiscount, type StaffRates,
 } from "@/lib/staff-pricing";
 import { formatCents, formatDateShort, formatTime12h } from "@/lib/format";
+import { cashReceivedError, cashReceivedNote } from "@/lib/cash";
 import { loadMessageInfo, notifyConfirmation, notifyUpdated } from "@/lib/reservation-messages";
 import { loadAppSettings } from "@/lib/settings-server";
 import { snapshotFrom, snapshotPricing } from "@/lib/settings";
@@ -98,6 +99,7 @@ export interface StaffPayment {
   collectNow: boolean;      // cash received / card charged on this screen
   splitCashCents: number;   // split only
   splitRest: CardMethod;    // split only: where the non-cash part goes
+  cashReceivedCents: number; // cash only: what the customer handed over (change = this − amount due)
 }
 
 /** Which card processor a payment choice uses (null = no card). */
@@ -198,12 +200,14 @@ function customExtrasError(role: string, input: StaffInput, resv?: any): string 
 }
 
 export function normalizePayment(p: any): StaffPayment {
-  const method: PayMethod = ["cash", "stripe", "square", "split", "comp"].includes(p?.method) ? p.method : "cash";
+  // No method sent → Square (never silently "cash paid").
+  const method: PayMethod = ["cash", "stripe", "square", "split", "comp"].includes(p?.method) ? p.method : "square";
   return {
     method,
     collectNow: p?.collectNow !== false,
     splitCashCents: Math.max(0, Math.round(Number(p?.splitCashCents) || 0)),
     splitRest: p?.splitRest === "stripe" ? "stripe" : "square",
+    cashReceivedCents: Math.max(0, Math.round(Number(p?.cashReceivedCents) || 0)),
   };
 }
 
@@ -420,6 +424,11 @@ export async function createStaffReservation(
   if (cardMethod && chargeCardNow && cardCents < CARD_MIN_CENTS[cardMethod]) {
     return { error: `${cardMinError(cardMethod)} — take the rest in cash or mark it Comp.` };
   }
+  const cashPaidNow = !comp && totalCents > 0 && pay === "cash" && payment.collectNow;
+  if (cashPaidNow) {
+    const cashErr = cashReceivedError(payment.cashReceivedCents, totalCents);
+    if (cashErr) return { error: cashErr };
+  }
   const cardPart = cardMethod === "square" ? "Square Terminal part" : "card part";
   const paymentRows =
     comp || totalCents === 0 ? [{ method: "comp", status: "paid", amount_cents: 0, notes: comp ? "Complimentary booking" : discount.label }]
@@ -428,7 +437,8 @@ export async function createStaffReservation(
         { method: cardMethod, status: "pending", amount_cents: cardCents, notes: `Split payment — ${cardPart}` },
       ]
     : cardMethod ? [{ method: cardMethod, status: "pending", amount_cents: totalCents, notes: chargeCardNow ? null : "To be collected" }]
-    : [{ method: "cash", status: payment.collectNow ? "paid" : "pending", amount_cents: totalCents, notes: payment.collectNow ? null : "To be collected" }];
+    : [{ method: "cash", status: payment.collectNow ? "paid" : "pending", amount_cents: totalCents,
+         notes: payment.collectNow ? cashReceivedNote(payment.cashReceivedCents, totalCents) : "To be collected" }];
 
   // Customer — reuse a matching record (same email + phone, ignoring capital
   // letters and phone formatting), else create one.
@@ -808,9 +818,11 @@ export async function startEdit(ctx: StaffContext, resv: any, input: StaffInput,
   // Costs more — collect the difference first.
   if (payment.method === "comp") return { ok: false, error: "Choose cash, card or split for the extra charge (or add a discount)." };
   if (payment.method === "cash") {
+    const cashErr = cashReceivedError(payment.cashReceivedCents, extra);
+    if (cashErr) return { ok: false, error: cashErr };
     const changeId = await logChange(sb, { ...base, status: "awaiting_payment" });
     if (!changeId) return { ok: false, error: "Could not record the change." };
-    return finishEdit(sb, changeId, [{ method: "cash", status: "paid", amount_cents: extra, notes: "Reservation change — cash" }]);
+    return finishEdit(sb, changeId, [{ method: "cash", status: "paid", amount_cents: extra, notes: `Reservation change — ${cashReceivedNote(payment.cashReceivedCents, extra)}` }]);
   }
   const cashCents = payment.method === "split" ? payment.splitCashCents : 0;
   if (payment.method === "split" && (cashCents <= 0 || cashCents >= extra)) {

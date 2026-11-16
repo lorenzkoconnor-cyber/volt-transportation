@@ -25,6 +25,7 @@ import {
   QrCode,
   Contact,
   Route,
+  HandCoins,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -54,6 +55,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/discount-codes", label: "Discount Codes", icon: Ticket,     roles: ["owner","manager"] },
   { href: "/dashboard/reviews",     label: "Reviews",       icon: Star,            roles: ["owner","manager"] },
   { href: "/dashboard/reports",     label: "Reports",       icon: BarChart3,       roles: ["owner","manager"] },
+  { href: "/dashboard/tips",        label: "Driver Tips",   icon: HandCoins,       roles: ["owner","manager","driver"] },
   { href: "/dashboard/employees",   label: "Employees",     icon: UserCog,         roles: ["owner"] },
   { href: "/dashboard/settings",    label: "Settings",      icon: Settings,        roles: ["owner","manager"] },
 ];

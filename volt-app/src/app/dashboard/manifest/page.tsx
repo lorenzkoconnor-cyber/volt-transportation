@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime12h, formatDateLong } from "@/lib/format";
+import { TripTime, HouseTag } from "@/components/admin/TripTags";
 import {
   ArrowLeft, Phone, CheckCircle2, XCircle, UserX, MapPin,
   MessageSquare, Loader2, AlertCircle, Plane, ChevronRight, Home, QrCode,
@@ -63,7 +64,7 @@ function ManifestContent() {
 
     const [tripRes, paxRes, flightRes] = await Promise.all([
       sb.from("trips")
-        .select("id, departure_date, departure_time, status, seats_booked, total_capacity, route:routes(name)")
+        .select("id, departure_date, departure_time, status, seats_booked, total_capacity, route:routes(name, origin_key, duration_minutes)")
         .eq("id", tripId)
         .single(),
       sb.from("reservation_passengers")
@@ -200,8 +201,12 @@ function ManifestContent() {
         <div>
           <h1 className="text-2xl font-bold text-white">Boarding List</h1>
           <p className="text-[#A1A1AA] text-sm mt-0.5">
-            {formatTime12h(trip.departure_time)} · {trip.route?.name} · {formatDateLong(trip.departure_date)} · {passengers.length} passenger{passengers.length !== 1 ? "s" : ""}
+            <TripTime trip={trip} className="text-white font-medium" /> · {trip.route?.name} · {formatDateLong(trip.departure_date)} · {passengers.length} passenger{passengers.length !== 1 ? "s" : ""}
           </p>
+          {(() => {
+            const n = passengers.reduce((k, p) => k + (p.pickupAddress ? 1 : 0) + (p.dropoffAddress ? 1 : 0), 0);
+            return n > 0 ? <HouseTag count={n} className="mt-1.5" /> : null;
+          })()}
         </div>
       </div>
 

@@ -93,3 +93,30 @@ export function atlSpot(terminal: string | null | undefined): string | null {
   if (terminal.startsWith("Domestic")) return terminal.replace("Domestic", "Domestic Terminal");
   return terminal;
 }
+
+/**
+ * How staff lists show a trip's time, so an ATL pickup is never mistaken for
+ * the time the van leaves Volt:
+ *   Columbus → ATL: "Leave Volt 6:00 AM"
+ *   ATL → Columbus: "ATL pickup 6:00 PM" + "leave Volt by 4:00 PM"
+ */
+export function staffTripTime(
+  originKey: string | null | undefined,
+  date: string,
+  departureTime: string,
+  routeMinutes: number | null | undefined,
+): { main: string; sub: string | null; atlPickup: boolean; text: string } {
+  const fmt = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+  };
+  if (!departureTime) return { main: "—", sub: null, atlPickup: false, text: "—" };
+  if (originKey === "atl") {
+    const leave = shiftClock(date || "2000-01-01", departureTime.slice(0, 5), -(routeMinutes || 120));
+    const main = `ATL pickup ${fmt(departureTime)}`;
+    const sub = `leave Volt by ${fmt(leave.time)}${date && leave.date !== date ? " (day before)" : ""}`;
+    return { main, sub, atlPickup: true, text: `${main} · ${sub}` };
+  }
+  const main = `Leave Volt ${fmt(departureTime)}`;
+  return { main, sub: null, atlPickup: false, text: main };
+}

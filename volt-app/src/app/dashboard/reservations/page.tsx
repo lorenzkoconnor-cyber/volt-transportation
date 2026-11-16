@@ -6,14 +6,17 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { canViewFinancials } from "@/lib/permissions";
 import { useDashboardRole } from "@/lib/useDashboardRole";
 import { createClient } from "@/lib/supabase/client";
-import { formatTime12h, formatCents, formatDateShort, formatEasternDateTime, localDateString } from "@/lib/format";
+import { formatCents, formatDateShort, formatEasternDateTime, localDateString } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import ReservationStatusBadge from "@/components/admin/ReservationStatusBadge";
+import { TripTime, HouseTag } from "@/components/admin/TripTags";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PAYMENT_LABELS, PAYMENT_STYLES, paymentSummary, statusLabel, type PaymentSummary } from "@/lib/reservation-status";
 import { Input } from "@/components/ui/input";
 import {
   Search, Plus, CheckCircle2, XCircle, Clock,
-  ChevronRight, Calendar, Users, DollarSign, Filter, Loader2,
+  ChevronRight, Calendar, Users, DollarSign, Filter, Loader2, Home,
 } from "lucide-react";
 
 
@@ -24,7 +27,9 @@ interface ReservationRow {
   phone: string;
   route: string;
   date: string;
-  time: string;
+  trip: any;
+  housePickup: boolean;
+  houseDropoff: boolean;
   pax: number;
   totalCents: number;
   status: string;
@@ -55,6 +60,7 @@ function ReservationsContent() {
   const todayOnly = useSearchParams().get("day") === "today";
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
+  const [houseOnly, setHouseOnly] = useState(false);
   const [rows, setRows] = useState<ReservationRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -69,10 +75,10 @@ function ReservationsContent() {
       let req = (supabase as any)
         .from("reservations")
         .select(
-          "id, confirmation_number, status, adults, children, total_cents, created_at, " +
+          "id, confirmation_number, status, adults, children, total_cents, created_at, pickup_address, dropoff_address, " +
           "payments(method, status, amount_cents, refund_amount_cents, reservation_change_id), " +
           "customer:customers(first_name, last_name, phone), " +
-          `trip:trips!reservations_trip_id_fkey${todayOnly ? "!inner" : ""}(departure_date, departure_time, route:routes(name)), ` +
+          `trip:trips!reservations_trip_id_fkey${todayOnly ? "!inner" : ""}(departure_date, departure_time, route:routes(name, origin_key, duration_minutes)), ` +
           "return_trip:trips!reservations_return_trip_id_fkey(departure_date)"
         );
       req = req.is("deleted_at", null);
@@ -89,7 +95,9 @@ function ReservationsContent() {
         phone: r.customer?.phone ?? "",
         route: r.trip?.route?.name ?? "—",
         date: r.trip ? formatDateShort(r.trip.departure_date) : "—",
-        time: r.trip ? formatTime12h(r.trip.departure_time) : "—",
+        trip: r.trip,
+        housePickup: !!r.pickup_address,
+        houseDropoff: !!r.dropoff_address,
         pax: (r.adults ?? 0) + (r.children ?? 0),
         totalCents: r.total_cents,
         status: r.status,
@@ -121,7 +129,8 @@ function ReservationsContent() {
       r.confirmation.toLowerCase().includes(q) ||
       r.phone.includes(query);
     const matchesFilter = filter === "all" || r.status === filter;
-    return matchesQuery && matchesFilter;
+    const matchesHouse = !houseOnly || r.housePickup || r.houseDropoff;
+    return matchesQuery && matchesFilter && matchesHouse;
   });
 
   const revenueCents = rows.filter(r => r.status !== "cancelled").reduce((s, r) => s + r.totalCents, 0);
@@ -170,6 +179,15 @@ function ReservationsContent() {
             }`}
           >
             <Calendar className="w-3 h-3" /> Today&apos;s trips
+          </button>
+          <button
+            onClick={() => setHouseOnly((v) => !v)}
+            aria-pressed={houseOnly}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              houseOnly ? "bg-orange-400 text-[#0A0A0A]" : "glass text-[#A1A1AA] hover:text-white"
+            }`}
+          >
+            <Home className="w-3 h-3" /> House pickups
           </button>
           <span className="w-px h-4 bg-white/10" aria-hidden />
           {(["all", "confirmed", "completed", "cancelled"] as FilterStatus[]).map((s) => (
@@ -243,10 +261,11 @@ function ReservationsContent() {
                     </div>
                     <div className={showMoney ? "col-span-3" : "col-span-4"}>
                       <div className="text-white text-sm">{r.route}</div>
-                      <div className="text-[#A1A1AA] text-xs flex items-center gap-2">
+                      <div className="text-[#A1A1AA] text-xs flex items-center gap-2 flex-wrap">
                         <Calendar className="w-3 h-3" />{r.date}
-                        <Clock className="w-3 h-3 ml-1" />{r.time}
+                        <Clock className="w-3 h-3 ml-1" />{r.trip ? <TripTime trip={r.trip} /> : "—"}
                       </div>
+                      {(r.housePickup || r.houseDropoff) && <HouseTag pickup={r.housePickup} dropoff={r.houseDropoff} className="mt-1" />}
                     </div>
                     <div className="col-span-1 flex justify-center">
                       <span className="flex items-center gap-1 text-[#A1A1AA] text-sm">

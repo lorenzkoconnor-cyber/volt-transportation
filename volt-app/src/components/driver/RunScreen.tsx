@@ -16,6 +16,7 @@ import {
 } from "@/lib/driver-run";
 import type { ActionInput, OpsSettings, RunPayload } from "@/lib/driver-runs-server";
 import VanProgressBar from "@/components/driver/VanProgressBar";
+import { staffTripTime } from "@/lib/trip-timeline";
 
 export interface RunScreenProps {
   run: RunPayload;
@@ -56,7 +57,7 @@ export default function RunScreen(p: RunScreenProps) {
         </button>
         <div className="min-w-0">
           <h1 className="text-white text-xl font-bold leading-tight">
-            {to12h(run.trip.time)} {run.trip.kind === "from_atl" ? "ATL → Columbus" : "Columbus → ATL"}
+            {staffTripTime(run.trip.kind === "from_atl" ? "atl" : "columbus", run.trip.date, run.trip.time, run.trip.routeMinutes).main} · {run.trip.kind === "from_atl" ? "ATL → Columbus" : "Columbus → ATL"}
           </h1>
           <p className="text-[#A1A1AA] text-sm">
             {run.vehicle ? `${run.vehicle.name} · ${run.vehicle.plate}` : "No van assigned"} · {run.riders.reduce((s, r) => s + r.partySize, 0)} riders

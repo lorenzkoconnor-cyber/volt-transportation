@@ -28,6 +28,8 @@ const ROUTE_ACCESS: { prefix: string; roles: EmployeeRole[] }[] = [
   { prefix: "/dashboard/discount-codes", roles: ["owner", "manager"] },
   { prefix: "/dashboard/reviews",      roles: ["owner", "manager"] },
   { prefix: "/dashboard/reports",      roles: ["owner", "manager"] },
+  // Drivers see only their own tips (the API filters).
+  { prefix: "/dashboard/tips",         roles: ["owner", "manager", "driver"] },
   { prefix: "/dashboard/settings",     roles: ["owner", "manager"] },
   // Managers: edit details / delete inactive office staff & drivers only (enforced in /api/employees/invite).
   { prefix: "/dashboard/employees",    roles: ["owner", "manager"] },

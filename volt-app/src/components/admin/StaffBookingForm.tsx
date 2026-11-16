@@ -275,9 +275,12 @@ export default function StaffBookingForm({
 
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [smsConsent, setSmsConsent] = useState(false);
-  const [payMethod, setPayMethod] = useState<PayMethod>("cash");
+  // Square Terminal by default — cash must be picked on purpose, and then the
+  // amount handed over has to be typed in (so change is worked out on screen).
+  const [payMethod, setPayMethod] = useState<PayMethod>("square");
   const [payNow, setPayNow] = useState(true);
   const [splitCash, setSplitCash] = useState("");
+  const [cashReceived, setCashReceived] = useState("");
   const [splitRest, setSplitRest] = useState<CardMethod>("square");
   const cardRef = useRef<StaffCardHandle>(null);
 
@@ -347,6 +350,10 @@ export default function StaffBookingForm({
   const priceChange = isEdit ? price.totalCents - oldTotalCents : price.totalCents;
   const due = isEdit ? Math.max(0, quote?.priceChangeCents ?? priceChange) : price.totalCents;
   const splitCashCents = Math.round((parseFloat(splitCash) || 0) * 100);
+  const cashReceivedCents = Math.round((parseFloat(cashReceived) || 0) * 100);
+  // Cash taken on this screen: a new booking marked collected now, or an edit's extra charge.
+  const cashNow = payMethod === "cash" && due > 0 && (isEdit || payNow);
+  const changeDueCents = Math.max(0, cashReceivedCents - due);
   const cardMethod: CardMethod | null =
     payMethod === "stripe" || payMethod === "square" ? payMethod : payMethod === "split" ? splitRest : null;
   const onTerminal = cardMethod === "square";
@@ -391,7 +398,7 @@ export default function StaffBookingForm({
     tipCents: isEdit ? 0 : tipCents,
     termsAgreed,
     smsConsent,
-    payment: { method: payMethod, collectNow: payNow, splitCashCents, splitRest },
+    payment: { method: payMethod, collectNow: payNow, splitCashCents, splitRest, cashReceivedCents: cashNow ? cashReceivedCents : 0 },
   });
 
   // Checks shared by both modes before anything is sent.
@@ -410,6 +417,14 @@ export default function StaffBookingForm({
 
   const validatePayment = (): string | null => {
     if (due <= 0) return null;
+    if (cashNow) {
+      if (cashReceived.trim() === "" || cashReceivedCents <= 0) {
+        return `Type in how much cash the customer handed you (at least ${formatCents(due)}).`;
+      }
+      if (cashReceivedCents < due) {
+        return `Cash received (${formatCents(cashReceivedCents)}) is less than the ${formatCents(due)} due. Take the rest, or use Split.`;
+      }
+    }
     if (payMethod === "split" && (splitCashCents <= 0 || splitCashCents >= due)) {
       return `For a split payment, enter a cash amount between $0 and ${formatCents(due)}.`;
     }
@@ -1047,17 +1062,40 @@ export default function StaffBookingForm({
                       {onTerminal && " — the Terminal shows the full cart with the cash as \"Paid in cash\"."}
                     </p>
                   </div>
+                ) : payMethod === "cash" ? (
+                  <div className="space-y-3">
+                    {cashNow && (
+                      <div className="flex flex-wrap items-end gap-4">
+                        <div className="w-44">
+                          <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Cash received from customer ($) *</Label>
+                          <Input type="number" inputMode="decimal" min={0} step="0.01" value={cashReceived} placeholder="0.00"
+                            onChange={(e) => setCashReceived(e.target.value)} className={inputCls} />
+                        </div>
+                        <div className="pb-2 text-sm">
+                          <div className="text-[#A1A1AA]">Due <span className="text-white font-semibold">{formatCents(due)}</span></div>
+                          {cashReceived.trim() !== "" && (
+                            cashReceivedCents >= due
+                              ? <div className="text-green-400 font-semibold">Change to give back: {formatCents(changeDueCents)}</div>
+                              : <div className="text-orange-400">Still short {formatCents(due - cashReceivedCents)}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {!isEdit && (
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input type="checkbox" checked={!payNow} onChange={(e) => setPayNow(!e.target.checked)} className="w-4 h-4 accent-[#FCC300]" />
+                        <span className="text-white text-sm">Collect the cash later (booking stays unpaid)</span>
+                      </label>
+                    )}
+                  </div>
                 ) : !isEdit ? (
                   <label className="flex items-center gap-2.5 cursor-pointer">
                     <input type="checkbox" checked={payNow} onChange={(e) => setPayNow(e.target.checked)} className="w-4 h-4 accent-[#FCC300]" />
                     <span className="text-white text-sm">
                       {payMethod === "stripe" ? "Charge card now (uncheck to collect later)"
-                        : payMethod === "square" ? "Send to the Square Terminal now (uncheck to collect later)"
-                        : "Payment collected (cash received)"}
+                        : "Send to the Square Terminal now (uncheck to collect later)"}
                     </span>
                   </label>
-                ) : payMethod === "cash" ? (
-                  <p className="text-[#A1A1AA] text-sm">Collect {formatCents(due)} cash before pressing Update.</p>
                 ) : null}
               </fieldset>
             )}

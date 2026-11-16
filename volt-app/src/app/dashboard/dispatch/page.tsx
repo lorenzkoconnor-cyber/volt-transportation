@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import LiveBoard from "@/components/admin/LiveBoard";
+import { TripTime, HouseTag } from "@/components/admin/TripTags";
+import { loadHouseStops, type HouseStops } from "@/lib/house-stops";
 
 const HALF_HOUR = /^([01]\d|2[0-3]):(00|30)$/;
 
@@ -51,6 +53,7 @@ export default function DispatchPage() {
   const [deleteTrip, setDeleteTrip] = useState<any>(null);
   const [deleteError, setDeleteError] = useState("");
   const [trips, setTrips] = useState<any[]>([]);
+  const [house, setHouse] = useState<Record<string, HouseStops>>({});
   const [routes, setRoutes] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -83,17 +86,18 @@ export default function DispatchPage() {
     const [tripsRes, routesRes, vehiclesRes, driversRes] = await Promise.all([
       sb.from("trips")
         .select(
-          "id, route_id, departure_time, total_capacity, seats_booked, status, notes, is_custom, is_private, " +
-          "route:routes(name), " +
+          "id, route_id, departure_date, departure_time, total_capacity, seats_booked, status, notes, is_custom, is_private, " +
+          "route:routes(name, origin_key, duration_minutes), " +
           "trip_vehicles(id, vehicle_id, driver_id, vehicle:vehicles(name, capacity), driver:drivers(first_name, last_name))"
         )
         .eq("departure_date", date)
         .order("departure_time"),
-      sb.from("routes").select("id, name").eq("is_active", true),
+      sb.from("routes").select("id, name, origin_key").eq("is_active", true),
       sb.from("vehicles").select("id, name, capacity, status").eq("status", "active"),
       sb.from("drivers").select("id, first_name, last_name").eq("is_active", true),
     ]);
     setTrips(tripsRes.data ?? []);
+    setHouse(await loadHouseStops(sb, (tripsRes.data ?? []).map((t: any) => t.id)));
     setRoutes(routesRes.data ?? []);
     if (routesRes.data?.length && !addRouteId) setAddRouteId(routesRes.data[0].id);
     setVehicles(vehiclesRes.data ?? []);
@@ -304,8 +308,9 @@ export default function DispatchPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-white font-bold text-lg">{formatTime12h(dep.departure_time)}</span>
+                        <TripTime trip={dep} className="text-white font-bold text-lg" subClassName="text-sm" />
                         <span className="text-[#A1A1AA] text-sm">{dep.route?.name}</span>
+                        <HouseTag count={(house[dep.id]?.pickups ?? 0) + (house[dep.id]?.dropoffs ?? 0)} />
                         {dep.is_custom && (
                           <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-sky-300 bg-sky-400/10 px-1.5 py-0.5 rounded"
                             title="Off the regular schedule — not shown on the website">
@@ -473,7 +478,9 @@ export default function DispatchPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Departure Time *</Label>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
+                    {routes.find((r) => r.id === addRouteId)?.origin_key === "atl" ? "ATL Pickup Time *" : "Leave Volt Time *"}
+                  </Label>
                   <input type="time" required step={1800} value={addTime} onChange={(e) => setAddTime(e.target.value)}
                     className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] [color-scheme:dark]" />
                 </div>
@@ -515,7 +522,9 @@ export default function DispatchPage() {
             <form onSubmit={saveEditTrip} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">Departure Time *</Label>
+                  <Label className="text-[#A1A1AA] text-xs mb-1.5 block">
+                    {editTrip.route?.origin_key === "atl" ? "ATL Pickup Time *" : "Leave Volt Time *"}
+                  </Label>
                   <input type="time" required step={1800} value={editTime} onChange={(e) => setEditTime(e.target.value)}
                     className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300] [color-scheme:dark]" />
                 </div>
@@ -593,7 +602,7 @@ export default function DispatchPage() {
               <div>
                 <h2 className="text-white font-bold text-lg">Assign Vehicle</h2>
                 <p className="text-[#A1A1AA] text-xs mt-0.5">
-                  {formatTime12h(assignTrip.departure_time)} · {assignTrip.route?.name}
+                  <TripTime trip={assignTrip} /> · {assignTrip.route?.name}
                 </p>
               </div>
               <button onClick={() => setAssignTrip(null)} className="text-[#A1A1AA] hover:text-white transition-colors">

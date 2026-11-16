@@ -21,6 +21,8 @@ import {
   Phone, Mail, Users, MapPin, CreditCard, Banknote, Gift, FileText,
   Pencil, Printer, MessageSquare, History, Undo2, Lock, Trash2, Nfc,
 } from "lucide-react";
+import { HouseTag } from "@/components/admin/TripTags";
+import { cashReceivedError, cashReceivedNote } from "@/lib/cash";
 
 
 const PAY_ICONS = { stripe: CreditCard, square: Nfc, cash: Banknote, comp: Gift } as const;
@@ -147,11 +149,25 @@ export default function ReservationDetailPage() {
     setBusy(false);
   };
 
-  const markPaymentPaid = async (paymentId: string) => {
+  // "Mark Paid" asks first: cash needs the amount handed over (change shown);
+  // a card/Square payment needs a second tap, since nothing is charged.
+  const [markingId, setMarkingId] = useState<string | null>(null);
+  const [markCash, setMarkCash] = useState("");
+  const markPaymentPaid = async (p: any) => {
+    setError("");
+    let notes: string | undefined;
+    if (p.method === "cash") {
+      const received = Math.round((parseFloat(markCash) || 0) * 100);
+      const err = cashReceivedError(received, p.amount_cents);
+      if (err) { setError(err); return; }
+      notes = [p.notes, cashReceivedNote(received, p.amount_cents)].filter((x: string | null) => x && x !== "To be collected").join(" · ");
+    }
     setBusy(true);
-    const { error: err } = await sb.from("payments").update({ status: "paid" }).eq("id", paymentId);
+    const { error: err } = await sb.from("payments")
+      .update({ status: "paid", ...(notes !== undefined ? { notes } : {}) })
+      .eq("id", p.id).eq("status", "pending");
     if (err) setError(err.message);
-    else await load();
+    else { setMarkingId(null); setMarkCash(""); await load(); }
     setBusy(false);
   };
 
@@ -259,6 +275,7 @@ export default function ReservationDetailPage() {
                 onComplete={() => updateStatus("completed")}
                 className="px-2.5 py-1"
               />
+              <HouseTag pickup={!!resv.pickup_address} dropoff={!!resv.dropoff_address} className="text-xs px-2.5 py-1" />
             </div>
             <p className="text-[#A1A1AA] text-sm mt-0.5">
               Booked {formatEasternDateTime(resv.created_at).date} at {formatEasternDateTime(resv.created_at).time}
@@ -560,15 +577,52 @@ export default function ReservationDetailPage() {
                         )}
                       </>
                     )}
-                    {p.status === "pending" && (
+                    {p.status === "pending" && markingId !== p.id && (
                       <Button size="sm" variant="outline" disabled={busy}
-                        onClick={() => markPaymentPaid(p.id)}
+                        onClick={() => { setError(""); setMarkCash(""); setMarkingId(p.id); }}
                         className="border-white/15 text-white hover:bg-white/5 text-xs">
-                        Mark Paid
+                        {p.method === "cash" ? "Cash Received…" : "Mark Paid…"}
                       </Button>
                     )}
                   </div>
                 </div>
+                {markingId === p.id && p.status === "pending" && (() => {
+                  const received = Math.round((parseFloat(markCash) || 0) * 100);
+                  return (
+                    <div className="rounded-xl border border-white/10 bg-white/3 p-3 space-y-2">
+                      {p.method === "cash" ? (
+                        <div className="flex flex-wrap items-end gap-3">
+                          <div className="w-40">
+                            <label className="text-[#A1A1AA] text-xs mb-1 block">Cash received ($)</label>
+                            <input type="number" inputMode="decimal" min={0} step="0.01" value={markCash} placeholder="0.00" autoFocus
+                              onChange={(e) => setMarkCash(e.target.value)}
+                              className="w-full h-9 rounded-lg bg-white/5 border border-white/10 text-white px-3 text-sm focus:outline-none focus:border-[#FCC300]" />
+                          </div>
+                          <div className="pb-1.5 text-sm">
+                            <span className="text-[#A1A1AA]">Due {formatCents(p.amount_cents)}</span>
+                            {markCash.trim() !== "" && (received >= p.amount_cents
+                              ? <span className="text-green-400 font-semibold"> · Change {formatCents(received - p.amount_cents)}</span>
+                              : <span className="text-orange-400"> · Short {formatCents(p.amount_cents - received)}</span>)}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[#A1A1AA] text-sm">
+                          Mark {formatCents(p.amount_cents)} as paid <span className="text-white">without charging anything</span>? Only do this if it was collected some other way.
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" disabled={busy} onClick={() => markPaymentPaid(p)}
+                          className="bg-[#FCC300] hover:bg-[#FFD54A] text-[#0A0A0A] text-xs font-semibold">
+                          {p.method === "cash" ? "Confirm Cash Paid" : "Yes, Mark Paid"}
+                        </Button>
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => setMarkingId(null)}
+                          className="border-white/15 text-white hover:bg-white/5 text-xs">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {chargingId === p.id && (
                   <div className="space-y-2">
                     {chargingWith === "square"

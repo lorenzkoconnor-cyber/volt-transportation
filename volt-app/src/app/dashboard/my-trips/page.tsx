@@ -17,6 +17,7 @@ import {
 } from "@/lib/driver-run";
 import type { ActionInput, OpsSettings, RunPayload } from "@/lib/driver-runs-server";
 import { phoneHref } from "@/lib/settings";
+import { staffTripTime } from "@/lib/trip-timeline";
 
 interface Loaded {
   runs: RunPayload[];
@@ -284,10 +285,13 @@ export default function MyTripsPage() {
               } ${d.stage === "completed" ? "opacity-60" : ""}`}>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-white font-bold text-lg">{to12h(run.trip.time)}</span>
+                  <span className="text-white font-bold text-lg">{staffTripTime(run.trip.kind === "from_atl" ? "atl" : "columbus", run.trip.date, run.trip.time, run.trip.routeMinutes).main}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${stage === "Under way" ? "bg-[#FCC300] text-black" : stage === "Next" ? "bg-[#FCC300]/15 text-[#FCC300]" : "bg-white/10 text-[#A1A1AA]"}`}>{stage}</span>
                 </div>
-                <div className="text-white text-sm">{run.trip.kind === "from_atl" ? "ATL → Columbus" : "Columbus → ATL"}</div>
+                <div className="text-white text-sm">
+                  {run.trip.kind === "from_atl" ? "ATL → Columbus" : "Columbus → ATL"}
+                  {run.trip.kind === "from_atl" && <span className="text-[#FCC300]"> · {staffTripTime(run.trip.kind === "from_atl" ? "atl" : "columbus", run.trip.date, run.trip.time, run.trip.routeMinutes).sub}</span>}
+                </div>
                 <div className="text-[#A1A1AA] text-xs mt-0.5">
                   {count} rider{count === 1 ? "" : "s"} · {d.stops.length} stop{d.stops.length === 1 ? "" : "s"} · {run.vehicle?.name ?? "no van"}
                   {isOffice && run.driver ? ` · ${run.driver.name}` : ""}
