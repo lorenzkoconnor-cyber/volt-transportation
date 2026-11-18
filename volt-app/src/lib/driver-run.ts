@@ -473,7 +473,6 @@ export const CHECK_ITEMS = [
   { key: "tires", label: "Tires look good" },
   { key: "lights", label: "Lights and signals work" },
   { key: "mirrors", label: "Mirrors and windows clean" },
-  { key: "belts", label: "Seat belts work" },
   { key: "clean", label: "Inside is clean" },
   { key: "safety", label: "First-aid kit and fire extinguisher on board" },
 ] as const;

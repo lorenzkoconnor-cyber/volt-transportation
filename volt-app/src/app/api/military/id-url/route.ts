@@ -3,7 +3,7 @@ import { createClient as createServerClient, createAdminClient } from "@/lib/sup
 import { MILITARY_BUCKET } from "@/lib/military";
 
 // GET /api/military/id-url?customerId=...
-// Owner/manager only. Returns a short-lived signed URL to view a rider's
+// Owner, manager, or office staff. Returns a short-lived signed URL to view a rider's
 // uploaded ID from the private bucket. IDs are never publicly accessible.
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .eq("is_active", true)
       .single();
-    if (!employee || !["owner", "manager"].includes(employee.role)) {
+    if (!employee || !["owner", "manager", "office_staff"].includes(employee.role)) {
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 

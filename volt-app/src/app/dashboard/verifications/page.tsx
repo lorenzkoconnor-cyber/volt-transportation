@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDateShort } from "@/lib/format";
 import { categoryLabel } from "@/lib/military";
 import { useAppSettings } from "@/context/SettingsContext";
+import { useAuth } from "@/context/AuthContext";
+import { canViewFinancials } from "@/lib/permissions";
 import { dollars } from "@/lib/settings";
 import {
   ShieldCheck, Loader2, Check, X, ExternalLink, Mail, Phone, Clock, BadgeCheck, CircleSlash, AlertTriangle,
@@ -44,18 +46,20 @@ function daysLeft(iso: string | null): number | null {
   return (new Date(iso).getTime() - Date.now()) / 86_400_000;
 }
 
-function holdLabel(b: HeldBooking, MILITARY_OFF: string): { text: string; tone: "ok" | "warn" | "bad" | "muted" } {
+function holdLabel(b: HeldBooking, MILITARY_OFF: string, showMoney: boolean): { text: string; tone: "ok" | "warn" | "bad" | "muted" } {
   const p = b.payment;
+  // Office staff don't see payment amounts (canViewFinancials).
+  const amt = (c: number) => (showMoney ? ` $${(c / 100).toFixed(2)}` : "");
   if (b.status === "cancelled") return { text: "Cancelled", tone: "muted" };
   if (!p) return { text: "No payment on file", tone: "bad" };
   if (p.status === "authorized") {
     const d = daysLeft(p.authorization_expires_at);
-    if (d === null) return { text: `Hold ${cents(p.amount_cents)}`, tone: "ok" };
-    if (d <= 0) return { text: `Hold ${cents(p.amount_cents)} — expired`, tone: "bad" };
+    if (d === null) return { text: `Card hold${amt(p.amount_cents)}`, tone: "ok" };
+    if (d <= 0) return { text: `Card hold${amt(p.amount_cents)} — expired`, tone: "bad" };
     const left = d < 1 ? `${Math.max(1, Math.round(d * 24))}h` : `${Math.floor(d)}d`;
-    return { text: `Hold ${cents(p.amount_cents)} — expires in ${left}`, tone: d <= EXPIRING_SOON_DAYS ? "warn" : "ok" };
+    return { text: `Card hold${amt(p.amount_cents)} — expires in ${left}`, tone: d <= EXPIRING_SOON_DAYS ? "warn" : "ok" };
   }
-  if (p.status === "paid") return { text: `Charged ${cents(p.amount_cents)} — ${MILITARY_OFF} refunded if approved`, tone: "muted" };
+  if (p.status === "paid") return { text: `Charged${amt(p.amount_cents)} — ${MILITARY_OFF} refunded if approved`, tone: "muted" };
   if (p.status === "voided") return { text: "Hold expired — collect payment", tone: "bad" };
   return { text: `Payment ${p.status}`, tone: "muted" };
 }
@@ -69,6 +73,8 @@ const TONE: Record<string, string> = {
 
 export default function VerificationsPage() {
   const MILITARY_OFF = dollars(useAppSettings().military.amount);
+  const { employee } = useAuth();
+  const showMoney = canViewFinancials(employee?.role);
   const supabase = createClient();
   const sb = supabase as any;
 
@@ -147,10 +153,10 @@ export default function VerificationsPage() {
         decision === "approve" ? "Approved." : decision === "reject" ? "Marked as not eligible." : "Charged the full fare; request stays in review.",
       ];
       if (data.captured > 0) {
-        parts.push(`Charged ${data.captured} held booking${data.captured > 1 ? "s" : ""} (${cents(data.capturedCents)}).`);
+        parts.push(`Charged ${data.captured} held booking${data.captured > 1 ? "s" : ""} ${showMoney ? ` (${cents(data.capturedCents)})` : ""}.`);
       }
       if (data.refunded > 0) {
-        parts.push(`Refunded the discount on ${data.refunded} booking${data.refunded > 1 ? "s" : ""} (${cents(data.refundedCents)}).`);
+        parts.push(`Refunded the discount on ${data.refunded} booking${data.refunded > 1 ? "s" : ""} ${showMoney ? ` (${cents(data.refundedCents)})` : ""}.`);
       }
       if (data.released > 0) parts.push(`Released ${data.released} hold${data.released > 1 ? "s" : ""} on cancelled bookings.`);
       if (data.failed?.length > 0) parts.push(`Needs attention: ${data.failed.join(" ")}`);
@@ -246,7 +252,7 @@ export default function VerificationsPage() {
                 {held.filter((b) => b.customer_id === r.id).length > 0 && (
                   <ul className="mt-2.5 space-y-1">
                     {held.filter((b) => b.customer_id === r.id).map((b) => {
-                      const label = holdLabel(b, MILITARY_OFF);
+                      const label = holdLabel(b, MILITARY_OFF, showMoney);
                       return (
                         <li key={b.id} className="flex items-center gap-2 text-xs flex-wrap">
                           <span className="font-mono text-white">{b.confirmation_number}</span>

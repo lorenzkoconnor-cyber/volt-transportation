@@ -3,7 +3,7 @@ import { createClient as createServerClient, createAdminClient } from "@/lib/sup
 import { settleMilitaryBookings } from "@/lib/stripe/holds";
 
 // POST /api/military/review  { customerId, decision, reservationId? }
-// Owner/manager only. Settles every booking the rider made while their
+// Owner, manager, or office staff. Settles every booking the rider made while their
 // Military Discount verification was pending:
 //
 //   approve      → account verified; card holds captured minus the flat
@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .eq("is_active", true)
       .single();
-    if (!employee || !["owner", "manager"].includes(employee.role)) {
-      return NextResponse.json({ error: "Only an owner or manager can review verifications" }, { status: 403 });
+    if (!employee || !["owner", "manager", "office_staff"].includes(employee.role)) {
+      return NextResponse.json({ error: "Only office staff, managers, or owners can review verifications" }, { status: 403 });
     }
 
     const { data: customer } = await sb

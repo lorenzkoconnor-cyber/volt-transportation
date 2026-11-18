@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatCents } from "@/lib/format";
@@ -42,6 +42,21 @@ export default function PaymentsPage() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
 
+  // "Total Collected" card cycles through these on each click.
+  const COLLECTED_VIEWS = ["year", "month", "week", "all"] as const;
+  type CollectedView = (typeof COLLECTED_VIEWS)[number];
+  const COLLECTED_LABEL: Record<CollectedView, string> = {
+    year: "Collected This Year",
+    month: "Collected This Month",
+    week: "Collected This Week",
+    all: "Total Collected",
+  };
+  const [collectedView, setCollectedView] = useState<CollectedView>("year");
+  // Every payment (just the fields the cards need). Loaded separately from the
+  // 500-row transaction list so the totals cover all history.
+  type TotalsRow = { amount_cents: number; created_at: string; status: string; method: string; refund_amount_cents: number; refunded_at: string | null };
+  const [totalsRows, setTotalsRows] = useState<TotalsRow[]>([]);
+
   // Refund modal
   const [refundTarget, setRefundTarget] = useState<any>(null);
   const [refundAmount, setRefundAmount] = useState("");
@@ -58,6 +73,19 @@ export default function PaymentsPage() {
       .limit(500);
     if (err) setError(err.message);
     setPayments(data ?? []);
+
+    const all: TotalsRow[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data: page, error: pageErr } = await sb
+        .from("payments")
+        .select("amount_cents, created_at, status, method, refund_amount_cents, refunded_at")
+        .order("created_at", { ascending: true })
+        .range(from, from + 999);
+      if (pageErr) { setError(pageErr.message); break; }
+      all.push(...(page ?? []));
+      if (!page || page.length < 1000) break;
+    }
+    setTotalsRows(all);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -75,11 +103,42 @@ export default function PaymentsPage() {
     );
   });
 
-  const paidCents    = payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
-  const refundCents  = payments.reduce((s, p) => s + p.refund_amount_cents, 0);
-  const stripeCents  = payments.filter(p => p.method === "stripe" && p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
-  const squareCents  = payments.filter(p => p.method === "square" && p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
-  const cashCents    = payments.filter(p => p.method === "cash" && p.status === "paid").reduce((s, p) => s + p.amount_cents, 0);
+  // Totals for each range. Every card follows the range picked on the first card.
+  // Payments count by the day they were made; refunds by the day they were issued.
+  const totals = useMemo(() => {
+    const now = new Date();
+    const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)); // Monday
+    const ranges: Record<CollectedView, { since: Date | null; sub: string }> = {
+      year: { since: yearStart, sub: `Since Jan 1, ${now.getFullYear()}` },
+      month: { since: monthStart, sub: `Since ${fmt(monthStart)}` },
+      week: { since: weekStart, sub: `Since Mon, ${fmt(weekStart)}` },
+      all: { since: null, sub: "All time" },
+    };
+    const out = {} as Record<CollectedView, { sub: string; collected: number; stripe: number; square: number; cash: number; refunds: number }>;
+    for (const view of COLLECTED_VIEWS) {
+      const { since, sub } = ranges[view];
+      const t = { sub, collected: 0, stripe: 0, square: 0, cash: 0, refunds: 0 };
+      for (const p of totalsRows) {
+        if (p.status === "paid" && (!since || new Date(p.created_at) >= since)) {
+          t.collected += p.amount_cents;
+          if (p.method === "stripe") t.stripe += p.amount_cents;
+          else if (p.method === "square") t.square += p.amount_cents;
+          else if (p.method === "cash") t.cash += p.amount_cents;
+        }
+        if (p.refund_amount_cents > 0 && (!since || new Date(p.refunded_at ?? p.created_at) >= since)) {
+          t.refunds += p.refund_amount_cents;
+        }
+      }
+      out[view] = t;
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalsRows]);
+  const nextView = COLLECTED_VIEWS[(COLLECTED_VIEWS.indexOf(collectedView) + 1) % COLLECTED_VIEWS.length];
+  const t = totals[collectedView];
 
   const openRefund = (p: any) => {
     setRefundTarget(p);
@@ -124,11 +183,18 @@ export default function PaymentsPage() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard label="Total Collected"  value={loading ? "…" : formatCents(paidCents)} icon={TrendingUp} accent />
-        <StatCard label="Card (Stripe)"    value={loading ? "…" : formatCents(stripeCents)} icon={CreditCard} />
-        <StatCard label="Square Terminal"  value={loading ? "…" : formatCents(squareCents)} icon={Nfc} />
-        <StatCard label="Cash Payments"    value={loading ? "…" : formatCents(cashCents)} icon={Banknote} />
-        <StatCard label="Refunds Issued"   value={loading ? "…" : formatCents(refundCents)} icon={RotateCcw} />
+        <StatCard
+          label={COLLECTED_LABEL[collectedView]}
+          value={loading ? "…" : formatCents(t.collected)}
+          sub={`${t.sub} · tap for ${COLLECTED_LABEL[nextView].replace("Collected ", "").toLowerCase()}`}
+          icon={TrendingUp}
+          accent
+          onClick={() => setCollectedView(nextView)}
+        />
+        <StatCard label="Card (Stripe)"    value={loading ? "…" : formatCents(t.stripe)} sub={t.sub} icon={CreditCard} />
+        <StatCard label="Square Terminal"  value={loading ? "…" : formatCents(t.square)} sub={t.sub} icon={Nfc} />
+        <StatCard label="Cash Payments"    value={loading ? "…" : formatCents(t.cash)}   sub={t.sub} icon={Banknote} />
+        <StatCard label="Refunds Issued"   value={loading ? "…" : formatCents(t.refunds)} sub={t.sub} icon={RotateCcw} />
       </div>
 
       <div className="glass rounded-2xl overflow-hidden">

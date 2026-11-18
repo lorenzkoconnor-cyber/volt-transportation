@@ -51,7 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/vehicles",    label: "Vehicles",      icon: Car,             roles: ["owner","manager"] },
   { href: "/dashboard/drivers",     label: "Drivers",       icon: Bus,             roles: ["owner","manager"] },
   { href: "/dashboard/payments",    label: "Payments",      icon: CreditCard,      roles: ["owner","manager"] },
-  { href: "/dashboard/verifications", label: "Verifications", icon: ShieldCheck,   roles: ["owner","manager"] },
+  { href: "/dashboard/verifications", label: "Verifications", icon: ShieldCheck,   roles: ["owner","manager","office_staff"] },
   { href: "/dashboard/discount-codes", label: "Discount Codes", icon: Ticket,     roles: ["owner","manager"] },
   { href: "/dashboard/reviews",     label: "Reviews",       icon: Star,            roles: ["owner","manager"] },
   { href: "/dashboard/reports",     label: "Reports",       icon: BarChart3,       roles: ["owner","manager"] },

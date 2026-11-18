@@ -9,9 +9,10 @@ interface StatCardProps {
   trend?: { value: string; positive: boolean };
   accent?: boolean;
   href?: string;   // makes the whole card a link
+  onClick?: () => void; // makes the whole card a button
 }
 
-export default function StatCard({ label, value, sub, icon: Icon, trend, accent, href }: StatCardProps) {
+export default function StatCard({ label, value, sub, icon: Icon, trend, accent, href, onClick }: StatCardProps) {
   const body = (
     <>
       <div className="flex items-start justify-between mb-3">
@@ -37,6 +38,16 @@ export default function StatCard({ label, value, sub, icon: Icon, trend, accent,
     </>
   );
   const className = `glass rounded-2xl p-5 ${accent ? "border-[#FCC300]/30" : ""}`;
+
+  const interactive = "group block transition-colors hover:border-[#FCC300]/50 hover:bg-white/[0.04] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FCC300]/60";
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={`${className} ${interactive} w-full text-left cursor-pointer select-none`}>
+        {body}
+      </button>
+    );
+  }
 
   return href ? (
     <Link

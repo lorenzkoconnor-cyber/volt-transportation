@@ -441,7 +441,6 @@ function VanCheck({ run, onSave }: { run: RunPayload; onSave: (b: Record<string,
   const [items, setItems] = useState<Record<string, boolean>>({});
   const [fuel, setFuel] = useState("");
   const [mileage, setMileage] = useState("");
-  const [notes, setNotes] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -455,6 +454,16 @@ function VanCheck({ run, onSave }: { run: RunPayload; onSave: (b: Record<string,
             {it.label}
           </label>
         ))}
+        {(() => {
+          const allOn = CHECK_ITEMS.every((it) => items[it.key]);
+          return (
+            <label className="flex items-center gap-3 text-[#FCC300] text-sm font-semibold py-1 border-t border-white/10 pt-3">
+              <input type="checkbox" className="w-5 h-5 accent-[#FCC300]" checked={allOn}
+                onChange={(e) => setItems(Object.fromEntries(CHECK_ITEMS.map((it) => [it.key, e.target.checked])))} />
+              Select all
+            </label>
+          );
+        })()}
         <div>
           <p className="text-[#A1A1AA] text-xs mb-1.5">Fuel</p>
           <div className="grid grid-cols-5 gap-1.5">
@@ -466,14 +475,12 @@ function VanCheck({ run, onSave }: { run: RunPayload; onSave: (b: Record<string,
         </div>
         <input inputMode="numeric" value={mileage} onChange={(e) => setMileage(e.target.value.replace(/\D/g, ""))}
           placeholder="Odometer (miles)" className="w-full rounded-xl bg-white/5 border border-white/15 px-3 py-3 text-white text-sm" />
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={2}
-          placeholder="Anything wrong? (optional)" className="w-full rounded-xl bg-white/5 border border-white/15 px-3 py-3 text-white text-sm" />
         <p className="text-[#71717A] text-xs">Leave a box unticked if something&apos;s wrong. The office is told right away.</p>
         {err && <p className="text-red-400 text-sm">{err}</p>}
         <button className={bigBtn} disabled={busy} onClick={async () => {
           if (!fuel) { setErr("Pick the fuel level."); return; }
           setBusy(true); setErr("");
-          const e = await onSave({ items, fuel, mileage, notes });
+          const e = await onSave({ items, fuel, mileage });
           setBusy(false);
           if (e) setErr(e);
         }}>
