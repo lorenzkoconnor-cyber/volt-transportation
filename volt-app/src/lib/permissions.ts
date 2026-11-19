@@ -14,6 +14,8 @@ export const ALL_ROLES: EmployeeRole[] = ["owner", "manager", "office_staff", "d
 const ROUTE_ACCESS: { prefix: string; roles: EmployeeRole[] }[] = [
   // Everyone sees the calendar; only owners/managers add or change events (RLS on calendar_events).
   { prefix: "/dashboard/calendar",     roles: ["owner", "manager", "office_staff", "driver"] },
+  // Owners/managers plan shifts and log hours; everyone else sees only their own schedule (RLS on employee_shifts).
+  { prefix: "/dashboard/schedule",     roles: ["owner", "manager", "office_staff", "driver"] },
   { prefix: "/dashboard/reservations", roles: ["owner", "manager", "office_staff"] },
   { prefix: "/dashboard/customers",    roles: ["owner", "manager"] },
   { prefix: "/dashboard/my-trips",     roles: ["owner", "manager", "office_staff", "driver"] },

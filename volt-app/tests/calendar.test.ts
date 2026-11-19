@@ -44,3 +44,18 @@ test("groupByDay sorts all-day items first, then by time", () => {
   ]);
   assert.deepEqual(map.get("2026-10-19")!.map((i) => i.id), ["b", "c", "a"]);
 });
+
+test("isPastItem: trips by ATL time, staff by end time, all-day by date", async () => {
+  const { isPastItem, easternNowStamp } = await import("../src/lib/calendar.ts");
+  const now = "2026-11-19 13:00";
+  const trip = (date: string, time: string) => ({ type: "departure", atAtl: { date, time } }) as any;
+  assert.equal(isPastItem(trip("2026-11-19", "12:00"), now), true);
+  assert.equal(isPastItem(trip("2026-11-19", "14:00"), now), false);
+  assert.equal(isPastItem(trip("2026-11-20", "00:30"), now), false);
+  const staff = (date: string, time: string | null, endTime: string | null = null) => ({ type: "staff", date, time, endTime }) as any;
+  assert.equal(isPastItem(staff("2026-11-19", "12:00"), now), true);
+  assert.equal(isPastItem(staff("2026-11-19", "12:00", "14:00"), now), false);
+  assert.equal(isPastItem(staff("2026-11-19", null), now), false);
+  assert.equal(isPastItem(staff("2026-11-18", null), now), true);
+  assert.equal(easternNowStamp(new Date("2026-11-19T05:30:00Z")), "2026-11-19 00:30");
+});

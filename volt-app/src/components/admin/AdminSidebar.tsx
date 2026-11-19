@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  CalendarClock,
   LayoutDashboard,
   CalendarDays,
   Truck,
@@ -43,6 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",             label: "Dashboard",     icon: LayoutDashboard, roles: ["owner","manager","office_staff","driver"] },
   { href: "/dashboard/my-trips",    label: "My Trips",      icon: Route,           roles: ["owner","manager","driver"] },
   { href: "/dashboard/calendar",    label: "Calendar",      icon: CalendarRange,   roles: ["owner","manager","office_staff","driver"] },
+  { href: "/dashboard/schedule",    label: "Schedule",      icon: CalendarClock,   roles: ["owner","manager","office_staff","driver"] },
   { href: "/dashboard/reservations",label: "Reservations",  icon: CalendarDays,    roles: ["owner","manager","office_staff"] },
   { href: "/dashboard/customers",   label: "Customers",     icon: Contact,         roles: ["owner","manager"] },
   { href: "/dashboard/dispatch",    label: "Dispatch",      icon: Truck,           roles: ["owner","manager","office_staff","driver"] },

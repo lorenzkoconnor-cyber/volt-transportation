@@ -159,3 +159,25 @@ export function groupByDay(items: CalendarItem[]): Map<string, CalendarItem[]> {
   }
   return map;
 }
+
+// ─── Past items ───────────────────────────────────────────────────────────────
+
+/** Current Eastern time as "YYYY-MM-DD HH:MM" — compare against item stamps. */
+export function easternNowStamp(now: Date = new Date()): string {
+  const date = now.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const time = now.toLocaleTimeString("en-GB", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: false });
+  return `${date} ${time.replace(/^24/, "00")}`;
+}
+
+/**
+ * True once an item's time slot is over: a trip after its last time on the
+ * card (drop-off / pickup at ATL), a staff event after its end (or start)
+ * time, an all-day event once the day is over.
+ */
+export function isPastItem(it: CalendarItem, nowStamp: string): boolean {
+  if (it.type === "staff") {
+    const t = it.endTime ?? it.time;
+    return t ? `${it.date} ${t}` < nowStamp : it.date < nowStamp.slice(0, 10);
+  }
+  return `${it.atAtl.date} ${it.atAtl.time.slice(0, 5)}` < nowStamp;
+}

@@ -9,7 +9,7 @@ import { canAccessRoute } from "@/lib/permissions";
 import { easternToday, formatTime12h, formatDateLong } from "@/lib/format";
 import { atlSpot } from "@/lib/trip-timeline";
 import {
-  addDays, addMonths, monthGrid, monthStart, weekday, tripItem, staffItem, groupByDay, categoryLabel,
+  addDays, addMonths, monthGrid, monthStart, weekday, tripItem, staffItem, groupByDay, categoryLabel, easternNowStamp, isPastItem,
   type CalendarItem, type TripItem, type StaffItem,
 } from "@/lib/calendar";
 import { CalendarEventModal } from "@/components/admin/CalendarEventModal";
@@ -35,6 +35,9 @@ const STYLE = {
   pickup:    { card: "bg-[#15803D] text-white", dot: "bg-[#22C55E]", sub: "text-green-100" },
   staff:     { card: "bg-[#FCC300] text-[#0A0A0A]", dot: "bg-[#FCC300]", sub: "text-[#0A0A0A]/70" },
 } as const;
+
+// Cards whose time slot has already passed: light gray, muted text.
+const PAST_STYLE = { card: "bg-[#A1A1AA] text-[#27272A]", dot: "bg-[#A1A1AA]", sub: "text-[#3F3F46]" } as const;
 
 const STAFF_ICONS = { cleaning: Sparkles, maintenance: Wrench, meeting: Users2, task: ClipboardList, other: StickyNote } as const;
 
@@ -140,6 +143,13 @@ export default function CalendarPage() {
 
   const byDay = useMemo(() => groupByDay(items), [items]);
 
+  // Eastern "now", ticked every 30s so cards gray out as their slot passes.
+  const [nowStamp, setNowStamp] = useState(() => easternNowStamp());
+  useEffect(() => {
+    const id = setInterval(() => setNowStamp(easternNowStamp()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const pick = (date: string, itemId?: string) => {
     setSelected(date);
     if (itemId) setExpanded(itemId);
@@ -235,9 +245,10 @@ export default function CalendarPage() {
                   {!loading && list.length === 0 && <div className="text-[#52525B] text-xs px-1.5">Nothing scheduled</div>}
                   {list.map((it) => {
                     const Icon = itemIcon(it);
-                    const s = STYLE[it.type];
+                    const past = isPastItem(it, nowStamp);
+                    const s = past ? PAST_STYLE : STYLE[it.type];
                     return (
-                      <button key={it.id} onClick={() => openItem(it)}
+                      <button key={it.id} onClick={() => openItem(it)} title={past ? "Already happened" : undefined}
                         className={`w-full text-left rounded-lg px-2 py-1.5 ${s.card} hover:brightness-110 transition`}>
                         {it.type === "staff" ? (
                           <>
@@ -257,7 +268,7 @@ export default function CalendarPage() {
                               <span className="text-sm font-semibold tabular-nums">{formatTime12h(it.leaveVolt.time)}</span>
                             </div>
                             <div className="text-xs font-medium leading-snug">Leave Volt</div>
-                            <div className="mt-1 pt-1 border-t border-white/25">
+                            <div className={`mt-1 pt-1 border-t ${past ? "border-black/15" : "border-white/25"}`}>
                               <span className="text-sm font-semibold tabular-nums">{formatTime12h(it.atAtl.time)}</span>
                               {it.atAtl.date > it.date && <span className={`text-[10px] ${s.sub}`}> (next day)</span>}
                             </div>
