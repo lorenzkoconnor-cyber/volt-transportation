@@ -7,7 +7,9 @@
 //   • no driver assigned yet: "Unassigned" until someone is put on the van
 // Card tips (Stripe / Square) pay the driver the tip minus the estimated
 // processing fee. A leg only counts once it has run, and a booking tip only
-// once the booking itself is paid. Pure — no I/O.
+// once the booking itself is paid. A booking cancelled after its first leg ran
+// keeps its tip (see cancellation-plan.ts) — all of it goes to the leg(s) that
+// ran. Pure — no I/O.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -87,12 +89,18 @@ export function legHasRun(trip: any, today: string): boolean {
 export function tipShares(reservations: any[], opts: { feePercent: number; today: string; paid: Record<string, number> }): TipShare[] {
   const out: TipShare[] = [];
   for (const r of reservations) {
-    if (r.status === "cancelled" || r.deleted_at || !(r.tip_cents > 0)) continue;
+    if (r.deleted_at || !(r.tip_cents > 0)) continue;
     const { grossCents, feeCents } = tipTotals(r, opts.feePercent);
     if (grossCents <= 0) continue;
 
-    const legs: { leg: Leg; trip: any }[] = [{ leg: "out", trip: r.trip }];
+    let legs: { leg: Leg; trip: any }[] = [{ leg: "out", trip: r.trip }];
     if (r.is_round_trip && r.return_trip) legs.push({ leg: "ret", trip: r.return_trip });
+    if (r.status === "cancelled") {
+      // Only if the tip wasn't refunded: what's still paid must cover it.
+      const kept = (r.payments ?? []).filter((p: any) => p.status === "paid" || p.status === "refunded").reduce((s: number, p: any) => s + net(p), 0);
+      legs = legs.filter(({ trip }) => legHasRun(trip, opts.today));
+      if (!legs.length || kept < r.tip_cents) continue;
+    }
     const grossParts = splitCents(grossCents, legs.length);
     const feeParts = splitCents(feeCents, legs.length);
 

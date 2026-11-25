@@ -13,12 +13,12 @@ import {
   type CalendarItem, type TripItem, type StaffItem,
 } from "@/lib/calendar";
 import { CalendarEventModal } from "@/components/admin/CalendarEventModal";
-import { HouseTag } from "@/components/admin/TripTags";
-import { houseStopsForTrip, loadHouseStops, type HouseStops } from "@/lib/house-stops";
+import { HouseTag, SpecialRequestTag } from "@/components/admin/TripTags";
+import { houseStopsForTrip, loadHouseStops, loadSpecialRequests, type HouseStops } from "@/lib/house-stops";
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, Plus, Loader2, AlertTriangle, Truck, Plane, Sparkles, Wrench, Users2,
-  ClipboardList, StickyNote, ChevronDown, Pencil, Radio, Home,
+  ClipboardList, StickyNote, ChevronDown, Pencil, Radio, Home, MessageSquare,
 } from "lucide-react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -70,6 +70,8 @@ export default function CalendarPage() {
   // House (door-to-door) stops per trip id.
   const [house, setHouse] = useState<Record<string, HouseStops>>({});
   const houseCount = (id: string) => (house[id]?.pickups ?? 0) + (house[id]?.dropoffs ?? 0);
+  const [requests, setRequests] = useState<Record<string, number>>({});
+  const requestCount = (id: string) => requests[id] ?? 0;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [live, setLive] = useState(false);
@@ -107,7 +109,13 @@ export default function CalendarPage() {
         ...(tripsRes.data ?? []).map((t: any) => tripItem(t, settings.schedule.toAtl.durationMinutes)),
         ...(eventsRes.data ?? []).map(staffItem),
       ]);
-      setHouse(await loadHouseStops(sb, (tripsRes.data ?? []).map((t: any) => t.id)).catch(() => ({})));
+      const tripIds = (tripsRes.data ?? []).map((t: any) => t.id);
+      const [hs, rq] = await Promise.all([
+        loadHouseStops(sb, tripIds).catch(() => ({})),
+        loadSpecialRequests(sb, tripIds).catch(() => ({})),
+      ]);
+      setHouse(hs);
+      setRequests(rq);
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,6 +285,7 @@ export default function CalendarPage() {
                               {it.passengers} passenger{it.passengers !== 1 ? "s" : ""}
                             </div>
                             {houseCount(it.id) > 0 && <HouseTag count={houseCount(it.id)} solid className="mt-1" />}
+                            {requestCount(it.id) > 0 && <SpecialRequestTag count={requestCount(it.id)} solid className="mt-1" />}
                           </>
                         )}
                       </button>
@@ -316,6 +325,7 @@ export default function CalendarPage() {
               const pu = list.filter((i) => i.type === "pickup").length;
               const st = list.filter((i) => i.type === "staff").length;
               const hs = list.reduce((n, i) => n + (i.type === "staff" ? 0 : houseCount(i.id)), 0);
+              const rq = list.reduce((n, i) => n + (i.type === "staff" ? 0 : requestCount(i.id)), 0);
               const inMonth = d.slice(0, 7) === monthAnchor.slice(0, 7);
               const isSel = d === selected;
               const isToday = d === today;
@@ -330,6 +340,7 @@ export default function CalendarPage() {
                     {pu > 0 && <div className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full flex-shrink-0 ${STYLE.pickup.dot}`} />{pu}<span className="hidden md:inline"> pickup{pu !== 1 ? "s" : ""}</span></div>}
                     {st > 0 && <div className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full flex-shrink-0 ${STYLE.staff.dot}`} />{st}<span className="hidden md:inline"> task{st !== 1 ? "s" : ""}</span></div>}
                     {hs > 0 && <div className="flex items-center gap-1 text-orange-300 font-semibold"><Home className="w-2.5 h-2.5 flex-shrink-0" />{hs}<span className="hidden md:inline"> house</span></div>}
+                    {rq > 0 && <div className="flex items-center gap-1 text-[#FCC300] font-semibold"><MessageSquare className="w-2.5 h-2.5 flex-shrink-0" />{rq}<span className="hidden md:inline"> request{rq !== 1 ? "s" : ""}</span></div>}
                   </div>
                 </button>
               );
@@ -356,7 +367,7 @@ export default function CalendarPage() {
             {dayItems.map((it) =>
               it.type === "staff"
                 ? <StaffRow key={it.id} item={it} canEdit={canEdit} onEdit={() => setModal({ event: it, date: it.date })} />
-                : <TripRow key={it.id} item={it} houseStops={houseCount(it.id)} open={expanded === it.id} canOpenBookings={canOpenBookings}
+                : <TripRow key={it.id} item={it} houseStops={houseCount(it.id)} requests={requestCount(it.id)} open={expanded === it.id} canOpenBookings={canOpenBookings}
                     onToggle={() => setExpanded(expanded === it.id ? null : it.id)} />
             )}
           </div>
@@ -401,8 +412,8 @@ function StaffRow({ item, canEdit, onEdit }: { item: StaffItem; canEdit: boolean
   );
 }
 
-function TripRow({ item, houseStops, open, onToggle, canOpenBookings }: {
-  item: TripItem; houseStops: number; open: boolean; onToggle: () => void; canOpenBookings: boolean;
+function TripRow({ item, houseStops, requests, open, onToggle, canOpenBookings }: {
+  item: TripItem; houseStops: number; requests: number; open: boolean; onToggle: () => void; canOpenBookings: boolean;
 }) {
   const isPickup = item.type === "pickup";
   const Icon = isPickup ? Plane : Truck;
@@ -428,7 +439,12 @@ function TripRow({ item, houseStops, open, onToggle, canOpenBookings }: {
           <div className="text-[#A1A1AA] text-xs mt-0.5">
             {item.passengers}/{item.capacity} passengers · {vanLine(item)}
           </div>
-          {houseStops > 0 && <HouseTag count={houseStops} className="mt-1.5" />}
+          {(houseStops > 0 || requests > 0) && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {houseStops > 0 && <HouseTag count={houseStops} />}
+              {requests > 0 && <SpecialRequestTag count={requests} />}
+            </div>
+          )}
         </div>
         <ChevronDown className={`w-4 h-4 text-[#A1A1AA] mt-1 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -448,7 +464,7 @@ function TripRiders({ item, canOpenBookings }: { item: TripItem; canOpenBookings
     (createClient() as any)
       .from("reservations")
       .select(
-        "id, confirmation_number, adults, children, status, trip_id, return_trip_id, is_round_trip, pickup_address, dropoff_address, " +
+        "id, confirmation_number, adults, children, status, trip_id, return_trip_id, is_round_trip, pickup_address, dropoff_address, special_notes, " +
         "customer:customers(first_name, last_name, phone), " +
         "reservation_flights(leg, airline, flight_number, terminal, flight_date, flight_time)"
       )
@@ -510,6 +526,11 @@ function TripRiders({ item, canOpenBookings }: { item: TripItem; canOpenBookings
                   : "No flight given"}
                 {r.customer?.phone ? ` · ${r.customer.phone}` : ""}
               </div>
+              {String(r.special_notes ?? "").trim() && (
+                <div className="mt-1 rounded-md border border-[#FCC300]/40 bg-[#FCC300]/10 px-2 py-1 text-xs text-[#FCC300] whitespace-pre-line">
+                  <span className="font-semibold">Special Request:</span> {r.special_notes.trim()}
+                </div>
+              )}
               {[["House pickup", pickupAt], ["House drop-off", dropoffAt]].filter(([, a]) => a).map(([label, a]) => (
                 <a key={label} href={`https://maps.google.com/?q=${encodeURIComponent(a)}`} target="_blank" rel="noreferrer"
                   className="mt-0.5 flex items-center gap-1 text-orange-300 hover:text-orange-200 text-xs font-medium">

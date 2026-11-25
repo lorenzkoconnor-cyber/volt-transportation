@@ -46,8 +46,9 @@ export default function ReservationDetailPage() {
   const [error, setError] = useState("");
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState<null | "partial" | "none">(null);
   const [waiveFee, setWaiveFee] = useState(false);
+  const [cancelPreview, setCancelPreview] = useState<any>(null);
   const [chargingId, setChargingId] = useState<string | null>(null);   // card payment being taken
   const [chargingWith, setChargingWith] = useState<"stripe" | "square">("stripe");
   const cardRef = useRef<StaffCardHandle>(null);
@@ -109,19 +110,31 @@ export default function ReservationDetailPage() {
     setNotice("");
     try {
       const res = await fetch(`/api/reservations/${id}/cancel`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ waiveFee }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refund: confirmCancel, waiveFee: confirmCancel === "partial" && waiveFee }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed to cancel.");
       setNotice(`Cancelled. ${[...data.lines.slice(1), ...data.problems].join(" · ")}.`);
       if (data.problems?.length) setError(`Needs attention: ${data.problems.join(" ")}`);
-      setConfirmCancel(false);
+      setConfirmCancel(null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to cancel.");
     }
     setBusy(false);
   };
+
+  // What each cancel button would refund/keep — refreshed when the waive box changes.
+  const resvStatus = resv?.status;
+  useEffect(() => {
+    if (!resvStatus || resvStatus === "cancelled") return;
+    let live = true;
+    fetch(`/api/reservations/${id}/cancel?waiveFee=${waiveFee ? 1 : 0}`)
+      .then((r) => r.json()).then((d) => { if (live) setCancelPreview(d.ok ? d : null); })
+      .catch(() => { if (live) setCancelPreview(null); });
+    return () => { live = false; };
+  }, [id, waiveFee, resvStatus]);
 
   const deleteReservation = async () => {
     setBusy(true);
@@ -727,45 +740,90 @@ export default function ReservationDetailPage() {
         </div>
       )}
 
-      {/* Cancel */}
-      {resv.status !== "cancelled" && (
-        <div className="glass rounded-2xl p-6 border-red-500/20">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <div className="text-white font-semibold">Cancel Reservation</div>
-              <div className="text-[#A1A1AA] text-sm mt-0.5">
-                Releases {seatCount} seat{seatCount !== 1 ? "s" : ""} back to the trip and refunds what was paid
-                {waiveFee ? "" : ", minus the cancellation fee"} (card first, then cash to hand back). The customer is texted and
-                emailed. This can&apos;t be undone.
-              </div>
-              {(role === "owner" || role === "manager") && (
-                <label className="flex items-center gap-2 mt-2 text-sm text-[#A1A1AA] cursor-pointer">
-                  <input type="checkbox" checked={waiveFee} onChange={(e) => setWaiveFee(e.target.checked)}
-                    className="accent-[#FCC300]" />
-                  Waive the cancellation fee
-                </label>
-              )}
+      {/* Cancel — two buttons: partial refund (keeps the fee, and the ride
+          already taken + tip if the first leg ran) or no refund (keeps all). */}
+      {resv.status !== "cancelled" && (() => {
+        const opt = (m: "partial" | "none") => cancelPreview?.options?.[m];
+        const money = (c: number) => `$${(c / 100).toFixed(2).replace(/\.00$/, "")}`;
+        const outcome = (m: "partial" | "none") => {
+          const o = opt(m);
+          if (!o) return "";
+          return o.refundCents > 0
+            ? `Refunds ${money(o.refundCents)}${o.keptCents > 0 ? `, keeps ${money(o.keptCents)}` : ""}.`
+            : `Refunds nothing${o.keptCents > 0 ? `, keeps ${money(o.keptCents)}` : ""}.`;
+        };
+        return (
+          <div className="glass rounded-2xl p-6 border-red-500/20">
+            <div className="text-white font-semibold">Cancel Reservation</div>
+            <div className="text-[#A1A1AA] text-sm mt-0.5">
+              Releases {seatCount} seat{seatCount !== 1 ? "s" : ""} on rides that haven&apos;t run yet. The customer is texted and
+              emailed. This can&apos;t be undone.
             </div>
+            {cancelPreview?.late && (
+              <div className="mt-3 rounded-lg border border-[#FCC300]/30 bg-[#FCC300]/10 px-3 py-2 text-sm text-[#FCC300]">
+                Less than 24 hours before the next ride — per the Terms, this cancellation is non-refundable.
+              </div>
+            )}
+            {cancelPreview?.firstLegTaken && (
+              <div className="mt-2 text-sm text-[#A1A1AA]">
+                The first ride has already run, so a partial refund only covers the ride not taken (tip kept for the driver).
+              </div>
+            )}
+
             {confirmCancel ? (
-              <div className="flex items-center gap-2">
-                <Button size="sm" disabled={busy} onClick={cancelReservation}
-                  className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold">
-                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Yes, Cancel It"}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setConfirmCancel(false)}
-                  className="border-white/15 text-white hover:bg-white/5 text-xs">
-                  Keep Reservation
-                </Button>
+              <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+                <div className="text-white text-sm font-semibold">
+                  {confirmCancel === "partial" ? "Cancel with a partial refund?" : "Cancel with no refund?"}
+                </div>
+                {opt(confirmCancel) && (
+                  <ul className="mt-1.5 space-y-0.5 text-sm text-[#A1A1AA]">
+                    <li className="text-white">{outcome(confirmCancel)}</li>
+                    {opt(confirmCancel).lines.map((l: string, i: number) => <li key={i}>• {l}</li>)}
+                  </ul>
+                )}
+                <div className="flex items-center gap-2 mt-3">
+                  <Button size="sm" disabled={busy} onClick={cancelReservation}
+                    className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold">
+                    {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Yes, Cancel It"}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmCancel(null)}
+                    className="border-white/15 text-white hover:bg-white/5 text-xs">
+                    Keep Reservation
+                  </Button>
+                </div>
               </div>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setConfirmCancel(true)}
-                className="border-red-500/40 text-red-400 hover:bg-red-500/10 text-xs">
-                <XCircle className="w-3.5 h-3.5 mr-1" /> Cancel Reservation
-              </Button>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/10 p-4 flex flex-col">
+                  <Button size="sm" variant="outline" onClick={() => setConfirmCancel("partial")}
+                    className="border-red-500/40 text-red-400 hover:bg-red-500/10 text-xs w-full">
+                    <XCircle className="w-3.5 h-3.5 mr-1" /> Cancel Reservation – Partial Refund
+                  </Button>
+                  <div className="text-[#A1A1AA] text-xs mt-2">
+                    Keeps the {waiveFee ? "(waived) " : ""}cancellation fee{cancelPreview?.firstLegTaken ? ", keeps the ride already taken and the tip" : ""}; refunds the rest. {outcome("partial")}
+                  </div>
+                  {(role === "owner" || role === "manager") && (
+                    <label className="flex items-center gap-2 mt-2 text-xs text-[#A1A1AA] cursor-pointer">
+                      <input type="checkbox" checked={waiveFee} onChange={(e) => setWaiveFee(e.target.checked)}
+                        className="accent-[#FCC300]" />
+                      Waive the cancellation fee
+                    </label>
+                  )}
+                </div>
+                <div className={`rounded-xl border p-4 flex flex-col ${cancelPreview?.late ? "border-[#FCC300]/40" : "border-white/10"}`}>
+                  <Button size="sm" variant="outline" onClick={() => setConfirmCancel("none")}
+                    className="border-red-500/40 text-red-400 hover:bg-red-500/10 text-xs w-full">
+                    <XCircle className="w-3.5 h-3.5 mr-1" /> Cancel Reservation – No Refund
+                  </Button>
+                  <div className="text-[#A1A1AA] text-xs mt-2">
+                    Keeps everything paid — for late cancels with no 24 hour notice. {outcome("none")}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Delete — owners/managers, past or cancelled reservations only */}
       {canDelete && (

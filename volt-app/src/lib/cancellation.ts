@@ -2,9 +2,15 @@
 // One path for every cancellation — the rider online (Manage Reservation) and
 // staff (reservation page). It:
 //   1. marks the reservation cancelled and frees its seats (exactly once);
-//   2. keeps the cancellation fee (booking_settings.cancellation_fee_cents,
-//      default $15 per reservation; owners/managers may waive it) and gives
-//      the rest back automatically:
+//   2. keeps what's owed to Volt and gives the rest back automatically.
+//      Staff choose one of two buttons:
+//        • Partial refund — keeps the cancellation fee
+//          (booking_settings.cancellation_fee_cents, default $15 per
+//          reservation; owners/managers may waive it). If the first leg has
+//          already run, it also keeps that ride and any tip, so only the
+//          untaken ride is refunded. Riders cancelling online always get this.
+//        • No refund — keeps everything (late cancels, per the Terms).
+//      Refunds go:
 //        • card payments are refunded first, then cash;
 //        • a card hold (Military Discount under review) is captured for just
 //          the fee and the rest released — or released in full if no fee;
@@ -20,8 +26,10 @@ import { isSimulatedPaymentId } from "@/lib/checkout";
 import { formatCents } from "@/lib/format";
 import { loadMessageInfo, notifyCancelled } from "@/lib/reservation-messages";
 import { alertOnlineCancellation } from "@/lib/notifications/alerts";
-import { planCancellation } from "@/lib/cancellation-plan";
+import { amountToKeep, planCancellation, type KeepAmounts, type RefundMode } from "@/lib/cancellation-plan";
 import { loadAppSettings } from "@/lib/settings-server";
+import { easternInstant } from "@/lib/staff-pricing";
+import { CANCEL_NOTICE_HOURS } from "@/lib/booking";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Db = any;
@@ -34,6 +42,7 @@ export interface CancelBy {
   employee?: { id: string; role: string; name: string };
   userId?: string;
   waiveFee?: boolean;
+  refund?: RefundMode;     // staff only; riders online always get "partial"
   customerNote?: string;   // put before the refund details in the customer's message
 }
 
@@ -41,7 +50,8 @@ export interface CancelResult {
   ok: boolean;
   error?: string;
   status?: number;
-  feeCents: number;          // fee actually kept
+  feeCents: number;          // cancellation fee actually kept
+  keptCents: number;         // everything kept (fee + ride taken + tip, or all of it)
   refundedCardCents: number; // refunded to cards (incl. released holds is NOT counted)
   cashRefundCents: number;   // cash handed back (staff) or still owed (online)
   cashOwedCents: number;     // cash the rider still has to collect (online only)
@@ -55,6 +65,88 @@ export async function cancellationFeeCents(): Promise<number> {
   return (await loadAppSettings()).cancellationFeeCents;
 }
 
+const RESV_COLS = "id, confirmation_number, status, trip_id, return_trip_id, adults, children, is_round_trip, " +
+  "total_cents, tip_cents, pickup_fee_cents, dropoff_fee_cents, " +
+  "trip:trips!reservations_trip_id_fkey(departure_date, departure_time, status), " +
+  "return_trip:trips!reservations_return_trip_id_fkey(departure_date, departure_time, status)";
+const PAY_COLS = "id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, square_payment_id, square_checkout_id, created_at";
+
+const departsAt = (t: any): number | null =>
+  t?.departure_date && t?.departure_time ? easternInstant(t.departure_date, String(t.departure_time).slice(0, 5)) : null;
+
+/** Has this leg's van already run (or left)? A van Volt cancelled never ran. */
+export function legTaken(trip: any, now = Date.now()): boolean {
+  if (!trip || trip.status === "cancelled") return false;
+  if (trip.status === "in_progress" || trip.status === "completed") return true;
+  const at = departsAt(trip);
+  return at !== null && at <= now;
+}
+
+function keepFor(r: any, mode: RefundMode, feeCents: number): KeepAmounts {
+  return amountToKeep({
+    mode,
+    feeCents,
+    firstLegTaken: legTaken(r.trip),
+    roundTrip: !!r.is_round_trip && !!r.return_trip_id,
+    totalCents: r.total_cents ?? 0,
+    tipCents: r.tip_cents ?? 0,
+    pickupFeeCents: r.pickup_fee_cents ?? 0,
+    dropoffFeeCents: r.dropoff_fee_cents ?? 0,
+  });
+}
+
+/** The next ride that hasn't run leaves within the notice window (Terms: no refund). */
+function isLate(r: any, now = Date.now()): boolean {
+  const next = [r.trip, r.is_round_trip ? r.return_trip : null].find((t) => t && !legTaken(t, now));
+  const at = departsAt(next);
+  return at !== null && at - now < CANCEL_NOTICE_HOURS * 3600_000;
+}
+
+export interface CancelPreview {
+  ok: boolean;
+  error?: string;
+  status?: number;
+  firstLegTaken: boolean;
+  late: boolean;             // less than CANCEL_NOTICE_HOURS before the next ride
+  options: Record<RefundMode, { refundCents: number; keptCents: number; lines: string[] }>;
+}
+
+/** What each button would do — nothing is changed. */
+export async function previewCancellation(sb: Db, reservationId: string, waiveFee: boolean): Promise<CancelPreview> {
+  const empty = { refundCents: 0, keptCents: 0, lines: [] };
+  const base: CancelPreview = { ok: false, firstLegTaken: false, late: false, options: { partial: empty, none: empty } };
+  const { data: r } = await sb.from("reservations").select(RESV_COLS).eq("id", reservationId).maybeSingle();
+  if (!r) return { ...base, error: "Reservation not found.", status: 404 };
+  if (r.status === "cancelled") return { ...base, error: "This reservation is already cancelled.", status: 400 };
+  const { data: payments } = await sb.from("payments").select(PAY_COLS).eq("reservation_id", reservationId);
+  const fee = waiveFee ? 0 : await cancellationFeeCents();
+  const options = {} as CancelPreview["options"];
+  for (const mode of ["partial", "none"] as RefundMode[]) {
+    const keep = keepFor(r, mode, fee);
+    const plan = planCancellation(payments ?? [], keep.totalCents, false);
+    const refundCents = plan.refunds.reduce((s, x) => s + x.amountCents, 0);
+    const keptCents = plan.keptFromPaidCents + plan.keptFromHoldsCents;
+    options[mode] = { refundCents, keptCents, lines: keptLines(keep, keptCents, !!waiveFee) };
+  }
+  return { ok: true, firstLegTaken: legTaken(r.trip), late: isLate(r), options };
+}
+
+/** "Kept: $59 ride already taken · $20 tip · $15 fee" — or just the total when less was paid. */
+function keptLines(keep: KeepAmounts, keptCents: number, waived: boolean): string[] {
+  if (keptCents <= 0) return waived && !keep.keepAll ? ["Cancellation fee waived"] : [];
+  if (keep.keepAll) return [`${formatCents(keptCents)} kept — no refund`];
+  const parts: string[] = [];
+  if (keep.usedRideCents + keep.tipCents + keep.feeCents === keptCents) {
+    if (keep.usedRideCents > 0) parts.push(`${formatCents(keep.usedRideCents)} kept for the ride already taken`);
+    if (keep.tipCents > 0) parts.push(`${formatCents(keep.tipCents)} tip kept for the driver`);
+    if (keep.feeCents > 0) parts.push(`${formatCents(keep.feeCents)} cancellation fee kept`);
+    else if (waived) parts.push("Cancellation fee waived");
+  } else {
+    parts.push(`${formatCents(keptCents)} kept`);
+  }
+  return parts;
+}
+
 function realCard(p: { method: string; stripe_payment_intent_id: string | null }): boolean {
   const pi = p.stripe_payment_intent_id;
   return p.method === "stripe" && !!pi && pi.startsWith("pi_") && !isSimulatedPaymentId(pi);
@@ -62,12 +154,13 @@ function realCard(p: { method: string; stripe_payment_intent_id: string | null }
 
 export async function cancelReservation(sb: Db, reservationId: string, by: CancelBy): Promise<CancelResult> {
   const empty: CancelResult = {
-    ok: false, feeCents: 0, refundedCardCents: 0, cashRefundCents: 0, cashOwedCents: 0,
+    ok: false, feeCents: 0, keptCents: 0, refundedCardCents: 0, cashRefundCents: 0, cashOwedCents: 0,
     holdReleased: false, lines: [], customerLine: "", problems: [],
   };
   if (by.waiveFee && !(by.kind === "staff" && by.employee && WAIVE_ROLES.includes(by.employee.role))) {
     return { ...empty, error: "Only an owner or manager can waive the cancellation fee.", status: 403 };
   }
+  const mode: RefundMode = by.kind === "staff" && by.refund === "none" ? "none" : "partial";
 
   // 1. Cancel — only if it isn't already, so seats are freed exactly once.
   const { data: flipped, error: flipErr } = await sb
@@ -75,26 +168,24 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
     .update({ status: "cancelled", cancelled_at: new Date().toISOString(), updated_by_employee_id: by.employee?.id ?? null })
     .eq("id", reservationId)
     .neq("status", "cancelled")
-    .select("id, confirmation_number, trip_id, return_trip_id, adults, children");
+    .select(RESV_COLS);
   if (flipErr) return { ...empty, error: flipErr.message, status: 500 };
   if (!flipped?.length) return { ...empty, error: "This reservation is already cancelled.", status: 400 };
   const r = flipped[0];
   const seats = (r.adults ?? 0) + (r.children ?? 0);
-  await sb.rpc("decrement_seats_booked", { p_trip_id: r.trip_id, p_count: seats });
-  if (r.return_trip_id) await sb.rpc("decrement_seats_booked", { p_trip_id: r.return_trip_id, p_count: seats });
+  // A van that already ran keeps its count — only seats still to come are freed.
+  if (!legTaken(r.trip)) await sb.rpc("decrement_seats_booked", { p_trip_id: r.trip_id, p_count: seats });
+  if (r.return_trip_id && !legTaken(r.return_trip)) await sb.rpc("decrement_seats_booked", { p_trip_id: r.return_trip_id, p_count: seats });
 
   // 2. Money.
-  const { data: payments } = await sb
-    .from("payments")
-    .select("id, method, status, amount_cents, refund_amount_cents, stripe_payment_intent_id, square_payment_id, square_checkout_id, created_at")
-    .eq("reservation_id", reservationId);
+  const { data: payments } = await sb.from("payments").select(PAY_COLS).eq("reservation_id", reservationId);
   const all = payments ?? [];
   const stripe = getStripeServer();
   const out: CancelResult = { ...empty, ok: true };
   const now = () => new Date().toISOString();
   const staffId = by.employee?.id ?? null;
 
-  const fee = by.waiveFee ? 0 : await cancellationFeeCents();
+  const fee = by.waiveFee || mode === "none" ? 0 : await cancellationFeeCents();
 
   // Unfinished payments (card never confirmed) are just voided.
   for (const p of all.filter((x: any) => x.status === "pending")) {
@@ -116,9 +207,10 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
     await sb.from("payments").update({ status: "voided", notes: "Reservation cancelled before payment." }).eq("id", p.id).eq("status", "pending");
   }
 
-  const plan = planCancellation(all, fee, by.kind === "customer");
+  const keep = keepFor(r, mode, fee);
+  const plan = planCancellation(all, keep.totalCents, by.kind === "customer");
   const byId = new Map(all.map((p: any) => [p.id, p]));
-  out.feeCents += plan.feeFromPaidCents;
+  out.keptCents += plan.keptFromPaidCents;
 
   for (const r of plan.refunds) {
     const p: any = byId.get(r.paymentId);
@@ -167,18 +259,20 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
     }
   }
 
-  // Card holds: capture just the remaining fee, release the rest.
+  // Card holds: capture just what's left to keep, release the rest.
   for (const h of plan.holds) {
     const p: any = byId.get(h.paymentId);
     if (h.action === "capture") {
-      const res = await captureHold(sb, p, h.amountCents, staffId, "Cancellation fee — rest of the hold released.");
+      const whole = h.amountCents >= p.amount_cents;
+      const res = await captureHold(sb, p, h.amountCents, staffId,
+        whole ? "Cancelled — card hold charged." : "Cancelled — part of the hold charged, rest released.");
       if (res.ok) {
-        out.feeCents += h.amountCents;
-        out.holdReleased = true;
-        out.lines.push(`${formatCents(h.amountCents)} cancellation fee charged; rest of the card hold released`);
+        out.keptCents += h.amountCents;
+        out.holdReleased = !whole;
+        out.lines.push(`${formatCents(h.amountCents)} charged on the card hold${whole ? "" : "; rest of the hold released"}`);
         continue;
       }
-      if (!res.expired) out.problems.push(`Could not charge the fee on the card hold: ${res.error}`);
+      if (!res.expired) out.problems.push(`Could not charge ${formatCents(h.amountCents)} on the card hold: ${res.error}`);
       if (res.expired) continue; // already marked voided
     }
     const res = await voidHold(sb, p, "Hold released — reservation cancelled.");
@@ -191,13 +285,15 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
   }
   if (out.holdReleased) await sb.from("reservations").update({ military_discount_pending: false }).eq("id", reservationId);
 
-  if (out.feeCents > 0) out.lines.unshift(`${formatCents(out.feeCents)} cancellation fee kept`);
-  else if (by.waiveFee) out.lines.unshift("Cancellation fee waived");
+  // How the kept money breaks down (fee part reported separately for the customer line).
+  out.feeCents = keep.keepAll ? 0 : Math.min(keep.feeCents, Math.max(0, out.keptCents - keep.usedRideCents - keep.tipCents));
+  out.lines.unshift(...keptLines(keep, out.keptCents, !!by.waiveFee));
   if (out.cashOwedCents > 0) out.lines.push(`${formatCents(out.cashOwedCents)} cash still owed to the rider`);
   if (!out.lines.length) out.lines.push("Nothing was paid, so nothing to refund");
-  out.lines.unshift(by.kind === "customer" ? "Cancelled online by the rider" : `Cancelled by ${by.employee?.name ?? "staff"}`);
+  out.lines.unshift(by.kind === "customer" ? "Cancelled online by the rider"
+    : `Cancelled by ${by.employee?.name ?? "staff"} — ${mode === "none" ? "no refund" : "partial refund"}`);
 
-  out.customerLine = customerMoneyLine(out);
+  out.customerLine = customerMoneyLine(out, keep);
 
   // 3. Record + tell people.
   await sb.from("reservation_changes").insert({
@@ -207,7 +303,10 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
     action: "cancelled",
     summary: [...out.lines, ...out.problems],
     amount_cents: out.refundedCardCents + out.cashRefundCents,
-    new_data: { fee_cents: out.feeCents, waived: !!by.waiveFee, cash_owed_cents: out.cashOwedCents },
+    new_data: {
+      refund_mode: mode, fee_cents: out.feeCents, kept_cents: out.keptCents, waived: !!by.waiveFee,
+      used_ride_cents: keep.usedRideCents, tip_kept_cents: keep.tipCents, cash_owed_cents: out.cashOwedCents,
+    },
     applied_at: now(),
   });
   await sb.from("audit_logs").insert({
@@ -218,7 +317,9 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
     record_id: reservationId,
     new_data: {
       via: by.kind === "customer" ? "manage-reservation" : "dashboard",
+      refund_mode: mode,
       fee_cents: out.feeCents,
+      kept_cents: out.keptCents,
       refunded_card_cents: out.refundedCardCents,
       cash_refund_cents: out.cashRefundCents,
       cash_owed_cents: out.cashOwedCents,
@@ -239,8 +340,17 @@ export async function cancelReservation(sb: Db, reservationId: string, by: Cance
   return out;
 }
 
-function customerMoneyLine(r: CancelResult): string {
+function customerMoneyLine(r: CancelResult, keep: KeepAmounts): string {
   const parts: string[] = [];
+  if (keep.keepAll) {
+    parts.push("Per our Terms, this cancellation is non-refundable.");
+    if (r.holdReleased) parts.push("The rest of the hold on your card has been released.");
+    if (r.problems.length) parts.push("Our team will contact you if anything else is needed.");
+    return parts.join(" ");
+  }
+  if (keep.usedRideCents > 0) {
+    parts.push(keep.tipCents > 0 ? "The ride you already took and your tip aren't refunded." : "The ride you already took isn't refunded.");
+  }
   if (r.feeCents > 0) parts.push(`A ${formatCents(r.feeCents)} cancellation fee applies.`);
   if (r.refundedCardCents > 0) parts.push(`${formatCents(r.refundedCardCents)} is being refunded to your card (allow 5–10 business days).`);
   if (r.holdReleased && r.feeCents === 0) parts.push("The hold on your card has been released — you were not charged.");

@@ -39,3 +39,28 @@ export async function loadHouseStops(sb: any, tripIds: string[]): Promise<Record
   }
   return out;
 }
+
+// ─── Special requests per trip ────────────────────────────────────────────────
+// A booking with anything in its notes is flagged on every leg it rides, so a
+// request ("pick us up at the Chevron, Exit 19") can't be skipped over.
+
+/** Bookings with notes on each of these trips, keyed by trip id (trips with none are left out). */
+export async function loadSpecialRequests(sb: any, tripIds: string[]): Promise<Record<string, number>> {
+  const ids = [...new Set(tripIds.filter(Boolean))];
+  if (!ids.length) return {};
+  const list = ids.join(",");
+  const { data } = await sb
+    .from("reservations")
+    .select("trip_id, return_trip_id, is_round_trip, special_notes")
+    .or(`trip_id.in.(${list}),return_trip_id.in.(${list})`)
+    .not("special_notes", "is", null)
+    .neq("status", "cancelled")
+    .is("deleted_at", null);
+  const out: Record<string, number> = {};
+  for (const r of data ?? []) {
+    if (!String(r.special_notes ?? "").trim()) continue;
+    const legs = new Set([r.trip_id, r.is_round_trip ? r.return_trip_id : null]);
+    for (const id of ids) if (legs.has(id)) out[id] = (out[id] ?? 0) + 1;
+  }
+  return out;
+}

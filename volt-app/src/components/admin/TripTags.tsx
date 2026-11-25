@@ -1,4 +1,4 @@
-import { Home, PlaneLanding } from "lucide-react";
+import { Home, MessageSquare, PlaneLanding } from "lucide-react";
 import { staffTripTime } from "@/lib/trip-timeline";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -40,6 +40,23 @@ export function HouseTag({ pickup, dropoff, count, solid = false, className = ""
       solid ? "bg-orange-500 border-orange-300 text-white" : "bg-orange-500/15 border-orange-400/40 text-orange-300"
     } ${className}`}>
       <Home className="w-3 h-3" />{label}
+    </span>
+  );
+}
+
+// A booking on this van has notes — yellow, so a special request can't be missed.
+export function SpecialRequestTag({ count = 1, solid = false, className = "" }: {
+  count?: number;      // how many bookings on this van have notes
+  solid?: boolean;     // filled yellow, for use on coloured cards
+  className?: string;
+}) {
+  if (!count) return null;
+  return (
+    <span className={`inline-flex max-w-full items-center gap-2.5 rounded-xl border px-1.5 py-1 text-[11px] font-semibold leading-[1.15] ${
+      solid ? "bg-[#FCC300] border-yellow-200 text-black" : "bg-[#FCC300]/15 border-[#FCC300]/40 text-[#FCC300]"
+    } ${className}`}>
+      <MessageSquare className="w-3 h-3 flex-shrink-0" />
+      <span>{count > 1 ? `${count} Special Requests` : "Special Request"}</span>
     </span>
   );
 }

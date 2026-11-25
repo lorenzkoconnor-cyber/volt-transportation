@@ -32,7 +32,6 @@ async function loadAll(sb: any) {
         `return_trip:trips!reservations_return_trip_id_fkey(${LEG_TRIP})`,
       )
       .gt("tip_cents", 0)
-      .neq("status", "cancelled")
       .is("deleted_at", null)
       .limit(10000),
     sb.from("driver_tip_payouts")

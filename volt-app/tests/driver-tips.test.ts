@@ -57,7 +57,7 @@ test("round trip splits between both drivers; return leg waits until it runs", (
 
 test("unpaid booking, cancelled booking, and unassigned van", () => {
   assert.equal(tipShares([resv({ payments: [{ method: "cash", status: "pending", amount_cents: 6000, is_tip: false }] })], opts()).length, 0);
-  assert.equal(tipShares([resv({ status: "cancelled" })], opts()).length, 0);
+  assert.equal(tipShares([resv({ status: "cancelled", trip: trip("t1", "2026-11-20", [["d1", "Gary"]], "scheduled") })], opts()).length, 0);
   const [s] = tipShares([resv({ trip: trip("t1", "2026-11-15", []) })], opts());
   assert.equal(s.driverId, null);
   assert.equal(s.owedCents, 0);
@@ -80,4 +80,24 @@ test("staff time labels never confuse an ATL pickup with leaving Volt", () => {
   assert.equal(atl.main, "ATL pickup 6:00 PM");
   assert.equal(atl.sub, "leave Volt by 4:00 PM");
   assert.equal(staffTripTime("atl", "2026-11-16", "01:00", 120).sub, "leave Volt by 11:00 PM (day before)");
+});
+
+test("cancelled after the first leg with the tip kept: whole tip to the outbound driver", () => {
+  const r = resv({
+    status: "cancelled", is_round_trip: true, tip_cents: 2000,
+    payments: [{ method: "cash", status: "paid", amount_cents: 13800, refund_amount_cents: 4400, is_tip: false }],
+    return_trip: trip("t2", "2026-11-25", [["d2", "Lee"]], "scheduled"),
+  });
+  const shares = tipShares([r], opts());
+  assert.equal(shares.length, 1);
+  assert.equal(shares[0].driverId, "d1");
+  assert.equal(shares[0].grossCents, 2000);
+});
+
+test("cancelled with the tip refunded: no driver credit", () => {
+  const r = resv({
+    status: "cancelled", tip_cents: 2000,
+    payments: [{ method: "cash", status: "paid", amount_cents: 7900, refund_amount_cents: 6400, is_tip: false }],
+  });
+  assert.equal(tipShares([r], opts()).length, 0);
 });
